@@ -21,6 +21,14 @@ entry per (k, seed): the run that holds its logits, the archive's SHA-256,
 the planned steps and which rule decided them (``epochs`` or
 ``min_train_steps``), the steps actually run, and ``reused_from`` when the
 point is an AC2 run.
+
+Every point's training sample is checked against ``curve_sample(k, seed)``
+recomputed now (``sample_fingerprint``). The encoder's resume check
+compares configs only, so a numpy release that changed the sampler's
+random stream would otherwise pair old encoder runs with new baseline
+samples without notice. AC2 runs predate the fingerprint field; for them
+the index records the fingerprint computed now and says so in
+``train_sample_sha256_source``.
 """
 
 from __future__ import annotations
@@ -28,6 +36,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from collections.abc import Callable
+from functools import cache
 from pathlib import Path
 
 from tinyrouter.baselines import run_all as run_baselines
@@ -38,20 +48,58 @@ from tinyrouter.runs import (
     EvaluateFn,
     Log,
     TrainFn,
+    archive_intact,
     default_evaluate,
     default_train,
     read_record,
     reusable_equivalent,
     run_one,
 )
+from tinyrouter.sampling import curve_sample, sample_fingerprint
 from tinyrouter.steps import plan_steps
+
+FingerprintFn = Callable[[RunConfig], str]
+BACKFILLED_SAMPLE = "computed at index time from curve_sample(k, seed); the run predates the field"
+
+
+@cache
+def _fingerprint(k: int, seed: int, oos_train: int | None) -> str:
+    return sample_fingerprint(curve_sample(k, seed, oos_train))
+
+
+def expected_fingerprint(config: RunConfig) -> str:
+    """Fingerprint of the rows ``config`` should train on, drawn with the numpy installed now."""
+    assert config.k_shot is not None
+    return _fingerprint(config.k_shot, config.seed, config.oos_train)
 
 
 class CurveError(RuntimeError):
     """A finished curve point does not look like the run it was supposed to be."""
 
 
-def index_entry(config: RunConfig, record: dict, reused_from: str | None) -> dict[str, object]:
+def checked_sample(
+    config: RunConfig, record: dict, reused_from: str | None, fingerprint_fn: FingerprintFn
+) -> tuple[str, str]:
+    """(fingerprint, source): the run's recorded sample must be the one drawn now."""
+    expected = fingerprint_fn(config)
+    recorded = record["training"].get("train_sample_sha256")
+    if recorded is None and reused_from is not None:
+        return expected, BACKFILLED_SAMPLE
+    if recorded != expected:
+        raise CurveError(
+            f"{record['run_name']}: trained on sample {recorded}, but curve_sample("
+            f"{config.k_shot}, {config.seed}) now gives {expected}; the sampler's output "
+            "changed (numpy upgrade?), so this run and the baselines no longer share rows"
+        )
+    return expected, "recorded by train()"
+
+
+def index_entry(
+    config: RunConfig,
+    record: dict,
+    reused_from: str | None,
+    fingerprint_fn: FingerprintFn | None = None,
+) -> dict[str, object]:
     training, logits = record["training"], record["logits"]
     plan = plan_steps(config, training["train_rows"])
     if training["global_step"] != plan.planned_steps:
@@ -61,6 +109,10 @@ def index_entry(config: RunConfig, record: dict, reused_from: str | None) -> dic
         )
     if reused_from is None and training.get("step_plan") != plan.as_dict():
         raise CurveError(f"{record['run_name']}: recorded step plan differs from this config's")
+    if reused_from is None and not archive_intact(RunPaths.of(config), record, config.seed):
+        raise CurveError(f"{record['run_name']}: archive does not match its record and manifest")
+    fingerprint_fn = fingerprint_fn or expected_fingerprint
+    fingerprint, source = checked_sample(config, record, reused_from, fingerprint_fn)
     return {
         "k": config.k_shot,
         "seed": config.seed,
@@ -70,7 +122,8 @@ def index_entry(config: RunConfig, record: dict, reused_from: str | None) -> dic
         "logits_sha256": logits["sha256"],
         "train_rows": training["train_rows"],
         "oos_train_rows": training["oos_train_rows"],
-        "train_sample_sha256": training.get("train_sample_sha256"),
+        "train_sample_sha256": fingerprint,
+        "train_sample_sha256_source": source,
         "planned_steps": plan.planned_steps,
         "epoch_steps": plan.epoch_steps,
         "decided_by": plan.decided_by,
@@ -80,20 +133,25 @@ def index_entry(config: RunConfig, record: dict, reused_from: str | None) -> dic
 
 
 def run_point(
-    config: RunConfig, protocol: CurveProtocol, train_fn: TrainFn, evaluate_fn: EvaluateFn, log: Log
+    config: RunConfig,
+    protocol: CurveProtocol,
+    train_fn: TrainFn,
+    evaluate_fn: EvaluateFn,
+    log: Log,
+    fingerprint_fn: FingerprintFn | None,
 ) -> dict[str, object]:
     donor = ac2_donor(protocol, config)
     if donor is not None:
         record = reusable_equivalent(config, donor)
         if record is not None:
             log(f"{config.run_name}: reusing {donor.run_name} (equivalent run, archive intact)")
-            return index_entry(config, record, donor.run_name)
+            return index_entry(config, record, donor.run_name, fingerprint_fn)
         log(f"{config.run_name}: {donor.run_name} is not an equivalent intact run; training")
     run_one(config, train_fn, evaluate_fn, log, keep_weights=False)
     record = read_record(RunPaths.of(config))
     if record is None:
         raise CurveError(f"{config.run_name}: no results JSON after evaluation")
-    return index_entry(config, record, None)
+    return index_entry(config, record, None, fingerprint_fn)
 
 
 def run_curve(
@@ -103,9 +161,10 @@ def run_curve(
     train_fn: TrainFn = default_train,
     evaluate_fn: EvaluateFn = default_evaluate,
     log: Log = print,
+    fingerprint_fn: FingerprintFn | None = None,
 ) -> dict[str, object]:
     """Run or resume every config, then write results/curves/<name>.json."""
-    entries = [run_point(c, protocol, train_fn, evaluate_fn, log) for c in configs]
+    entries = [run_point(c, protocol, train_fn, evaluate_fn, log, fingerprint_fn) for c in configs]
     shas = [e["logits_sha256"] for e in entries]
     if len(set(shas)) != len(shas):
         raise CurveError(f"{name}: two points share one logits archive")

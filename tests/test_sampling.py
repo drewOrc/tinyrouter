@@ -124,3 +124,39 @@ def test_on_the_real_train_split_k_100_is_everything_and_k_5_is_balanced():
     assert sample_k_shot(real, 100, seed=42).texts == real.texts
     counts = Counter(sample_k_shot(real, 5, seed=42).intents.tolist())
     assert counts.pop(OOS) == 13 and set(counts.values()) == {5}
+
+
+def rng_free_train() -> Split:
+    """OOS+-shaped split built without any random generator, so only the sampler draws."""
+    in_scope = [i for i in range(151) if i != OOS]
+    intents = [i for r in range(100) for i in in_scope]
+    for n in range(250):
+        intents.insert(n * 61, OOS)
+    texts = tuple(f"q{n}-{i}" for n, i in enumerate(intents))
+    return Split("train", texts, np.array(intents, dtype=np.int64))
+
+
+# SHA-256 of sample_fingerprint on rng_free_train(), numpy 2.5.3 (uv.lock). If
+# these change, numpy's Generator stream changed: every k < 100 sample differs
+# from the one the recorded runs trained on. Do not update the values to make
+# the test pass; the curves must be rerun (curves.py also refuses to index such
+# runs, by comparing each run's recorded fingerprint with curve_sample now).
+GOLDEN_FINGERPRINTS = {
+    (1, 42): "73b3054b10915c25150fbaf12f841a8dbf9b7d501050100c9b1c1b8ffed9b9eb",
+    (5, 42): "bcb7915540c4392dbb999b056e7e0e90deeeaa07260b45850b36447f8549cfc1",
+    (5, 43): "8616df6a42cf0d60893c7b32f64cbd9bcfc99d645c57df25c150442c89e86bfd",
+    (25, 44): "ebd8fa4ebcaa263c378315dff1a627bf6d49dd53215a0d6d3b4a159266dca1cb",
+    (50, 42): "7829d6e72d2af9c9a602787ccf1890c19a9d6ddacaff98762c9eaadde178a5b1",
+}
+
+
+@pytest.mark.parametrize(("k", "seed"), sorted(GOLDEN_FINGERPRINTS))
+def test_samples_are_pinned_across_numpy_releases(k, seed):
+    sample = sample_k_shot(rng_free_train(), k, seed)
+    assert sample_fingerprint(sample) == GOLDEN_FINGERPRINTS[(k, seed)]
+
+
+def test_the_rng_free_split_is_oos_plus_shaped():
+    split = rng_free_train()
+    counts = Counter(split.intents.tolist())
+    assert counts.pop(OOS) == 250 and set(counts.values()) == {100}

@@ -15,19 +15,30 @@ them the same way. How the scores are defined:
   frequent agent, ``finance_agent`` (38 of the 150 intents): that is the
   8-way majority class, so ``accuracy_8_summed`` is the majority-class
   accuracy and ``accuracy_8`` (argmax intent, then its agent) always says
-  oos. Its softmax is the training class distribution, a calibrated
-  prior; the temperature fit on validation may still move it.
-- ``tfidf-centroid``: cosine similarity between the query's TF-IDF vector
-  and each intent's centroid. The vectorizer (word unigrams and bigrams,
-  sublinear tf, L2-normalised rows) is fit on the training sample only;
-  a centroid is the mean of its intent's training vectors, L2-normalised.
-  The score is ``COSINE_SCALE`` (100) times the cosine, the convention
-  CLIP uses to turn cosines into logits. The factor changes no argmax;
-  it only moves the scores to a range where the validation temperature
-  fit (search range T in [0.05, 100]) has an interior optimum. On the
-  raw cosines (range [0, 1]) the fitted T hit the lower bound at every
-  k >= 5 (checked on seed 42 before this was written). A query with no
-  known term scores 0 everywhere and its argmax is intent 0.
+  oos. Every query gets the same scores, so every uncertainty signal
+  (MSP, entropy, margin, with or without temperature) is one constant:
+  it cannot rank queries, and the RQ3 analysis leaves this baseline out.
+- ``tfidf-centroid``: ``COSINE_SCALE`` (100) times the cosine similarity
+  between the query's TF-IDF vector and each intent's centroid. The
+  vectorizer (word unigrams and bigrams, sublinear tf, L2-normalised
+  rows) is fit on the training sample only; a centroid is the mean of its
+  intent's training vectors, L2-normalised. A query with no known term
+  scores 0 everywhere and its argmax is intent 0.
+
+  The factor is not neutral. It changes nothing that depends on the
+  argmax (accuracy, OOS recall) and nothing computed after temperature
+  scaling or directly on the scores: the validation fit returns a T 100
+  times larger, so softmax(scores / T) is the same distribution (a test
+  checks this), and a margin between two scores only changes by the same
+  constant factor, so its ranking of queries does not change. It does
+  change everything computed from softmax(scores) without a temperature:
+  raw MSP, raw entropy, raw ECE and raw NLL. On seed 42 validation,
+  raw-softmax AURC at k=100 was 0.0854 (MSP) and 0.1418 (entropy) on
+  plain cosines and 0.0533 and 0.0539 at 100 times. So for this baseline
+  RQ3 reports only temperature-scaled signals and the score margin
+  (docs/PLAN.md section 4.1). The factor was chosen so that the
+  temperature fit (T in [0.05, 100]) has an interior optimum: on plain
+  cosines it hit the lower bound at every k >= 5.
 """
 
 from __future__ import annotations

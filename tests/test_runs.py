@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from run_fakes import FakeRuns
+from run_fakes import FakeRuns, current_environment
 from tinyrouter.config import ADDED_FIELD_DEFAULTS, load_config
 from tinyrouter.evaluate import RunPaths
 from tinyrouter.runs import equivalent_run, reusable_equivalent, run_one
@@ -32,6 +32,7 @@ def ac2_like_record(seed: int = 42, training: dict | None = None) -> dict:
     return {
         "run_name": BERT.with_seed(seed).run_name,
         "config": config,
+        "environment": current_environment(),
         "training": {
             "seed": seed,
             "train_rows": 15_250,
@@ -108,6 +109,7 @@ def test_min_train_steps_that_decides_equals_the_same_fixed_max_steps():
     record = {
         "run_name": fixed.run_name,
         "config": asdict(fixed),
+        "environment": current_environment(),
         "training": {"seed": 42, "train_rows": 763, "oos_train_rows": 13, "global_step": 200},
     }
     assert equivalent_run(by_floor, record)
@@ -140,3 +142,91 @@ def test_reusable_equivalent_needs_an_intact_archive(tmp_bert):
 def test_reusable_equivalent_is_none_when_the_donor_never_ran(tmp_bert):
     point = replace(tmp_bert, k_shot=100, min_train_steps=400)
     assert reusable_equivalent(point, tmp_bert) is None
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [{"max_steps": 2385}, {"num_train_epochs": 4.999}],
+    ids=["fixed_2385_steps", "epochs_4.999"],
+)
+def test_same_step_count_under_another_schedule_is_not_the_same_run(fields):
+    """Both give 2,385 steps on the full split, but through other TrainingArguments."""
+    record = ac2_like_record()
+    record["config"].update(fields)
+    assert record["training"]["global_step"] == 2385
+    assert not equivalent_run(curve_point(), record)
+
+
+@pytest.mark.parametrize("library", ["torch", "transformers"])
+def test_a_run_recorded_with_another_library_release_is_not_the_same_run(library):
+    record = ac2_like_record()
+    record["environment"][library] = "0.0.1"
+    assert not equivalent_run(curve_point(), record)
+
+
+def test_a_record_without_library_versions_is_not_the_same_run():
+    record = ac2_like_record()
+    del record["environment"]
+    assert not equivalent_run(curve_point(), record)
+
+
+def test_a_local_build_label_does_not_count_as_another_release():
+    from tinyrouter.runs import public_version
+
+    record = ac2_like_record()
+    record["environment"]["torch"] = public_version(record["environment"]["torch"]) + "+cpu"
+    assert equivalent_run(curve_point(), record)
+
+
+def test_evaluation_that_leaves_a_broken_archive_keeps_the_weights(tmp_bert):
+    from tinyrouter.runs import RunIncompleteError, run_dir
+
+    fake = FakeRuns()
+
+    def truncating(config, model_dir):
+        record = fake.evaluate(config, model_dir)
+        archive = RunPaths.of(config).logits
+        archive.write_bytes(archive.read_bytes()[:100])
+        return record
+
+    point = replace(tmp_bert, k_shot=5, min_train_steps=200)
+    with pytest.raises(RunIncompleteError, match="weights kept"):
+        run_one(point, fake.train, truncating, lambda _: None, keep_weights=False)
+    assert (run_dir(point) / "final" / "model.safetensors").exists()
+
+
+def spy_on_npz_reads(monkeypatch) -> list[str]:
+    import numpy as np
+
+    seen: list[str] = []
+    original = np.lib.npyio.NpzFile.__getitem__
+
+    def spy(self, key):
+        seen.append(key)
+        return original(self, key)
+
+    monkeypatch.setattr(np.lib.npyio.NpzFile, "__getitem__", spy)
+    return seen
+
+
+def test_validation_only_reuse_reads_no_test_array_and_no_metrics(tmp_bert, monkeypatch):
+    donor = tmp_bert.with_seed(42)
+    run_one(donor, FakeRuns().train, FakeRuns().evaluate, lambda _: None, keep_weights=False)
+    point = replace(tmp_bert, k_shot=100, min_train_steps=None)
+    seen = spy_on_npz_reads(monkeypatch)
+    record = reusable_equivalent(point, donor, validation_only=True)
+    assert record is not None
+    assert "metrics" not in record
+    assert seen and not [key for key in seen if key.startswith("test")]
+    seen.clear()
+    assert reusable_equivalent(point, donor) is not None
+    assert "test_logits" in seen  # the full check does read test, which is why pilots avoid it
+
+
+def test_validation_only_reuse_still_rejects_a_changed_archive(tmp_bert):
+    donor = tmp_bert.with_seed(42)
+    run_one(donor, FakeRuns().train, FakeRuns().evaluate, lambda _: None, keep_weights=False)
+    archive = RunPaths.of(donor).logits
+    archive.write_bytes(archive.read_bytes() + b"x")
+    point = replace(tmp_bert, k_shot=100)
+    assert reusable_equivalent(point, donor, validation_only=True) is None

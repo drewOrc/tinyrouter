@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from run_fakes import FakeRuns
+from run_fakes import FakeRuns, fake_fingerprint
 from test_pilots import make_protocol
 from tinyrouter.curves import CurveError, index_entry, run_curve
 from tinyrouter.evaluate import RunPaths
@@ -12,6 +12,14 @@ from tinyrouter.protocol import ProtocolError
 from tinyrouter.runs import run_one
 
 pytestmark = pytest.mark.filterwarnings("ignore::tinyrouter.calibrate.TemperatureBoundWarning")
+
+
+@pytest.fixture(autouse=True)
+def fake_samples(monkeypatch):
+    """The fake runs record fake_fingerprint; the index compares against the same function."""
+    import tinyrouter.curves as curves
+
+    monkeypatch.setattr(curves, "expected_fingerprint", fake_fingerprint)
 
 
 def quiet(_: str) -> None:
@@ -192,3 +200,85 @@ def test_the_ablation_cli_skips_the_baselines(tmp_path, monkeypatch):
     curves.main(["--ablation"])
     assert calls == ["curve oos-ablation"]
     assert Path(tmp_path / "res" / "curves" / "oos-ablation.json").exists()
+
+
+def test_index_refuses_a_non_reused_point_whose_archive_changed(tmp_path):
+    protocol = make_protocol(tmp_path, s_min=400, bert_lr=5e-5, modern_lr=2e-5)
+    config = protocol.curve_config("modernbert", 5, 42)
+    fake = FakeRuns()
+    run_one(config, fake.train, fake.evaluate, quiet, keep_weights=False)
+    record = json.loads(RunPaths.of(config).results_json.read_text())
+    assert index_entry(config, record, None)["run_name"] == config.run_name
+    archive = RunPaths.of(config).logits
+    archive.write_bytes(archive.read_bytes() + b"x")
+    with pytest.raises(CurveError, match="archive does not match"):
+        index_entry(config, record, None)
+
+
+def test_curve_writes_no_index_when_an_evaluation_leaves_a_broken_archive(tmp_path):
+    from tinyrouter.runs import RunIncompleteError
+
+    protocol = make_protocol(tmp_path, s_min=400, bert_lr=5e-5, modern_lr=2e-5)
+    fake = FakeRuns()
+
+    def truncating(config, model_dir):
+        record = fake.evaluate(config, model_dir)
+        archive = RunPaths.of(config).logits
+        archive.write_bytes(archive.read_bytes()[:100])
+        return record
+
+    with pytest.raises(RunIncompleteError):
+        run_curve(
+            "modernbert",
+            protocol.curve_configs("modernbert"),
+            protocol,
+            fake.train,
+            truncating,
+            quiet,
+        )
+    assert not (tmp_path / "res" / "curves" / "modernbert.json").exists()
+    assert list((tmp_path / "ckpt").rglob("model.safetensors"))
+
+
+def test_a_point_trained_on_another_sample_than_curve_sample_now_gives_is_refused(tmp_path):
+    protocol = make_protocol(tmp_path, s_min=400, bert_lr=5e-5, modern_lr=2e-5)
+    configs = protocol.curve_configs("modernbert")[:3]
+    fake = FakeRuns()
+    run_curve("modernbert", configs, protocol, fake.train, fake.evaluate, quiet)
+
+    def drifted(config):
+        return fake_fingerprint(config) + "-numpy-upgrade"
+
+    with pytest.raises(CurveError, match="sampler's output changed"):
+        run_curve("modernbert", configs, protocol, fake.train, fake.evaluate, quiet, drifted)
+
+
+def test_reused_ac2_points_get_the_fingerprint_computed_now_and_say_so(tmp_path):
+    from tinyrouter.curves import BACKFILLED_SAMPLE
+
+    protocol = make_protocol(tmp_path, s_min=400, bert_lr=5e-5, modern_lr=2e-5)
+    ac2_runs(protocol)
+    configs = [c for c in protocol.curve_configs("bert") if c.k_shot == 100]
+    fake = FakeRuns()
+    body = run_curve("bert", configs, protocol, fake.train, fake.evaluate, quiet)
+    for point, config in zip(body["points"], configs, strict=True):
+        assert point["reused_from"] is not None
+        assert point["train_sample_sha256"] == fake_fingerprint(config)
+        assert point["train_sample_sha256_source"] == BACKFILLED_SAMPLE
+
+
+def test_the_real_fingerprint_function_draws_the_curve_sample(monkeypatch):
+    import tinyrouter.curves as curves
+    import tinyrouter.sampling as sampling
+    from test_sampling import FULL
+    from tinyrouter.sampling import sample_fingerprint, sample_k_shot
+
+    monkeypatch.setattr(sampling, "load_split", lambda name: FULL)
+    curves._fingerprint.cache_clear()
+    try:
+        assert curves._fingerprint(5, 43, None) == sample_fingerprint(sample_k_shot(FULL, 5, 43))
+        assert curves._fingerprint(100, 42, 0) == sample_fingerprint(
+            sample_k_shot(FULL, 100, 42, oos_override=0)
+        )
+    finally:
+        curves._fingerprint.cache_clear()

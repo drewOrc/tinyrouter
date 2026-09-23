@@ -127,3 +127,24 @@ def test_baselines_see_exactly_the_rows_the_encoder_of_that_point_trains_on(tmp_
 def test_unknown_baseline_is_refused():
     with pytest.raises(ValueError, match="unknown baseline"):
         baselines.baseline_logits("knn", TRAIN, EVALS)
+
+
+def test_temperature_scaling_undoes_the_cosine_scale():
+    """1x and 100x cosines, each with its own validation-fitted T, give the same probabilities."""
+    from tinyrouter.calibrate import SplitLogits, apply_temperature, fit_temperature
+
+    rng = np.random.default_rng(0)
+    n = 400
+    gold = rng.integers(0, 151, size=n)
+    cosine = rng.uniform(0.0, 0.35, size=(n, 151))
+    cosine[np.arange(n), gold] += rng.uniform(0.0, 0.1, size=n)
+    plain = SplitLogits("validation", cosine, gold)
+    scaled = SplitLogits("validation", baselines.COSINE_SCALE * cosine, gold)
+    t_plain, t_scaled = fit_temperature(plain), fit_temperature(scaled)
+    assert 0.05 < t_plain < 1 and t_scaled == pytest.approx(100 * t_plain, rel=1e-4)
+    np.testing.assert_allclose(
+        apply_temperature(plain.logits, t_plain),
+        apply_temperature(scaled.logits, t_scaled),
+        rtol=1e-4,
+        atol=1e-8,
+    )

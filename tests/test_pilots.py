@@ -216,3 +216,38 @@ def test_a_crash_after_training_keeps_the_weights_for_the_rerun(tmp_path):
     again = FakeRuns()
     pilots.run_pilot("lr", protocol, tmp_path / "lr.json", again.train, again.validation, quiet)
     assert len(again.trained) == len(pilots.lr_points(protocol)) - 1
+
+
+def test_pilot_reads_no_test_array_from_the_ac2_archive(tmp_path, monkeypatch):
+    from test_runs import spy_on_npz_reads
+
+    protocol = make_protocol(tmp_path)
+    ac2_donor_run(protocol, in_scope_correct=2_902)
+    seen = spy_on_npz_reads(monkeypatch)
+    fake = FakeRuns()
+    body = pilots.run_pilot(
+        "lr", protocol, tmp_path / "lr.json", fake.train, fake.validation, quiet
+    )
+    assert any(p["source"].startswith("reused") for p in body["points"])
+    assert seen and not [key for key in seen if key.startswith("test")]
+
+
+def test_pilot_runs_and_chooses_the_same_without_the_donors_metrics(tmp_path):
+    protocol = make_protocol(tmp_path)
+    ac2_donor_run(protocol, in_scope_correct=2_990)
+    fake = FakeRuns()
+    fake.correct = {(MODERN_NAME, 2e-5): 2_950}
+    first = pilots.run_pilot(
+        "lr", protocol, tmp_path / "a.json", fake.train, fake.validation, quiet
+    )
+    donor_json = tmp_path / "res" / "runs" / "bert-base-uncased-full-seed42.json"
+    record = json.loads(donor_json.read_text())
+    del record["metrics"]
+    donor_json.write_text(json.dumps(record))
+    again = FakeRuns()
+    again.correct = fake.correct
+    second = pilots.run_pilot(
+        "lr", protocol, tmp_path / "b.json", again.train, again.validation, quiet
+    )
+    assert first["selected"] == second["selected"] == {"bert": 5e-5, "modernbert": 2e-5}
+    assert len(again.trained) == 5

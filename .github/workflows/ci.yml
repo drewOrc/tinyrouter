@@ -87,7 +87,8 @@ jobs:
         # checkout on pull_request lands on GitHub's synthetic merge commit).
         # Pushes to main: the pushed range, which is where a squash merge
         # message edited in the web UI shows up. Patterns live in
-        # .github/disallowed-trailers.txt.
+        # .github/disallowed-trailers.txt; the check itself is
+        # .github/scripts/check-disallowed-text.sh, shared with pr-text.yml.
         env:
           EVENT: ${{ github.event_name }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
@@ -102,17 +103,8 @@ jobs:
           else
             range="$PUSH_BEFORE..$PUSH_AFTER"
           fi
-          patterns="$(grep -vE '^[[:space:]]*(#|$)' .github/disallowed-trailers.txt | paste -sd'|' -)"
-          if [ -z "$patterns" ]; then
-            echo "::error::.github/disallowed-trailers.txt has no patterns"
-            exit 1
-          fi
-          bad="$(git log "$range" --format='%h %s%n%b' | grep -iE "$patterns" || true)"
-          if [ -n "$bad" ]; then
-            echo "::error::commit messages must not carry tool-attribution trailers:"
-            echo "$bad"
-            exit 1
-          fi
+          git log "$range" --format='%h %s%n%b' \
+            | .github/scripts/check-disallowed-text.sh "commit messages in $range"
           echo "clean: $(git rev-list --count "$range") commit(s) in $range"
 
   network:

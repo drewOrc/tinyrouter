@@ -3,8 +3,10 @@
 ``make pilot-lr``: each encoder at k=100, seed 42, learning rate in
 {1e-5, 2e-5, 5e-5}. Chosen by validation 150-way in-scope accuracy, then
 validation OOS recall, then the smaller learning rate. BERT at 5e-5 is the
-AC2 seed-42 run, reused when ``runs.equivalent_run`` confirms it; only its
-validation logits are read.
+AC2 seed-42 run, reused when ``runs.equivalent_run`` confirms it. From
+that run only the validation arrays and metadata of its archive are read
+(the whole file is hashed), and only the results-JSON fields in
+``runs.VALIDATION_ONLY_FIELDS``, which exclude ``metrics``.
 
 ``make pilot-steps``: both encoders at k=5, seed 42, with their chosen
 learning rates, S_min in {100, 200, 400}. Chosen by the mean of the two
@@ -12,7 +14,8 @@ encoders' validation in-scope accuracy, then the smaller S_min.
 
 Neither pilot scores, loads or writes anything from the test split:
 ``predict_validation`` and ``validation_scores`` raise ``LeakageError`` on
-any other split, the reused AC2 archive is read through
+any other split, the reused AC2 archive and record are read through
+``reusable_equivalent(..., validation_only=True)`` and
 ``load_validation_logits``, and nothing here calls ``evaluate()`` (which
 scores test). Outputs go to ``results/pilots/{lr,steps}.json``. The
 selected values are printed, not written into ``configs/curve.yaml``;
@@ -172,7 +175,9 @@ def point_entry(point: PilotPoint, training: dict, scores: dict, source: str) ->
 def reused_entry(point: PilotPoint, protocol: CurveProtocol) -> dict | None:
     """The AC2 run as this point, if it is an equivalent run; validation logits only."""
     donor = ac2_donor(protocol, point.config)
-    record = None if donor is None else reusable_equivalent(point.config, donor)
+    record = (
+        None if donor is None else reusable_equivalent(point.config, donor, validation_only=True)
+    )
     if donor is None or record is None:
         return None
     _, val = load_validation_logits(RunPaths.of(donor).logits)

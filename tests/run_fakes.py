@@ -18,24 +18,39 @@ from tinyrouter.sampling import planned_rows
 from tinyrouter.steps import plan_steps
 
 
+def fake_fingerprint(config: RunConfig) -> str:
+    """What FakeRuns records as the sample fingerprint; tests hand it to the curve index."""
+    return f"sample-{config.k_shot}-{config.seed}-{config.oos_train}"
+
+
+def current_environment() -> dict[str, str]:
+    from importlib.metadata import version
+
+    return {"torch": version("torch"), "transformers": version("transformers")}
+
+
 def summary_for(config: RunConfig) -> dict[str, object]:
     if config.k_shot is None:
         rows, oos = 15_250, 250
     else:
         rows, oos = planned_rows(config.k_shot, config.oos_train)
     plan = plan_steps(config, rows)
-    return {
+    summary = {
         "run_name": config.run_name,
         "seed": config.seed,
         "config": asdict(config),
         "train_rows": rows,
         "oos_train_rows": oos,
         "k_shot": config.k_shot,
-        "train_sample_sha256": f"sample-{config.k_shot}-{config.seed}",
+        "train_sample_sha256": fake_fingerprint(config),
         "step_plan": plan.as_dict(),
         "global_step": plan.planned_steps,
         "train_wall_seconds": 1.0,
     }
+    if config.k_shot is None:
+        # Like the AC2 summaries, written before the fingerprint field existed.
+        del summary["train_sample_sha256"]
+    return summary
 
 
 class FakeRuns:
@@ -71,6 +86,7 @@ class FakeRuns:
         record = {
             "run_name": config.run_name,
             "config": asdict(config),
+            "environment": current_environment(),
             "training": training,
             "logits": {"file": paths.logits.name, "sha256": entry["sha256"]},
             "metrics": score(splits["validation"], splits["test"]),

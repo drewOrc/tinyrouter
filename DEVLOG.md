@@ -4,6 +4,34 @@
 
 ---
 
+## 2026-09-23（夜）：PR #7 審查修正
+
+### 本次工作 / 執行摘要
+- 新增 `pr-text.yml`（job `pr-text-hygiene`）：squash merge 的 commit 取自 PR 標題與內文，原本的 commit-hygiene 看不到。標題與內文只經 env 傳入。兩個 job 共用 `.github/scripts/check-disallowed-text.sh` 與同一份 pattern 檔。
+- pilot 重用 AC2 改為 validation-only：archive 整檔照算 SHA-256，但只讀 metadata 與 validation 陣列；結果 JSON 只取 `run_name`、`config`、`training`、`logits`、`environment`，不含 `metrics`。
+- 權重刪除前先確認結果 JSON、manifest、archive 三處一致；曲線索引對非重用點也驗 archive。
+- 曲線索引逐點比對「訓練時記下的抽樣指紋」與「現在重抽的 `curve_sample(k, seed)`」，numpy 升版造成樣本改變時會報錯；AC2 重用點補上現算的指紋並標註來源。測試裡另釘了 5 組抽樣指紋。
+- 等價判斷新增：torch 與 transformers 版本必須與目前安裝的相同（忽略 `+cpu` 這類 build 標籤）；schedule 層補獨立測試。
+- TF-IDF 的 100 倍：修正 docstring，PLAN §4.1 註明 RQ3 對 TF-IDF 只報溫度校準後的訊號與 margin，多數類排除在 RQ3 外。
+- scipy 列入 dev group。
+
+### 核心發現 / 數據
+- 審查實測（seed 42 val，k=100）：TF-IDF 未校準 MSP 的 AURC 在純餘弦為 0.0854、100 倍為 0.0533；entropy 為 0.1418 與 0.0539。倍數確實改變未校準訊號，所以 RQ3 不用它們。
+- 關於 test 洩漏：Drew 在 PR #6（AC2 結果）看過 BERT lr 5e-5 的 test 數字。lr pilot 的選擇規則是機械式的（只比 validation 的正確筆數，再比 validation OOS 正確筆數，再取較小 lr），看過 test 數字不會影響它選出什麼，所以不構成洩漏。
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] PR #7 合併後，由協調者把 `pr-text-hygiene` 加進 main 的 required checks
+- [ ] 其餘同上一則
+
+### Files / Budget
+- `.github/workflows/pr-text.yml`、`.github/scripts/check-disallowed-text.sh`、`tests/test_text_hygiene.py`
+- API 花費：US$0
+
+---
+
 ## 2026-09-23（晚）：步驟 3 準備，抽樣、步數協定、pilot、執行器與 ModernBERT 相容性試跑
 
 ### 本次工作 / 執行摘要

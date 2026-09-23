@@ -7,3 +7,7 @@
 co-authored-by:.*(anthropic|claude|openai|chatgpt|copilot|gemini|cursor)
 generated (with|by) \[?(claude|chatgpt|copilot|gemini|cursor)
 noreply@anthropic\.com
+# Canary: exercises the checks (for example in a throwaway draft PR)
+# without writing a real attribution line that would then stay in
+# GitHub's edit history.
+tinyrouter-hygiene-canary

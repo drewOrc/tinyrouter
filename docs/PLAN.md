@@ -84,6 +84,7 @@ TinyRouter 問三件事：**小模型要多少標註資料才夠？它知不知�
 | AC2 重用 | BERT 的 5e-5 直接重用 AC2 seed 42 的 validation 數字；曲線上 BERT 的 k=100 點，若選中 5e-5，重用 AC2 的三個 run。重用前逐欄比對設定、訓練列數與步數，任何一項不同就重訓 |
 | test 隔離 | pilot 不得產生或讀取 test 的任何結果：pilot 的評估函式在程式層級只接受 validation，傳入 test 就 raise，並有測試 |
 | 信賴區間 | OOS recall 的信賴區間用 Wilson score interval（`metrics.wilson_interval`，預設 95%） |
+| 基準的不確定性訊號（RQ3） | TF-IDF centroid 的分數是 100 倍餘弦（讓 validation 溫度擬合有內部最佳解）。這個倍數不影響 argmax 與溫度校準後的機率，但會改變未校準的 MSP、entropy 與原始 ECE，所以 TF-IDF 在 RQ3 只報溫度校準後的訊號與分數 margin。多數類對每筆查詢給同一組分數，所有不確定性訊號都是常數，RQ3 不納入 |
 
 **訓練次數估計**：ModernBERT 6 刻度 × 3 seeds + OOS 0 筆消融 × 3 seeds = 21 次；BERT 6 刻度 × 3 seeds = 18 次（其中 k=100 那 3 次就是 AC2）；共 39 次 encoder，k ≤ 25 的每次數十秒；另加 LoRA（全量 + 10-shot）× 3 seeds = 6 次、QLoRA 全量 × 1 seed = 1 次。encoder 小刻度每次數十秒、全量數分鐘到二十分鐘；LoRA 全量預估每次一小時上下，試跑後更新。
 

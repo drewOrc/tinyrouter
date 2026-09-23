@@ -1150,6 +1150,7 @@ dependencies = [
 dev = [
     { name = "pytest" },
     { name = "ruff" },
+    { name = "scipy" },
 ]
 llm = [
     { name = "anthropic" },
@@ -1178,6 +1179,7 @@ requires-dist = [
 dev = [
     { name = "pytest", specifier = "==9.1.1" },
     { name = "ruff", specifier = "==0.16.8" },
+    { name = "scipy", specifier = "==1.18.1" },
 ]
 llm = [{ name = "anthropic", specifier = "==1.8.0" }]
 onnx = [

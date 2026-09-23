@@ -10,6 +10,11 @@ records the current config.
 under a different config: would training with ``config`` have run the
 same code on the same rows with the same hyperparameters? See its
 docstring for the two rewrites it accepts; everything else must be equal.
+
+The pilots use ``reusable_equivalent(..., validation_only=True)``: it
+hashes the whole archive file (a hash is not a result), reads only the
+validation arrays and metadata from it, and keeps only the record fields
+in ``VALIDATION_ONLY_FIELDS``, none of which holds a test number.
 """
 
 from __future__ import annotations
@@ -18,9 +23,16 @@ import json
 import shutil
 from collections.abc import Callable
 from dataclasses import fields
+from importlib.metadata import version
 from pathlib import Path
 
-from tinyrouter.archive import ArchiveError, load_logits, read_manifest, remove_from_manifest
+from tinyrouter.archive import (
+    ArchiveError,
+    load_logits,
+    load_validation_logits,
+    read_manifest,
+    remove_from_manifest,
+)
 from tinyrouter.config import ADDED_FIELD_DEFAULTS, LOCATION_FIELDS, RunConfig
 from tinyrouter.data import sha256_of
 from tinyrouter.evaluate import RunPaths
@@ -36,14 +48,28 @@ Log = Callable[[str], None]
 DATA_AND_SCHEDULE_FIELDS = frozenset(
     {"per_intent", "k_shot", "oos_train", "num_train_epochs", "max_steps", "min_train_steps"}
 )
+# Record fields the validation-only path keeps; ``metrics`` (which has test) is dropped.
+VALIDATION_ONLY_FIELDS = ("run_name", "config", "training", "logits", "environment")
+# Libraries whose version must match for a recorded run to count as this code's run.
+PINNED_LIBRARIES = ("torch", "transformers")
+
+
+class RunIncompleteError(RuntimeError):
+    """Evaluation returned but the run's results JSON and archive do not check out."""
 
 
 def run_dir(config: RunConfig) -> Path:
     return Path(config.checkpoint_root) / config.run_name
 
 
-def archive_intact(paths: RunPaths, record: dict[str, object], seed: int) -> bool:
-    """The archive's SHA-256 agrees in results JSON, manifest and file, and it is this seed's."""
+def archive_intact(
+    paths: RunPaths, record: dict[str, object], seed: int, validation_only: bool = False
+) -> bool:
+    """The archive's SHA-256 agrees in results JSON, manifest and file, and it is this seed's.
+
+    ``validation_only`` checks the seed through the metadata and validation
+    arrays alone, without reading the test arrays.
+    """
     if not paths.logits.exists():
         return False
     logits = record.get("logits")
@@ -52,17 +78,23 @@ def archive_intact(paths: RunPaths, record: dict[str, object], seed: int) -> boo
     if not recorded or not recorded == listed == sha256_of(paths.logits):
         return False
     try:
-        archive = load_logits(paths.logits)
+        if validation_only:
+            metadata, _ = load_validation_logits(paths.logits)
+        else:
+            metadata = load_logits(paths.logits).metadata
     except ArchiveError:
         return False
-    return archive.metadata["seed"] == seed
+    return metadata["seed"] == seed
 
 
-def read_record(paths: RunPaths) -> dict[str, object] | None:
+def read_record(paths: RunPaths, keep: tuple[str, ...] | None = None) -> dict[str, object] | None:
+    """The results JSON, or only the ``keep`` fields of it."""
     if not paths.results_json.exists():
         return None
     record = json.loads(paths.results_json.read_text(encoding="utf-8"))
-    return record if isinstance(record, dict) else None
+    if not isinstance(record, dict):
+        return None
+    return record if keep is None else {k: record[k] for k in keep if k in record}
 
 
 def is_done(config: RunConfig) -> bool:
@@ -113,6 +145,11 @@ def run_one(
             log(f"{config.run_name}: training")
             final_dir = train_fn(config)
         evaluate_fn(config, final_dir)
+        if not is_done(config):
+            raise RunIncompleteError(
+                f"{config.run_name}: evaluation returned but the results JSON, manifest and "
+                f"archive do not agree; weights kept in {run_dir(config)} for a rerun"
+            )
         log(f"{config.run_name}: evaluated, logits archived")
     if not keep_weights and run_dir(config).exists():
         shutil.rmtree(run_dir(config))
@@ -183,11 +220,14 @@ def equivalent_run(config: RunConfig, record: dict[str, object]) -> bool:
 
     All other fields must be equal. The record's own training summary must
     also show the rows and steps this config plans: train rows, oos rows,
-    and global_step.
+    and global_step; and the record must have been made with the torch and
+    transformers versions installed now (``same_libraries``).
     """
     recorded = config_from_record(record.get("config"))
     training = record.get("training")
     if recorded is None or not isinstance(training, dict):
+        return False
+    if not same_libraries(record.get("environment")):
         return False
     mine, theirs = training_identity(config), training_identity(recorded)
     if mine is None or theirs is None or mine != theirs:
@@ -202,6 +242,24 @@ def equivalent_run(config: RunConfig, record: dict[str, object]) -> bool:
     )
 
 
+def public_version(text: str) -> str:
+    """Drop a local build label: the Linux CPU wheel ``2.14.0+cpu`` is release 2.14.0."""
+    return text.split("+", 1)[0]
+
+
+def same_libraries(environment: object) -> bool:
+    """The recorded torch and transformers releases are the ones installed now."""
+    if not isinstance(environment, dict):
+        return False
+    for name in PINNED_LIBRARIES:
+        recorded = environment.get(name)
+        if not isinstance(recorded, str):
+            return False
+        if public_version(recorded) != public_version(version(name)):
+            return False
+    return True
+
+
 def default_train(config: RunConfig) -> Path:
     from tinyrouter.train import prepare_train_split, train
 
@@ -214,12 +272,19 @@ def default_evaluate(config: RunConfig, model_dir: Path) -> dict[str, object]:
     return evaluate(config, model_dir)
 
 
-def reusable_equivalent(config: RunConfig, donor: RunConfig) -> dict[str, object] | None:
-    """The donor run's record if it is done, intact, and equivalent to ``config``; else None."""
+def reusable_equivalent(
+    config: RunConfig, donor: RunConfig, validation_only: bool = False
+) -> dict[str, object] | None:
+    """The donor run's record if it is done, intact, and equivalent to ``config``; else None.
+
+    With ``validation_only`` the returned record holds only
+    ``VALIDATION_ONLY_FIELDS`` and the archive's test arrays are never read.
+    """
     paths = RunPaths.of(donor)
-    record = read_record(paths)
+    record = read_record(paths, VALIDATION_ONLY_FIELDS if validation_only else None)
     if record is None or record.get("run_name") != donor.run_name:
         return None
     if not equivalent_run(config, record):
         return None
-    return record if archive_intact(paths, record, config.seed) else None
+    intact = archive_intact(paths, record, config.seed, validation_only)
+    return record if intact else None
