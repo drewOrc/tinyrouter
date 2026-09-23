@@ -1,6 +1,237 @@
 {
   "format_version": 1,
   "files": {
+    "ModernBERT-base-k1-seed42.npz": {
+      "sha256": "aaa5c7cc5e068eed5da1dc4a55a91587761246e273c254564fd6bf69a27c2ae2",
+      "bytes": 4828906,
+      "run_name": "ModernBERT-base-k1-seed42",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T11:28:13+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k1-seed43.npz": {
+      "sha256": "c2eae04634a5224685fed57cf0600993eb975a269a9ef61ec97f33598705786b",
+      "bytes": 4828825,
+      "run_name": "ModernBERT-base-k1-seed43",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T11:31:54+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k1-seed44.npz": {
+      "sha256": "84067b0f3e6ad7ab14ed6b9b919b1b4b24ed1d0c3399dd81573f325adf2021b4",
+      "bytes": 4828958,
+      "run_name": "ModernBERT-base-k1-seed44",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T11:35:39+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k10-seed42.npz": {
+      "sha256": "6fff9cd41ff6f9c828b9337b3c190f6e4cb1e41dff62667329f5e0647f81afba",
+      "bytes": 4832287,
+      "run_name": "ModernBERT-base-k10-seed42",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T11:50:36+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k10-seed43.npz": {
+      "sha256": "f08779235eb7af011ab4c6402e86fe393d5cb9cc0d341ecfb01992fe97d52004",
+      "bytes": 4832661,
+      "run_name": "ModernBERT-base-k10-seed43",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T11:54:23+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k10-seed44.npz": {
+      "sha256": "6c20ced25748c4ed64688269d0ab4fe74f0b32ae9af565c8ccd4cf6ed72140d9",
+      "bytes": 4831998,
+      "run_name": "ModernBERT-base-k10-seed44",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T11:58:06+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k100-oos0-seed42.npz": {
+      "sha256": "c83e3c569facc09d5eb14cc3f837883fb59b0d5d68583257e9366e3750066be6",
+      "bytes": 4833660,
+      "run_name": "ModernBERT-base-k100-oos0-seed42",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T14:07:31+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k100-oos0-seed43.npz": {
+      "sha256": "09029343a7529ac08bbc145fef45edcc1bfb04f6b976dc956473c6c546175343",
+      "bytes": 4833643,
+      "run_name": "ModernBERT-base-k100-oos0-seed43",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T14:27:35+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k100-oos0-seed44.npz": {
+      "sha256": "6edfa2106d6d72ae26449b5598cff759ae601c44c42648de129ceab6e5530a61",
+      "bytes": 4833040,
+      "run_name": "ModernBERT-base-k100-oos0-seed44",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T14:47:39+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k100-seed42.npz": {
+      "sha256": "208f372ab9096fa4f95a006328c8ef766cb65144005d9df8f4bad1c391a100a9",
+      "bytes": 4833253,
+      "run_name": "ModernBERT-base-k100-seed42",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T13:06:17+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k100-seed43.npz": {
+      "sha256": "58c3bd83838784f23d7e9977921b4a021797799b9a514b3c4cd449c641cd5257",
+      "bytes": 4832996,
+      "run_name": "ModernBERT-base-k100-seed43",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T13:26:41+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k100-seed44.npz": {
+      "sha256": "37ebd645a97a654308f9f50cf4501b6b1c5bfed5bbd064fe591d8587a4873966",
+      "bytes": 4833398,
+      "run_name": "ModernBERT-base-k100-seed44",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T13:47:03+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k25-seed42.npz": {
+      "sha256": "da2c8b7a2fcefcda47211bec4d2248e7ca5288eda05cc2572ade0945abea36ff",
+      "bytes": 4833547,
+      "run_name": "ModernBERT-base-k25-seed42",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T12:03:33+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k25-seed43.npz": {
+      "sha256": "ac640bffd502ea71d7dd5b5f9cc18d7068b6b8b1b950acbf3a2fd58a3c50f1b6",
+      "bytes": 4833666,
+      "run_name": "ModernBERT-base-k25-seed43",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T12:09:00+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k25-seed44.npz": {
+      "sha256": "cd9b8473e1b5b0d4597feb76bdf99d27464910b85b536eb7169193676c94ce68",
+      "bytes": 4832954,
+      "run_name": "ModernBERT-base-k25-seed44",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T12:14:29+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k5-seed42.npz": {
+      "sha256": "8ffbbf00d37abfc1fc2e3601e96ed26c71c6cb2452c8c88d32375674f22996c1",
+      "bytes": 4830959,
+      "run_name": "ModernBERT-base-k5-seed42",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T11:39:23+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k5-seed43.npz": {
+      "sha256": "561ef2079fd97de9a221e029b2589c50ccd17a579423fa9503ef95fe2944730c",
+      "bytes": 4831188,
+      "run_name": "ModernBERT-base-k5-seed43",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T11:43:07+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k5-seed44.npz": {
+      "sha256": "9c6b23ca81db2a58e2f444a13533edcf9687f6d4020ba6ec6ecc52915f26e784",
+      "bytes": 4831385,
+      "run_name": "ModernBERT-base-k5-seed44",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T11:46:51+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k50-seed42.npz": {
+      "sha256": "86bcc65f899f519154881c6e1ccb10ba468e055b7a26049fc11727fc74347a4c",
+      "bytes": 4833586,
+      "run_name": "ModernBERT-base-k50-seed42",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T12:24:57+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k50-seed43.npz": {
+      "sha256": "0f72b3ebe5b54dcee8b7857d339de335b31230f6dd06d4f43297730e19d955ee",
+      "bytes": 4833495,
+      "run_name": "ModernBERT-base-k50-seed43",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T12:35:24+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "ModernBERT-base-k50-seed44.npz": {
+      "sha256": "c7427794ce3f205347c4a1bc703409bfece96251974823dcb075bfc2dd3d6da3",
+      "bytes": 4833374,
+      "run_name": "ModernBERT-base-k50-seed44",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T12:45:49+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
     "bert-base-uncased-full-seed42.npz": {
       "sha256": "673a4c11200dd61ddd6310f174ab9fb27580cf5b512c7ba3b5db19088958bab2",
       "bytes": 4824207,
@@ -29,6 +260,171 @@
       "run_name": "bert-base-uncased-full-seed44",
       "git_commit": "b3a59e2debe8bf210ba749ec6d34033b9be6cab8",
       "created_at": "2026-09-23T04:05:58+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k1-seed42.npz": {
+      "sha256": "33464fd83ba26e6de38f2df4a347659dc396c57d98ce9fca16b78ab31101da2d",
+      "bytes": 4820569,
+      "run_name": "bert-base-uncased-k1-seed42",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T10:31:21+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k1-seed43.npz": {
+      "sha256": "de95f070e64b443b4761f3ca786da624343fe8a5dc20e3f341220333e586cff3",
+      "bytes": 4823550,
+      "run_name": "bert-base-uncased-k1-seed43",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T10:33:52+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k1-seed44.npz": {
+      "sha256": "db5595875d86d5b3476689bb5932f72bdb7651effb3686d8636cb308e8279881",
+      "bytes": 4821951,
+      "run_name": "bert-base-uncased-k1-seed44",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T10:36:27+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k10-seed42.npz": {
+      "sha256": "51df91b493b56ae7d49fdd3195bc1d53d55099ec5b1cf011dfa9579a8a6320a3",
+      "bytes": 4820339,
+      "run_name": "bert-base-uncased-k10-seed42",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T10:46:35+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k10-seed43.npz": {
+      "sha256": "113c11c8b72a8f20ac46e70a1c8492ee1a4d0571b1b86caba1b583cc85d0faf8",
+      "bytes": 4824784,
+      "run_name": "bert-base-uncased-k10-seed43",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T10:49:08+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k10-seed44.npz": {
+      "sha256": "b60ca5253fc8ff28108fcfa32d4aa79139357e9f5639d187b2270a266c594adb",
+      "bytes": 4818953,
+      "run_name": "bert-base-uncased-k10-seed44",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T10:51:40+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k25-seed42.npz": {
+      "sha256": "5397a2237935d24210a1b8e47ed837f1807db8beb0a4c18f31d24d0681bef1cc",
+      "bytes": 4817631,
+      "run_name": "bert-base-uncased-k25-seed42",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T10:55:22+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k25-seed43.npz": {
+      "sha256": "cf40024e86a42cfe34703b4b04e58696d93a03f3408a44f820960b11d554d626",
+      "bytes": 4820374,
+      "run_name": "bert-base-uncased-k25-seed43",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T10:59:05+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k25-seed44.npz": {
+      "sha256": "c4de18e8e6d5e96011ab20178ec669bd2462c6aae44cd2fd40ae8ba3ce077f30",
+      "bytes": 4818898,
+      "run_name": "bert-base-uncased-k25-seed44",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T11:02:47+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k5-seed42.npz": {
+      "sha256": "12e3d723ecbdeda888a687bd3b539ef5b8bc07515bd72f28293b0dfc4314f94d",
+      "bytes": 4820512,
+      "run_name": "bert-base-uncased-k5-seed42",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T10:38:58+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k5-seed43.npz": {
+      "sha256": "78dd86d8b8a700aa8986c7bf23fef4a99720a8f226df3e6d0d21d896cae3aa8a",
+      "bytes": 4826522,
+      "run_name": "bert-base-uncased-k5-seed43",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T10:41:31+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k5-seed44.npz": {
+      "sha256": "175a274248600f6f85681b2e8a824dd9bf17f281782044110b1c3facb10f1da5",
+      "bytes": 4818879,
+      "run_name": "bert-base-uncased-k5-seed44",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T10:44:02+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k50-seed42.npz": {
+      "sha256": "42bd57f63c3f37264962334df25861a73c5279f7559302c9a467d5fadd246b7d",
+      "bytes": 4819519,
+      "run_name": "bert-base-uncased-k50-seed42",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T11:09:55+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k50-seed43.npz": {
+      "sha256": "21bb8489d1c181fa6982ff89fb8a587505a5fb00ad53031246c0bdecb16bd949",
+      "bytes": 4819533,
+      "run_name": "bert-base-uncased-k50-seed43",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T11:17:02+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-k50-seed44.npz": {
+      "sha256": "e335e894b2eb54e9f4074b861f202c478078700f308503c82ecc34ec7fc1c6fa",
+      "bytes": 4821765,
+      "run_name": "bert-base-uncased-k50-seed44",
+      "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+      "created_at": "2026-09-23T11:24:07+00:00",
       "rows": {
         "validation": 3100,
         "test": 5500
