@@ -1,0 +1,56 @@
+{
+  "config": "configs/modernbert-base.yaml",
+  "model_name": "answerdotai/ModernBERT-base",
+  "model_revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8",
+  "learning_rate": 5e-05,
+  "train_batch_size": 32,
+  "max_length": 64,
+  "steps": 50,
+  "wall_seconds": 30.622,
+  "step_seconds_median": 0.2344,
+  "step_seconds_mean_after_5": 0.2778,
+  "step_seconds_first": 1.1259,
+  "estimated_full_5_epoch_seconds": 559.1,
+  "loss_first_5": [
+    5.222139358520508,
+    5.159377098083496,
+    5.297676086425781,
+    5.101874351501465,
+    5.049973964691162
+  ],
+  "loss_last_5": [
+    4.463723182678223,
+    4.428763389587402,
+    4.537565231323242,
+    4.791100025177002,
+    4.218628883361816
+  ],
+  "loss_decreased": true,
+  "any_nan_loss": false,
+  "validation_logits_finite": true,
+  "validation_in_scope_accuracy_150": 0.11266666666666666,
+  "validation_oos_recall_151": 0.1,
+  "parameters": {
+    "total": 149720983,
+    "trainable": 149720983
+  },
+  "attn_implementation": "sdpa",
+  "peak_memory": {
+    "device": "mps",
+    "measures": "sampled after each backward and optimizer step: torch.mps.driver_allocated_memory (Metal driver, includes allocator cache; headline, usually at or above the tensor peak but not guaranteed) and current_allocated_memory (live tensors; lower bound)",
+    "samples": 101,
+    "driver_allocated_bytes": 5151735808,
+    "tensor_allocated_bytes": 2464530176
+  },
+  "environment": {
+    "python": "3.12.12",
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "device": "mps",
+    "device_name": "Apple M4",
+    "deterministic_algorithms": false,
+    "dataset_revision": "155b9c710419136e17307b80d0a13e68cd46b4ec"
+  },
+  "plan_note": "full 5 epochs = StepPlan(epoch_steps=2385, min_train_steps=None, planned_steps=2385, decided_by='epochs', max_steps_arg=-1)"
+}
