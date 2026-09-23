@@ -10,11 +10,12 @@ Tuning after a FAIL uses the validation numbers only; ``ac2.json`` and the
 printout list them for that purpose. The test numbers are the verdict and
 are not a tuning signal.
 
-Resumable. A seed is skipped only when its results JSON was produced by
-the current config (output paths aside) and its logits archive has the
-same SHA-256 in the results JSON, in the manifest and on disk. Trained
-weights are reused only when their ``train_summary.json`` records the
-current config. Anything else is cleared and redone. ``--force`` clears
+Resumable, with the rules in runs.py: a seed is skipped only when its
+results JSON was produced by the current config (output paths aside) and
+its logits archive has the same SHA-256 in the results JSON, in the
+manifest and on disk. Trained weights are reused only when their
+``train_summary.json`` records the current config. Anything else is
+cleared and redone. ``--force`` clears
 every seed's outputs before training anything, so a crash halfway never
 leaves old and new runs mixed. Weights of every seed except 42 are deleted
 once that seed's logits are archived (disk is tight; seed 42 is kept as
@@ -25,14 +26,22 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
-from collections.abc import Callable
 from pathlib import Path
 
-from tinyrouter.archive import ArchiveError, load_logits, read_manifest, remove_from_manifest
 from tinyrouter.config import RunConfig, load_config
-from tinyrouter.data import sha256_of
 from tinyrouter.evaluate import RunPaths
+from tinyrouter.runs import (
+    EvaluateFn,
+    Log,
+    TrainFn,
+    clear_outputs,
+    default_evaluate,
+    default_train,
+    is_done,
+    reusable_weights,
+    run_dir,
+    run_one,
+)
 
 SEEDS = (42, 43, 44)
 KEEP_WEIGHTS_SEEDS = frozenset({42})
@@ -42,10 +51,16 @@ EXPECTED_TRAIN_ROWS = 15_250
 EXPECTED_OOS_TRAIN_ROWS = 250
 EXPECTED_TEST_ROWS = 5_500
 REPORTED = ("in_scope_accuracy_150", "oos_recall_151", "accuracy_8", "oos_recall_8")
-
-TrainFn = Callable[[RunConfig], Path]
-EvaluateFn = Callable[[RunConfig, Path], dict[str, object]]
-Log = Callable[[str], None]
+# Re-exported: the resume rules live in runs.py and are shared with the curves.
+__all__ = [
+    "clear_outputs",
+    "default_evaluate",
+    "default_train",
+    "is_done",
+    "reusable_weights",
+    "run_ac2",
+    "run_dir",
+]
 
 
 class SetupError(ValueError):
@@ -56,69 +71,8 @@ def expected_run_name(seed: int) -> str:
     return f"bert-base-uncased-full-seed{seed}"
 
 
-def run_dir(config: RunConfig) -> Path:
-    return Path(config.checkpoint_root) / config.run_name
-
-
-def is_done(config: RunConfig) -> bool:
-    """This config's results JSON exists and its archive is intact and the one it was scored on."""
-    paths = RunPaths.of(config)
-    if not (paths.results_json.exists() and paths.logits.exists()):
-        return False
-    record = json.loads(paths.results_json.read_text(encoding="utf-8"))
-    if not config.matches(record.get("config")):
-        return False
-    recorded = record.get("logits", {}).get("sha256")
-    listed = read_manifest(paths.manifest).get(paths.logits.name, {}).get("sha256")
-    if not recorded or not recorded == listed == sha256_of(paths.logits):
-        return False
-    try:
-        archive = load_logits(paths.logits)
-    except ArchiveError:
-        return False
-    return archive.metadata["seed"] == config.seed
-
-
-def reusable_weights(config: RunConfig) -> bool:
-    """Final weights exist and were trained with exactly this config."""
-    final = run_dir(config) / "final"
-    summary = final / "train_summary.json"
-    if not ((final / "model.safetensors").exists() and summary.exists()):
-        return False
-    return config.matches(json.loads(summary.read_text(encoding="utf-8")).get("config"))
-
-
-def clear_outputs(config: RunConfig, log: Log) -> None:
-    """Remove this seed's weights, results JSON, logits archive and manifest entry."""
-    paths = RunPaths.of(config)
-    removed = [str(p) for p in (paths.results_json, paths.logits) if p.exists()]
-    for name in removed:
-        Path(name).unlink()
-    if remove_from_manifest(paths.manifest, paths.logits.name):
-        removed.append(f"manifest entry {paths.logits.name}")
-    if run_dir(config).exists():
-        shutil.rmtree(run_dir(config))
-        removed.append(str(run_dir(config)))
-    if removed:
-        log(f"seed {config.seed}: cleared {', '.join(removed)}")
-
-
 def run_seed(config: RunConfig, train_fn: TrainFn, evaluate_fn: EvaluateFn, log: Log) -> None:
-    if is_done(config):
-        log(f"seed {config.seed}: results and logits for this config already archived, skipping")
-    else:
-        if reusable_weights(config):
-            log(f"seed {config.seed}: reusing weights trained with this config")
-            final_dir = run_dir(config) / "final"
-        else:
-            clear_outputs(config, log)
-            log(f"seed {config.seed}: training {config.run_name}")
-            final_dir = train_fn(config)
-        evaluate_fn(config, final_dir)
-        log(f"seed {config.seed}: evaluated, logits archived")
-    if config.seed not in KEEP_WEIGHTS_SEEDS and run_dir(config).exists():
-        shutil.rmtree(run_dir(config))
-        log(f"seed {config.seed}: deleted weights {run_dir(config)} (only seed 42 is kept)")
+    run_one(config, train_fn, evaluate_fn, log, keep_weights=config.seed in KEEP_WEIGHTS_SEEDS)
 
 
 def check_setup(record: dict[str, object], seed: int) -> None:
@@ -207,18 +161,6 @@ def run_ac2(
     out.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     log(f"wrote {out}: {result['verdict']}")
     return result
-
-
-def default_train(config: RunConfig) -> Path:
-    from tinyrouter.train import prepare_train_split, train
-
-    return train(config, prepare_train_split(config), run_dir(config))
-
-
-def default_evaluate(config: RunConfig, model_dir: Path) -> dict[str, object]:
-    from tinyrouter.evaluate import evaluate
-
-    return evaluate(config, model_dir)
 
 
 def main(argv: list[str] | None = None) -> None:

@@ -36,6 +36,27 @@ def oos_recall(pred: np.ndarray, gold: np.ndarray, oos_id: int) -> float:
     return float(np.mean(pred[mask] == oos_id))
 
 
+def wilson_interval(successes: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Wilson score interval for a binomial proportion ``successes / n``.
+
+    Used for OOS recall, where the test split has 1,000 OOS rows and a
+    rate near 0 or 1 makes the normal-approximation interval fall outside
+    [0, 1]. The Wilson interval stays inside [0, 1] and is not degenerate
+    at 0 or n successes. ``z = 1.96`` gives a two-sided 95% interval.
+    """
+    if n < 1:
+        raise ValueError(f"n must be >= 1, got {n}")
+    if not 0 <= successes <= n:
+        raise ValueError(f"successes must be in [0, {n}], got {successes}")
+    if z <= 0:
+        raise ValueError(f"z must be positive, got {z}")
+    p = successes / n
+    z2 = z * z
+    centre = (p + z2 / (2 * n)) / (1 + z2 / n)
+    half = z * np.sqrt(p * (1 - p) / n + z2 / (4 * n * n)) / (1 + z2 / n)
+    return float(max(0.0, centre - half)), float(min(1.0, centre + half))
+
+
 def expected_calibration_error(probs: np.ndarray, gold: np.ndarray, n_bins: int = 15) -> float:
     """Top-label ECE with equal-width confidence bins over (0, 1].
 

@@ -36,6 +36,16 @@ llm = [
 dev = [
     "pytest==9.1.1",
     "ruff==0.16.8",
+    # tests/test_metrics.py checks wilson_interval against scipy. It is also
+    # a scikit-learn dependency, but a test must not rely on that.
+    "scipy==1.18.1",
+]
+# ONNX export and ONNX Runtime (RQ7; scripts/export_onnx.py). Not installed
+# by `uv sync` or in CI; `uv sync --group onnx` installs it.
+onnx = [
+    "onnx==1.23.0",
+    "onnxruntime==1.30.0",
+    "onnxscript==0.7.2",
 ]
 
 [tool.uv]

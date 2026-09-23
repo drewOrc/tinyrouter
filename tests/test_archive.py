@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -193,3 +194,108 @@ def test_git_state_ignores_changes_under_results_but_not_elsewhere(tmp_path):
     assert git_state(tmp_path)[1] is False
     (tmp_path / "code.py").write_text("x = 2\n")
     assert git_state(tmp_path)[1] is True
+
+
+def write_format1(path, **overrides):
+    """An archive as the AC2 code wrote it: format 1, no dataset_sha256, no k_shot."""
+    meta = fake_metadata(format_version=1, **overrides)
+    del meta["dataset_sha256"], meta["k_shot"]
+    arrays = {"metadata": np.array(json.dumps(meta, sort_keys=True))}
+    for name, split in fake_splits().items():
+        arrays[f"{name}_logits"] = split.logits
+        arrays[f"{name}_labels"] = split.labels.astype(np.int64)
+    with path.open("wb") as fh:
+        np.savez_compressed(fh, **arrays)
+    return path
+
+
+def test_new_archives_record_the_sha256_of_all_three_split_files(tmp_path):
+    from tinyrouter.data import SPLIT_FILES
+
+    archive = load_logits(save_logits(tmp_path / "r.npz", fake_splits(), fake_metadata()))
+    assert archive.metadata["format_version"] == 2
+    assert archive.metadata["dataset_sha256"] == {
+        name: SPLIT_FILES[name].sha256 for name in ("train", "validation", "test")
+    }
+    assert "dataset_sha256_source" not in archive.metadata
+
+
+def test_format1_archive_at_the_pinned_revision_is_back_filled_on_read(tmp_path):
+    from tinyrouter.archive import BACKFILL_NOTE, pinned_dataset_sha256
+
+    archive = load_logits(write_format1(tmp_path / "old.npz"))
+    assert archive.metadata["format_version"] == 1
+    assert archive.metadata["dataset_sha256"] == pinned_dataset_sha256()
+    assert archive.metadata["dataset_sha256_source"] == BACKFILL_NOTE
+    assert archive.metadata["k_shot"] is None
+
+
+def test_format1_archive_from_another_dataset_revision_is_refused(tmp_path):
+    path = write_format1(tmp_path / "old.npz", dataset_revision="f" * 40)
+    with pytest.raises(ArchiveError, match="can only be back-filled"):
+        load_logits(path)
+
+
+def test_format1_archive_that_already_claims_checksums_is_refused(tmp_path):
+    path = write_format1(tmp_path / "old.npz")
+    rewrite_metadata(path, lambda m: m.update(dataset_sha256={"train": "x"}))
+    with pytest.raises(ArchiveError, match="already carries"):
+        load_logits(path)
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"train": "0" * 64, "validation": "0" * 64, "test": "0" * 64},
+        {"train": "x", "validation": "y"},
+        None,
+    ],
+)
+def test_format2_archive_with_other_dataset_checksums_is_refused(tmp_path, bad):
+    with pytest.raises(ArchiveError, match="dataset_sha256|pinned CLINC150"):
+        save_logits(tmp_path / "r.npz", fake_splits(), fake_metadata(dataset_sha256=bad))
+
+
+def test_format2_archive_of_another_revision_is_refused_even_with_pinned_checksums(tmp_path):
+    with pytest.raises(ArchiveError, match="pinned CLINC150"):
+        save_logits(tmp_path / "r.npz", fake_splits(), fake_metadata(dataset_revision="f" * 40))
+
+
+def test_format1_cannot_be_written_any_more(tmp_path):
+    with pytest.raises(ArchiveError, match="cannot be written"):
+        save_logits(tmp_path / "r.npz", fake_splits(), fake_metadata(format_version=1))
+
+
+def test_load_validation_logits_never_needs_the_test_arrays(tmp_path):
+    from tinyrouter.archive import load_validation_logits
+
+    path = save_logits(tmp_path / "r.npz", fake_splits(), fake_metadata())
+    with np.load(path, allow_pickle=False) as npz:
+        kept = {k: npz[k] for k in npz.files if not k.startswith("test_")}
+    with path.open("wb") as fh:
+        np.savez_compressed(fh, **kept)
+    with pytest.raises(ArchiveError, match="test_"):
+        load_logits(path)
+    meta, val = load_validation_logits(path)
+    assert val.split == "validation" and val.logits.shape == (7, NUM_INTENTS)
+    assert meta["run_name"] == "bert-base-uncased-full-seed42"
+
+
+def test_load_validation_logits_back_fills_a_format1_archive(tmp_path):
+    from tinyrouter.archive import load_validation_logits
+
+    meta, _ = load_validation_logits(write_format1(tmp_path / "old.npz"))
+    assert meta["dataset_sha256_source"]
+
+
+AC2_ARCHIVES = sorted(
+    (Path(__file__).parent.parent / "results" / "logits").glob("bert-base-uncased-full-*.npz")
+)
+
+
+@pytest.mark.skipif(not AC2_ARCHIVES, reason="AC2 archives are not in git (GitHub Release)")
+@pytest.mark.parametrize("path", AC2_ARCHIVES, ids=lambda p: p.name)
+def test_the_real_ac2_archives_still_load_as_format1(path):
+    archive = load_logits(path)
+    assert archive.metadata["format_version"] == 1
+    assert archive.test.logits.shape == (5_500, NUM_INTENTS)

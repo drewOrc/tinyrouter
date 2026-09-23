@@ -1,0 +1,43 @@
+name: PR text
+
+# main only takes squash merges, and a squash commit's title and message
+# come from the PR title and body, not from the branch's commits. The
+# commit-hygiene job in ci.yml checks the branch's commits only, so this
+# job checks the PR title and body with the same patterns
+# (.github/disallowed-trailers.txt via .github/scripts/check-disallowed-text.sh).
+#
+# A separate workflow because it runs on `edited`: editing a PR description
+# must re-run this check without cancelling or re-running ci.yml's jobs.
+#
+# Not covered: text typed into the merge dialog by hand. No PR event carries
+# it; the push-to-main run of commit-hygiene sees it, after the fact.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+concurrency:
+  group: pr-text-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  pr-text-hygiene:
+    name: pr-text-hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout (for the pattern file and the check script)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: No tool-attribution lines in the PR title or body
+        # Title and body are attacker-controlled text. They reach the shell
+        # only as environment variables, never through ${{ }} inside `run`,
+        # so nothing in them can be executed.
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s\n%s\n' "$PR_TITLE" "$PR_BODY" \
+            | .github/scripts/check-disallowed-text.sh "PR title and body"

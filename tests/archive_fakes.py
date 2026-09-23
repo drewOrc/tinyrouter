@@ -2,6 +2,7 @@
 
 import numpy as np
 
+from tinyrouter.archive import pinned_dataset_sha256
 from tinyrouter.calibrate import SplitLogits
 from tinyrouter.labels import load_label_space
 
@@ -22,16 +23,18 @@ def fake_splits(seed: int = 0, n_val: int = 7, n_test: int = 11) -> dict[str, Sp
 
 def fake_metadata(**overrides: object) -> dict[str, object]:
     meta: dict[str, object] = {
-        "format_version": 1,
+        "format_version": 2,
         "run_name": "bert-base-uncased-full-seed42",
         "model_name": "google-bert/bert-base-uncased",
         "model_revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
         "seed": 42,
         "per_intent": None,
+        "k_shot": None,
         "train_rows": 15_250,
         "oos_train_rows": 250,
         "eval_per_intent": None,
         "dataset_revision": "155b9c710419136e17307b80d0a13e68cd46b4ec",
+        "dataset_sha256": pinned_dataset_sha256(),
         "label_space_sha256": load_label_space().sha256,
         "git_commit": "0" * 40,
         "git_dirty": False,

@@ -1,0 +1,56 @@
+{
+  "config": "configs/bert-base.yaml",
+  "model_name": "google-bert/bert-base-uncased",
+  "model_revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+  "learning_rate": 5e-05,
+  "train_batch_size": 32,
+  "max_length": 64,
+  "steps": 50,
+  "wall_seconds": 18.426,
+  "step_seconds_median": 0.139,
+  "step_seconds_mean_after_5": 0.1445,
+  "step_seconds_first": 0.5056,
+  "estimated_full_5_epoch_seconds": 331.6,
+  "loss_first_5": [
+    5.080526828765869,
+    5.005545616149902,
+    5.043530464172363,
+    5.185548305511475,
+    5.147557735443115
+  ],
+  "loss_last_5": [
+    4.936195373535156,
+    4.977850914001465,
+    4.936770439147949,
+    4.952746391296387,
+    5.00227165222168
+  ],
+  "loss_decreased": true,
+  "any_nan_loss": false,
+  "validation_logits_finite": true,
+  "validation_in_scope_accuracy_150": 0.021666666666666667,
+  "validation_oos_recall_151": 0.0,
+  "parameters": {
+    "total": 109598359,
+    "trainable": 109598359
+  },
+  "attn_implementation": "sdpa",
+  "peak_memory": {
+    "device": "mps",
+    "measures": "sampled after each backward and optimizer step: torch.mps.driver_allocated_memory (Metal driver, includes allocator cache; headline, usually at or above the tensor peak but not guaranteed) and current_allocated_memory (live tensors; lower bound)",
+    "samples": 101,
+    "driver_allocated_bytes": 3414933504,
+    "tensor_allocated_bytes": 1780597248
+  },
+  "environment": {
+    "python": "3.12.12",
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "device": "mps",
+    "device_name": "Apple M4",
+    "deterministic_algorithms": false,
+    "dataset_revision": "155b9c710419136e17307b80d0a13e68cd46b4ec"
+  },
+  "plan_note": "full 5 epochs = StepPlan(epoch_steps=2385, min_train_steps=None, planned_steps=2385, decided_by='epochs', max_steps_arg=-1)"
+}

@@ -1,0 +1,18 @@
+# answerdotai/ModernBERT-base, the main encoder (docs/PLAN.md section 4).
+# Revision checked against the Hub API on 2026-09-23 (Apache-2.0).
+# Everything except the model matches bert-base.yaml, so the two curves
+# differ in the encoder only.
+model_name: answerdotai/ModernBERT-base
+model_revision: 8949b909ec900327062f0ebf497f51aef5e6f0c8
+seed: 42
+per_intent: null
+max_length: 64
+# Placeholder: chosen by `make pilot-lr` from {1e-5, 2e-5, 5e-5} on
+# validation only, then written into configs/curve.yaml. Training refuses null.
+learning_rate: null
+weight_decay: 0.01
+warmup_ratio: 0.1
+num_train_epochs: 5
+train_batch_size: 32
+eval_batch_size: 128
+device: auto

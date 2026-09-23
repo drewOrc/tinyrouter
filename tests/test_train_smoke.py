@@ -276,3 +276,40 @@ def test_evaluate_removes_the_old_results_json_before_it_can_fail(tmp_path, monk
     with pytest.raises(RuntimeError, match="prediction failed"):
         evaluate(config, model_dir)
     assert not old.exists()
+
+
+@pytest.mark.parametrize(
+    ("fields", "steps", "decided_by"),
+    [
+        ({"num_train_epochs": 1.0}, 4, "epochs"),  # 32 rows / batch 8
+        ({"num_train_epochs": 1.0, "min_train_steps": 6}, 6, "min_train_steps"),
+        ({"num_train_epochs": 2.0, "min_train_steps": 3}, 8, "epochs"),
+    ],
+)
+def test_trainer_runs_exactly_the_planned_steps_and_records_the_plan(
+    tiny_model_dir, tmp_path, fields, steps, decided_by
+):
+    import json
+
+    config = replace(smoke_config(tiny_model_dir, tmp_path), max_steps=-1, **fields)
+    final_dir = train(config, synthetic_split("train"), tmp_path / "ckpt" / config.run_name)
+    summary = json.loads((final_dir / "train_summary.json").read_text())
+    assert summary["global_step"] == summary["step_plan"]["planned_steps"] == steps
+    assert summary["step_plan"]["decided_by"] == decided_by
+    assert list((tmp_path / "ckpt" / config.run_name).glob("checkpoint-*")) == []
+
+
+def test_step_count_that_differs_from_the_plan_raises(tiny_model_dir, tmp_path, monkeypatch):
+    import tinyrouter.train as train_module
+    from tinyrouter.steps import StepPlan
+
+    config = replace(smoke_config(tiny_model_dir, tmp_path), max_steps=-1, num_train_epochs=1.0)
+    monkeypatch.setattr(train_module, "plan_steps", lambda *_: StepPlan(4, None, 5, "epochs", -1))
+    with pytest.raises(train_module.StepCountError, match="trained 4 steps, planned 5"):
+        train(config, synthetic_split("train"), tmp_path / "x")
+
+
+def test_training_refuses_a_learning_rate_still_waiting_for_its_pilot(tmp_path):
+    config = replace(smoke_config(Path("unused"), tmp_path), learning_rate=None)
+    with pytest.raises(ValueError, match="make pilot-lr"):
+        train(config, synthetic_split("train"), tmp_path / "x")

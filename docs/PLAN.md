@@ -72,6 +72,20 @@ TinyRouter 問三件事：**小模型要多少標註資料才夠？它知不知�
 | 推論優化 | encoder 用 Optimum 匯出 ONNX，ONNX Runtime 動態 int8 量化；CPU、batch 1 量延遲 | TensorRT：需要 NVIDIA GPU；只量 PyTorch：沒有優化可講 |
 | 服務化 | FastAPI `/route` 端點（encoder ONNX + 門檻 + 可關閉的 Haiku fallback）、`/healthz`、Dockerfile；本機壓測 | 只交 notebook：沒有「上線」證據；上雲長期運行：L1 專案不值得維運成本 |
 
+### 4.1 超參數協定（學習曲線，2026-09-23 定案）
+
+所有 pilot 只看 validation，選出的值凍結後，整條曲線與兩個 encoder 共用。設定檔 `configs/curve.yaml`；pilot 只印出選定值，由人手動填入，程式不自動改設定。
+
+| 項目 | 協定 |
+|---|---|
+| 訓練步數 | 實際步數 = max(S_min, 5 個 epoch 的步數)。S_min 從 {100, 200, 400} 選一個，所有 k 與兩個 encoder 共用。結果 JSON 記錄預定步數、實際步數與由哪一邊決定（`epochs` 或 `min_train_steps`） |
+| S_min pilot（`make pilot-steps`） | k=5、seed 42，兩個 encoder 各用自己選定的 learning rate 都跑；選兩者 val 150 類 in-scope 準確率平均最高者，平手取較小的 S_min |
+| learning rate pilot（`make pilot-lr`） | 每個 encoder 各自從 {1e-5, 2e-5, 5e-5} 選，k=100、seed 42；標準是 val 150 類 in-scope 準確率，平手看 val OOS recall，再平手取較小的 learning rate。k=100 的 epoch 步數（2,385）大於任何 S_min，所以這個 pilot 不設 S_min，先跑它 |
+| AC2 重用 | BERT 的 5e-5 直接重用 AC2 seed 42 的 validation 數字；曲線上 BERT 的 k=100 點，若選中 5e-5，重用 AC2 的三個 run。重用前逐欄比對設定、訓練列數與步數，任何一項不同就重訓 |
+| test 隔離 | pilot 不得產生或讀取 test 的任何結果：pilot 的評估函式在程式層級只接受 validation，傳入 test 就 raise，並有測試 |
+| 信賴區間 | OOS recall 的信賴區間用 Wilson score interval（`metrics.wilson_interval`，預設 95%） |
+| 基準的不確定性訊號（RQ3） | TF-IDF centroid 的分數是 100 倍餘弦（讓 validation 溫度擬合有內部最佳解）。這個倍數不影響 argmax 與溫度校準後的機率，但會改變未校準的 MSP、entropy 與原始 ECE，所以 TF-IDF 在 RQ3 只報溫度校準後的訊號與分數 margin。多數類對每筆查詢給同一組分數，所有不確定性訊號都是常數，RQ3 不納入 |
+
 **訓練次數估計**：ModernBERT 6 刻度 × 3 seeds + OOS 0 筆消融 × 3 seeds = 21 次；BERT 6 刻度 × 3 seeds = 18 次（其中 k=100 那 3 次就是 AC2）；共 39 次 encoder，k ≤ 25 的每次數十秒；另加 LoRA（全量 + 10-shot）× 3 seeds = 6 次、QLoRA 全量 × 1 seed = 1 次。encoder 小刻度每次數十秒、全量數分鐘到二十分鐘；LoRA 全量預估每次一小時上下，試跑後更新。
 
 ## 5. 驗收條件

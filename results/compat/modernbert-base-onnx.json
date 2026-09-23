@@ -1,0 +1,42 @@
+{
+  "model_type": "modernbert",
+  "rows": 10,
+  "padded_sequence_length": 14,
+  "attempts": [
+    {
+      "exporter": "dynamo",
+      "ok": true,
+      "seconds": 14.6,
+      "onnx_bytes": 601513367,
+      "max_abs_logit_diff": 2.1219253540039062e-05,
+      "other_shape": [
+        3,
+        25
+      ],
+      "other_shape_max_abs_logit_diff": 1.1337921023368835e-05,
+      "argmax_agree": 10,
+      "rows": 10
+    },
+    {
+      "exporter": "torchscript",
+      "ok": true,
+      "seconds": 3.6,
+      "onnx_bytes": 599490381,
+      "max_abs_logit_diff": 2.1219253540039062e-05,
+      "other_shape": [
+        3,
+        25
+      ],
+      "other_shape_max_abs_logit_diff": 1.1337921023368835e-05,
+      "argmax_agree": 10,
+      "rows": 10
+    }
+  ],
+  "versions": {
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "onnx": "1.23.0",
+    "onnxruntime": "1.30.0"
+  },
+  "machine": "macOS-26.6.2-arm64-arm-64bit"
+}
