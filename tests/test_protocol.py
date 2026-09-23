@@ -33,12 +33,29 @@ def decided(tmp_path) -> CurveProtocol:
     return load_protocol(protocol_file(tmp_path, s_min=400, bert="5.0e-5", modern="2.0e-5"))
 
 
-def test_the_committed_protocol_loads_with_both_pilots_still_open():
+def test_the_committed_protocol_matches_the_committed_pilot_outputs():
+    """Values copied by hand into configs/curve.yaml must equal what the pilots selected.
+
+    A pilot whose output is not committed yet must still be null in the protocol.
+    """
+    import json
+
     protocol = load_protocol(ROOT / "configs" / "curve.yaml")
-    assert protocol.min_train_steps is None
-    assert protocol.learning_rates == {"bert": None, "modernbert": None}
-    with pytest.raises(ProtocolError, match="make pilot-lr"):
-        protocol.curve_configs("bert")
+    lr_file = ROOT / "results" / "pilots" / "lr.json"
+    if lr_file.exists():
+        selected = json.loads(lr_file.read_text())["selected"]
+        assert json.loads(lr_file.read_text())["split"] == "validation"
+        assert protocol.learning_rates == selected
+    else:
+        assert protocol.learning_rates == {"bert": None, "modernbert": None}
+        with pytest.raises(ProtocolError, match="make pilot-lr"):
+            protocol.curve_configs("bert")
+    steps_file = ROOT / "results" / "pilots" / "steps.json"
+    if steps_file.exists():
+        assert json.loads(steps_file.read_text())["split"] == "validation"
+        assert protocol.min_train_steps == json.loads(steps_file.read_text())["selected"]
+    else:
+        assert protocol.min_train_steps is None
 
 
 def test_curve_refuses_to_start_until_s_min_is_chosen(tmp_path):
