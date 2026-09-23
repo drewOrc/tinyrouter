@@ -40,7 +40,7 @@ Other targets:
 
 Run every target from the repository root: `checkpoint_root` and `results_root` in the configs are relative paths.
 
-There is no default target: a bare `make`, or a quoted `make "curve MODEL=bert"` (one argument, which make reads as a variable assignment), stops with an error instead of running `make setup` and exiting 0.
+There is no default target: a bare `make`, or a quoted `make "curve MODEL=bert"` (one argument: GNU make 3.81, the macOS default, reads it as a variable assignment and used to run `make setup` and exit 0; make 4.x reads it as an unknown target), stops with an error.
 
 **How to tell a curve finished.** Not from the exit code alone. `make baselines`, `make curve` and `make oos-ablation` end with one line that is printed only after the index was read back from disk and checked: exactly the expected points, each once, and every archive's SHA-256 equal on disk, in the manifest and in the index. Match the whole line: `completed 36/36 baseline points`, `completed 18/18 encoder points (bert)` (or `(modernbert)`), `completed 3/3 ablation points`. `make curve` runs the baselines first and prints their `completed 36/36 baseline points` before any encoder point, so a curve that fails afterwards still has a line starting with `completed` in its output; grepping for `completed` alone is not enough.
 
