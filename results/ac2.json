@@ -1,0 +1,81 @@
+{
+  "criterion": "AC2: test in_scope_accuracy_150 >= threshold for every seed",
+  "split": "test",
+  "threshold": 0.957,
+  "tuning_note": "tune on the validation numbers only; test is the verdict",
+  "seeds": {
+    "42": {
+      "run_name": "bert-base-uncased-full-seed42",
+      "logits_sha256": "673a4c11200dd61ddd6310f174ab9fb27580cf5b512c7ba3b5db19088958bab2",
+      "validation": {
+        "in_scope_accuracy_150": 0.9673333333333334,
+        "oos_recall_151": 0.68,
+        "accuracy_8": 0.9780645161290322,
+        "oos_recall_8": 0.68
+      },
+      "test": {
+        "in_scope_accuracy_150": 0.9651111111111111,
+        "oos_recall_151": 0.583,
+        "accuracy_8": 0.9158181818181819,
+        "oos_recall_8": 0.583
+      },
+      "passed": true
+    },
+    "43": {
+      "run_name": "bert-base-uncased-full-seed43",
+      "logits_sha256": "b6963da29f5886b915d2c5626391721fbd18c7f54a68b7720bf2d10d6cc2c58f",
+      "validation": {
+        "in_scope_accuracy_150": 0.9673333333333334,
+        "oos_recall_151": 0.69,
+        "accuracy_8": 0.9761290322580645,
+        "oos_recall_8": 0.69
+      },
+      "test": {
+        "in_scope_accuracy_150": 0.964,
+        "oos_recall_151": 0.558,
+        "accuracy_8": 0.9098181818181819,
+        "oos_recall_8": 0.558
+      },
+      "passed": true
+    },
+    "44": {
+      "run_name": "bert-base-uncased-full-seed44",
+      "logits_sha256": "0324b20d4736ca9ad913b97269100b398475ab06a2bd130f653af55de239c277",
+      "validation": {
+        "in_scope_accuracy_150": 0.9673333333333334,
+        "oos_recall_151": 0.73,
+        "accuracy_8": 0.9790322580645161,
+        "oos_recall_8": 0.73
+      },
+      "test": {
+        "in_scope_accuracy_150": 0.9622222222222222,
+        "oos_recall_151": 0.567,
+        "accuracy_8": 0.9105454545454545,
+        "oos_recall_8": 0.567
+      },
+      "passed": true
+    }
+  },
+  "verdict": "PASS",
+  "config": {
+    "model_name": "google-bert/bert-base-uncased",
+    "model_revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+    "per_intent": null,
+    "max_length": 64,
+    "learning_rate": 5e-05,
+    "weight_decay": 0.01,
+    "warmup_ratio": 0.1,
+    "num_train_epochs": 5,
+    "max_steps": -1,
+    "train_batch_size": 32,
+    "eval_batch_size": 128,
+    "device": "auto",
+    "replace_classifier_head": false,
+    "eval_per_intent": null
+  },
+  "weights_kept": {
+    "42": true,
+    "43": false,
+    "44": false
+  }
+}
