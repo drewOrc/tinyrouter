@@ -98,6 +98,13 @@ def test_one_result_reused_for_all_three_seeds_is_refused():
         judge({42: same, 43: same, 44: same})
 
 
+def test_record_with_another_runs_name_is_refused_even_if_its_seeds_match():
+    bad = records(0.99, 0.99, 0.99)
+    bad[43]["run_name"] = "bert-base-uncased-k10-seed43"
+    with pytest.raises(SetupError, match="run_name"):
+        judge(bad)
+
+
 def test_records_whose_seed_fields_disagree_with_their_slot_are_refused():
     bad = records(0.99, 0.99, 0.99)
     bad[44]["training"]["seed"] = 42  # type: ignore[index]
