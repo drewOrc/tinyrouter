@@ -1,0 +1,82 @@
+{
+  "run_name": "majority-k25-seed44",
+  "baseline": {
+    "name": "majority",
+    "version": "1",
+    "scores": "log share of each intent in the training sample, same for every query",
+    "params": {}
+  },
+  "environment": {
+    "python": "3.12.12",
+    "numpy": "2.5.3",
+    "scikit-learn": "1.9.1",
+    "dataset_revision": "155b9c710419136e17307b80d0a13e68cd46b4ec"
+  },
+  "training": {
+    "seed": 44,
+    "k_shot": 25,
+    "train_rows": 3813,
+    "oos_train_rows": 63,
+    "train_sample_sha256": "790cd7cf9eb24143276f6c59c7bac29c4a0b42f14bef38e9634e96253e6315fb"
+  },
+  "logits": {
+    "file": "majority-k25-seed44.npz",
+    "sha256": "be5db7a3d7fda2f50097788b959e62a40acd27100a64ad4350f1527883183e1f",
+    "bytes": 24108
+  },
+  "metrics": {
+    "temperature": 0.5742741151323764,
+    "validation": {
+      "raw": {
+        "accuracy_8": 0.03225806451612903,
+        "oos_recall_8": 1.0,
+        "accuracy_8_summed": 0.24516129032258063,
+        "oos_recall_8_summed": 0.0,
+        "in_scope_accuracy_150": 0.0,
+        "oos_recall_151": 1.0,
+        "ece_151": 0.015735644356524463,
+        "ece_8_summed": 0.003986363236986118,
+        "nll_151": 4.997480934744622,
+        "n": 3100
+      },
+      "calibrated": {
+        "accuracy_8": 0.03225806451612903,
+        "oos_recall_8": 1.0,
+        "accuracy_8_summed": 0.24516129032258063,
+        "oos_recall_8_summed": 0.0,
+        "in_scope_accuracy_150": 0.0,
+        "oos_recall_151": 1.0,
+        "ece_151": 9.563552463842662e-09,
+        "ece_8_summed": 2.4227664596754295e-09,
+        "nll_151": 4.991507764905245,
+        "n": 3100
+      }
+    },
+    "test": {
+      "raw": {
+        "accuracy_8": 0.18181818181818182,
+        "oos_recall_8": 1.0,
+        "accuracy_8_summed": 0.20727272727272728,
+        "oos_recall_8_summed": 0.0,
+        "in_scope_accuracy_150": 0.0,
+        "oos_recall_151": 1.0,
+        "ece_151": 0.16529576165857726,
+        "ece_8_summed": 0.04187492628683945,
+        "nll_151": 4.859248693816038,
+        "n": 5500
+      },
+      "calibrated": {
+        "accuracy_8": 0.18181818181818182,
+        "oos_recall_8": 1.0,
+        "accuracy_8_summed": 0.20727272727272728,
+        "oos_recall_8_summed": 0.0,
+        "in_scope_accuracy_150": 0.0,
+        "oos_recall_151": 1.0,
+        "ece_151": 0.14956010773850031,
+        "ece_8_summed": 0.03788856062708687,
+        "nll_151": 4.750799996113127,
+        "n": 5500
+      }
+    }
+  }
+}

@@ -33,6 +33,402 @@
         "validation": 3100,
         "test": 5500
       }
+    },
+    "majority-k1-seed42.npz": {
+      "sha256": "ad9e1099ed7d88354021da1cda7ae310d1313af9d7d4654eafd03fabb8318e34",
+      "bytes": 24098,
+      "run_name": "majority-k1-seed42",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:05+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k1-seed43.npz": {
+      "sha256": "1b6de003a49322dea12ae7a224e9e6934b084fbbf6014bf7cb6721950b9d80e6",
+      "bytes": 24098,
+      "run_name": "majority-k1-seed43",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:06+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k1-seed44.npz": {
+      "sha256": "52a40757315fd9be80c2fd0cf5329f0b4c446ff25cf9a23ff714beab956155c9",
+      "bytes": 24098,
+      "run_name": "majority-k1-seed44",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:06+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k10-seed42.npz": {
+      "sha256": "73c39d0e3e96319a1a3e339c4f7beeb57fa9c05ffbdda933ad50d8da0b47ce42",
+      "bytes": 24108,
+      "run_name": "majority-k10-seed42",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:08+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k10-seed43.npz": {
+      "sha256": "10fd16db95cd9c12358fdb5a5d5d17c0ca0f6248c6f2c7506e03c8d30da5d650",
+      "bytes": 24108,
+      "run_name": "majority-k10-seed43",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:08+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k10-seed44.npz": {
+      "sha256": "68305d812ce5fa3dc38d311014e4231cb19cb2a5fc25548011c3d448accfd491",
+      "bytes": 24107,
+      "run_name": "majority-k10-seed44",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:09+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k100-seed42.npz": {
+      "sha256": "45de4fe9a649263e6470be6fdbe46e8a4fceb5a97a0afe36c21062b7d6447fb4",
+      "bytes": 24111,
+      "run_name": "majority-k100-seed42",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:12+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k100-seed43.npz": {
+      "sha256": "d57231c421661de1827d36c2b11d1a9cba0d5107f57447d639b25a70bcc46bb6",
+      "bytes": 24111,
+      "run_name": "majority-k100-seed43",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:13+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k100-seed44.npz": {
+      "sha256": "7422da060f87bd4325a17ef3f38948acf314349861f27c352038cbad2834c72b",
+      "bytes": 24111,
+      "run_name": "majority-k100-seed44",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:13+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k25-seed42.npz": {
+      "sha256": "0847cf359ec51cb09bfec7ae8dfea24c09254963a5ea73a82875b4d1780c593e",
+      "bytes": 24108,
+      "run_name": "majority-k25-seed42",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:09+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k25-seed43.npz": {
+      "sha256": "1d6145a48b53b954eba6a1d453b77f5eafc5f9cada582ff9012f7d39f1201ad5",
+      "bytes": 24108,
+      "run_name": "majority-k25-seed43",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:10+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k25-seed44.npz": {
+      "sha256": "be5db7a3d7fda2f50097788b959e62a40acd27100a64ad4350f1527883183e1f",
+      "bytes": 24108,
+      "run_name": "majority-k25-seed44",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:10+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k5-seed42.npz": {
+      "sha256": "9e6bb6f163ed274f4c53aedd58604b2c1259d3c083384ea7fb2d49455f9db466",
+      "bytes": 24098,
+      "run_name": "majority-k5-seed42",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:07+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k5-seed43.npz": {
+      "sha256": "3314ad9a70b585c6f4fccb9eb0bd56a5df209206e20b552c464727e10bbaba98",
+      "bytes": 24097,
+      "run_name": "majority-k5-seed43",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:07+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k5-seed44.npz": {
+      "sha256": "1da11415daed0f054fcb2477402f323bdcc4c0908abfebacfc116bc6f1ec5837",
+      "bytes": 24098,
+      "run_name": "majority-k5-seed44",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:07+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k50-seed42.npz": {
+      "sha256": "7c4872ed6ac1c993a1850633e26c44fac500db0efdc4923ea6a1ad1486a5ef97",
+      "bytes": 24110,
+      "run_name": "majority-k50-seed42",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:11+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k50-seed43.npz": {
+      "sha256": "ddd5754bd4acf617e268c6c68c49b3ab257bef78fb1e41e56cdb2d5508c3638e",
+      "bytes": 24110,
+      "run_name": "majority-k50-seed43",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:11+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "majority-k50-seed44.npz": {
+      "sha256": "15276ebf3a368cb46ccb4beb03a529067369266cbfcfe1d5e6294e022d374e7c",
+      "bytes": 24110,
+      "run_name": "majority-k50-seed44",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:12+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k1-seed42.npz": {
+      "sha256": "94258de1803c08b0ba3fd2066c15b4814dfb701f499959b33319623e70d6089d",
+      "bytes": 2211462,
+      "run_name": "tfidf-centroid-k1-seed42",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:05+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k1-seed43.npz": {
+      "sha256": "d2d86e9f3d9cb80ca61f3323aa17dcb00ce80afbddf52beddf89da9ccb841380",
+      "bytes": 2387115,
+      "run_name": "tfidf-centroid-k1-seed43",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:06+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k1-seed44.npz": {
+      "sha256": "fe1f9f4b8c84c652cec9717dd20fd94591d7134748764883360c9fe27ef5dbc5",
+      "bytes": 2290727,
+      "run_name": "tfidf-centroid-k1-seed44",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:06+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k10-seed42.npz": {
+      "sha256": "efa61924b5913a37d54b9d4a3d13cd5be52fa35b56491dbfa9709fc8755b1aef",
+      "bytes": 4087246,
+      "run_name": "tfidf-centroid-k10-seed42",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:08+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k10-seed43.npz": {
+      "sha256": "aa4fc1ec5e6cdcac08cd404d778130f36725e6151a54f9ab2be795d38ed523e2",
+      "bytes": 4068984,
+      "run_name": "tfidf-centroid-k10-seed43",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:09+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k10-seed44.npz": {
+      "sha256": "cfb9163965d84af33aef86d28145073b143ebb604bd9901d37b18d54d842db22",
+      "bytes": 4080654,
+      "run_name": "tfidf-centroid-k10-seed44",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:09+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k100-seed42.npz": {
+      "sha256": "0ae4c761890317d76efc8d3b08a3920eab94633e32f710f0059cb7b96f82cb75",
+      "bytes": 4522480,
+      "run_name": "tfidf-centroid-k100-seed42",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:13+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k100-seed43.npz": {
+      "sha256": "01e56ce77413fd0e6dcb11398fdd0eb8024997983daf7bac5fea2a410d1bbe33",
+      "bytes": 4522481,
+      "run_name": "tfidf-centroid-k100-seed43",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:13+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k100-seed44.npz": {
+      "sha256": "ae69c656b6f00892ace610769c997b03dcfe588cb8568b4cd4e94bba9fee14bf",
+      "bytes": 4522482,
+      "run_name": "tfidf-centroid-k100-seed44",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:14+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k25-seed42.npz": {
+      "sha256": "be4fdf7bd9f789ab99de9042ffbc8b0d41d6cb152e08a7c079fd3bf623909a47",
+      "bytes": 4354875,
+      "run_name": "tfidf-centroid-k25-seed42",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:09+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k25-seed43.npz": {
+      "sha256": "c09e6879bf292df29c7fa24208687bdc43a2513f62033313cc100d5d6a1f0fa4",
+      "bytes": 4358905,
+      "run_name": "tfidf-centroid-k25-seed43",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:10+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k25-seed44.npz": {
+      "sha256": "e7aa6e711a2a6b5322a78def95a33738c6bf0f80f6006710d203af2c9c3fdcd5",
+      "bytes": 4349783,
+      "run_name": "tfidf-centroid-k25-seed44",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:10+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k5-seed42.npz": {
+      "sha256": "cac96d18d9cad091f8dd3822554c9b94ae38e08d90688d161f52560791ccb63b",
+      "bytes": 3697662,
+      "run_name": "tfidf-centroid-k5-seed42",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:07+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k5-seed43.npz": {
+      "sha256": "dbfdd8f7f5107d61cae3e48f2e7a99916ecdf6a094047b4053e65fe43bc3ec1d",
+      "bytes": 3708540,
+      "run_name": "tfidf-centroid-k5-seed43",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:07+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k5-seed44.npz": {
+      "sha256": "e3e751ba605ba46a492f6f8ba0759c63b41239d46bf01f9513dc0d1d5db175ba",
+      "bytes": 3769932,
+      "run_name": "tfidf-centroid-k5-seed44",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:08+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k50-seed42.npz": {
+      "sha256": "27608c5f570bcb13a37d9cff167a0c2980f2915bc0fbce190c0027b0e52c3b93",
+      "bytes": 4457536,
+      "run_name": "tfidf-centroid-k50-seed42",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:11+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k50-seed43.npz": {
+      "sha256": "9f8eed2728260b4b58e05b7e7d70b79b4b5f74d6b9f7a01decc8cff13e42aa2f",
+      "bytes": 4461339,
+      "run_name": "tfidf-centroid-k50-seed43",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:11+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "tfidf-centroid-k50-seed44.npz": {
+      "sha256": "3fa2c12a4a881fe0c9148c86acc9be6edd315d968621aecf6f7936c0927d79ab",
+      "bytes": 4455620,
+      "run_name": "tfidf-centroid-k50-seed44",
+      "git_commit": "9eec09f16a9cf059c38884f3b8ede49957bd7e87",
+      "created_at": "2026-09-23T09:22:12+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
     }
   }
 }

@@ -1,0 +1,82 @@
+{
+  "run_name": "majority-k100-seed44",
+  "baseline": {
+    "name": "majority",
+    "version": "1",
+    "scores": "log share of each intent in the training sample, same for every query",
+    "params": {}
+  },
+  "environment": {
+    "python": "3.12.12",
+    "numpy": "2.5.3",
+    "scikit-learn": "1.9.1",
+    "dataset_revision": "155b9c710419136e17307b80d0a13e68cd46b4ec"
+  },
+  "training": {
+    "seed": 44,
+    "k_shot": 100,
+    "train_rows": 15250,
+    "oos_train_rows": 250,
+    "train_sample_sha256": "7a3ebd2cd2f985a26e815c229cc54add6763f783bee572c5e7948636c66c7553"
+  },
+  "logits": {
+    "file": "majority-k100-seed44.npz",
+    "sha256": "7422da060f87bd4325a17ef3f38948acf314349861f27c352038cbad2834c72b",
+    "bytes": 24111
+  },
+  "metrics": {
+    "temperature": 0.5693234098482851,
+    "validation": {
+      "raw": {
+        "accuracy_8": 0.03225806451612903,
+        "oos_recall_8": 1.0,
+        "accuracy_8_summed": 0.24516129032258063,
+        "oos_recall_8_summed": 0.0,
+        "in_scope_accuracy_150": 0.0,
+        "oos_recall_151": 1.0,
+        "ece_151": 0.01586462143900791,
+        "ece_8_summed": 0.0040190374312154276,
+        "nll_151": 4.997606830056294,
+        "n": 3100
+      },
+      "calibrated": {
+        "accuracy_8": 0.03225806451612903,
+        "oos_recall_8": 1.0,
+        "accuracy_8_summed": 0.24516129032258063,
+        "oos_recall_8_summed": 0.0,
+        "in_scope_accuracy_150": 0.0,
+        "oos_recall_151": 1.0,
+        "ece_151": 4.375323360561456e-09,
+        "ece_8_summed": 1.1084151652074326e-09,
+        "nll_151": 4.9915077649052435,
+        "n": 3100
+      }
+    },
+    "test": {
+      "raw": {
+        "accuracy_8": 0.18181818181818182,
+        "oos_recall_8": 1.0,
+        "accuracy_8_summed": 0.20727272727272728,
+        "oos_recall_8_summed": 0.0,
+        "in_scope_accuracy_150": 0.0,
+        "oos_recall_151": 1.0,
+        "ece_151": 0.1654247387410607,
+        "ece_8_summed": 0.041907600481068785,
+        "nll_151": 4.860566276501883,
+        "n": 5500
+      },
+      "calibrated": {
+        "accuracy_8": 0.18181818181818182,
+        "oos_recall_8": 1.0,
+        "accuracy_8_summed": 0.20727272727272728,
+        "oos_recall_8_summed": 0.0,
+        "in_scope_accuracy_150": 0.0,
+        "oos_recall_151": 1.0,
+        "ece_151": 0.14956011292672944,
+        "ece_8_summed": 0.037888561941438276,
+        "nll_151": 4.750800020969453,
+        "n": 5500
+      }
+    }
+  }
+}
