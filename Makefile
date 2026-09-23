@@ -1,4 +1,5 @@
-.PHONY: setup lint format test test-network smoke train evaluate ac2 verify-logits report clean-checkpoints
+.PHONY: setup lint format test test-network smoke train evaluate ac2 pilot-lr pilot-steps baselines \
+	curve oos-ablation verify-logits report clean-checkpoints
 
 CONFIG ?= configs/bert-base.yaml
 SEED ?= 42
@@ -63,6 +64,32 @@ evaluate:
 # which retrains all three seeds.
 ac2:
 	uv run $(UV_ENV) python -m tinyrouter.ac2 --config configs/bert-base.yaml $(if $(filter 1,$(FORCE)),--force,)
+
+# Step 3 (docs/PLAN.md section 4, hyperparameter protocol). Order:
+#   make pilot-lr     then copy each model's selected lr into configs/curve.yaml
+#   make pilot-steps  then copy the selected S_min into configs/curve.yaml
+#   make curve MODEL=bert ; make curve MODEL=modernbert ; make oos-ablation
+# Pilots read and write validation numbers only (results/pilots/*.json) and
+# never edit configs/curve.yaml. Curves and the ablation resume like ac2 and
+# keep no weights, only logits. `curve` runs the cheap baselines first.
+# `make baselines` runs them alone.
+pilot-lr:
+	uv run $(UV_ENV) python -m tinyrouter.pilots lr
+
+pilot-steps:
+	uv run $(UV_ENV) python -m tinyrouter.pilots steps
+
+# Majority-class and TF-IDF centroid baselines on every (k, seed) sample; seconds.
+baselines:
+	uv run python -m tinyrouter.baselines
+
+# Checks configs/curve.yaml is filled in, then runs the baselines, then the curve.
+curve:
+	@case "$(MODEL)" in bert|modernbert) ;; *) echo "usage: make curve MODEL=bert|modernbert"; exit 2;; esac
+	uv run $(UV_ENV) python -m tinyrouter.curves --model $(MODEL)
+
+oos-ablation:
+	uv run $(UV_ENV) python -m tinyrouter.curves --ablation
 
 # Every archive listed in results/logits-manifest.json is present and matches its SHA-256.
 verify-logits:

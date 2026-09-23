@@ -24,6 +24,8 @@ from tinyrouter.efficiency import (
     start_measurement,
 )
 from tinyrouter.labels import LabelSpace, load_label_space
+from tinyrouter.sampling import curve_sample, sample_fingerprint
+from tinyrouter.steps import StepPlan, plan_steps
 
 SUMMARY_NAME = "train_summary.json"
 
@@ -70,9 +72,26 @@ def load_model_and_tokenizer(config: RunConfig, labels: LabelSpace) -> tuple[obj
     return model, tokenizer
 
 
-def training_arguments(config: RunConfig, output_dir: Path, device: str) -> object:
+def require_learning_rate(config: RunConfig) -> None:
+    if config.learning_rate is None:
+        raise ValueError(
+            f"{config.model_name}: learning_rate is null (not chosen yet); run `make pilot-lr` "
+            "and write the selected value into configs/curve.yaml"
+        )
+
+
+class StepCountError(RuntimeError):
+    """Training ran a different number of steps than the plan recorded for it."""
+
+
+def training_arguments(
+    config: RunConfig, output_dir: Path, device: str, plan: StepPlan | None = None
+) -> object:
+    """TrainingArguments for ``config``; ``plan`` supplies max_steps (default: config.max_steps)."""
     from transformers import TrainingArguments
 
+    require_learning_rate(config)
+    max_steps = config.max_steps if plan is None else plan.max_steps_arg
     return TrainingArguments(
         output_dir=str(output_dir),
         seed=config.seed,
@@ -82,14 +101,14 @@ def training_arguments(config: RunConfig, output_dir: Path, device: str) -> obje
         # transformers 5.x reads warmup_steps < 1 as a fraction of total steps.
         warmup_steps=config.warmup_ratio,
         num_train_epochs=config.num_train_epochs,
-        max_steps=config.max_steps,
+        max_steps=max_steps,
         per_device_train_batch_size=config.train_batch_size,
         per_device_eval_batch_size=config.eval_batch_size,
         eval_strategy="no",
-        save_strategy="epoch" if config.max_steps < 0 else "no",
+        save_strategy="epoch" if max_steps < 0 else "no",
         save_total_limit=1,
         save_only_model=True,
-        logging_strategy="epoch" if config.max_steps < 0 else "steps",
+        logging_strategy="epoch" if max_steps < 0 else "steps",
         logging_steps=1,
         report_to="none",
         use_cpu=device == "cpu",
@@ -102,13 +121,16 @@ def train(config: RunConfig, train_split: Split, output_dir: Path) -> Path:
     """Train on ``train_split`` and return the directory holding the final weights.
 
     ``final/train_summary.json`` records the training set size, parameter
-    counts, wall time, steps and peak memory; evaluation copies it into the
-    results JSON, because the weights (and this file) may be deleted later.
+    counts, wall time, the step plan and the steps actually run, and peak
+    memory; evaluation copies it into the results JSON, because the weights
+    (and this file) may be deleted later.
     """
     from transformers import DataCollatorWithPadding, Trainer, set_seed
 
     if train_split.name != "train":
         raise ValueError(f"train() only accepts the train split, got '{train_split.name}'")
+    require_learning_rate(config)
+    plan = plan_steps(config, len(train_split))
     set_seed(config.seed)
     labels = load_label_space()
     device = pick_device(config.device)
@@ -116,7 +138,7 @@ def train(config: RunConfig, train_split: Split, output_dir: Path) -> Path:
     sampler = start_measurement(device)
     trainer = Trainer(
         model=model,  # type: ignore[arg-type]
-        args=training_arguments(config, output_dir, device),  # type: ignore[arg-type]
+        args=training_arguments(config, output_dir, device, plan),  # type: ignore[arg-type]
         train_dataset=to_hf_dataset(train_split, tokenizer, config.max_length),  # type: ignore[arg-type]
         data_collator=DataCollatorWithPadding(tokenizer),  # type: ignore[arg-type]
         processing_class=tokenizer,  # type: ignore[arg-type]
@@ -125,6 +147,12 @@ def train(config: RunConfig, train_split: Split, output_dir: Path) -> Path:
     started = time.perf_counter()
     result = trainer.train()
     wall_seconds = time.perf_counter() - started
+    if result.global_step != plan.planned_steps:
+        raise StepCountError(
+            f"{config.run_name}: trained {result.global_step} steps, planned "
+            f"{plan.planned_steps} ({plan.decided_by}); steps.plan_steps no longer matches the "
+            "Trainer's arithmetic"
+        )
     sampler.sample()
     final_dir = output_dir / "final"
     trainer.save_model(str(final_dir))
@@ -141,6 +169,9 @@ def train(config: RunConfig, train_split: Split, output_dir: Path) -> Path:
         "train_rows": len(train_split),
         "oos_train_rows": int((train_split.intents == labels.oos_intent_id).sum()),
         "per_intent": config.per_intent,
+        "k_shot": config.k_shot,
+        "train_sample_sha256": sample_fingerprint(train_split),
+        "step_plan": plan.as_dict(),
         "global_step": result.global_step,
         "train_loss": result.training_loss,
         "parameters": count_parameters(model),
@@ -152,6 +183,9 @@ def train(config: RunConfig, train_split: Split, output_dir: Path) -> Path:
 
 
 def prepare_train_split(config: RunConfig) -> Split:
+    """The rows ``config`` trains on: a k-shot sample, a per-intent cap (smoke), or everything."""
+    if config.k_shot is not None:
+        return curve_sample(config.k_shot, config.seed, config.oos_train)
     return subsample_per_intent(load_split("train"), config.per_intent, config.seed)
 
 

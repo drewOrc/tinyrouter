@@ -11,6 +11,7 @@ from tinyrouter.metrics import (
     oos_recall,
     routing_metrics,
     softmax,
+    wilson_interval,
 )
 
 OOS_ID = 9
@@ -109,3 +110,42 @@ def test_routing_metrics_on_a_tiny_label_space():
     assert m["oos_recall_8_summed"] == 0.0
     assert m["n"] == 4
     assert len(AGENTS) == 8
+
+
+@pytest.mark.parametrize(
+    ("successes", "n", "low", "high"),
+    [
+        (0, 10, 0.0, 0.2775),  # upper = z^2 / (n + z^2)
+        (5, 10, 0.2366, 0.7634),
+        (10, 10, 0.7225, 1.0),
+    ],
+)
+def test_wilson_interval_matches_hand_computed_values(successes, n, low, high):
+    got = wilson_interval(successes, n)
+    assert got == pytest.approx((low, high), abs=1e-4)
+
+
+@pytest.mark.parametrize(("successes", "n"), [(583, 1000), (1, 3), (59, 100), (990, 1000)])
+def test_wilson_interval_agrees_with_scipy(successes, n):
+    from scipy.stats import binomtest, norm
+
+    ref = binomtest(successes, n).proportion_ci(confidence_level=0.95, method="wilson")
+    got = wilson_interval(successes, n, z=float(norm.ppf(0.975)))
+    assert got == pytest.approx((ref.low, ref.high), abs=1e-12)
+
+
+def test_wilson_interval_is_mirror_symmetric_and_narrows_with_n():
+    low, high = wilson_interval(30, 100)
+    mirror = wilson_interval(70, 100)
+    assert (1 - high, 1 - low) == pytest.approx(mirror)
+    small, big = wilson_interval(58, 100), wilson_interval(583, 1000)
+    assert big[1] - big[0] < small[1] - small[0]
+    assert wilson_interval(583, 1000, z=2.576)[0] < big[0]
+
+
+@pytest.mark.parametrize(
+    ("successes", "n", "z"), [(1, 0, 1.96), (-1, 10, 1.96), (11, 10, 1.96), (5, 10, 0.0)]
+)
+def test_wilson_interval_refuses_impossible_inputs(successes, n, z):
+    with pytest.raises(ValueError):
+        wilson_interval(successes, n, z)

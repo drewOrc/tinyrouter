@@ -24,9 +24,11 @@ from pathlib import Path
 import numpy as np
 
 from tinyrouter.archive import (
+    FORMAT_VERSION,
     MANIFEST_NAME,
     git_state,
     load_logits,
+    pinned_dataset_sha256,
     record_in_manifest,
     save_logits,
     utc_now,
@@ -47,10 +49,14 @@ class RunPaths:
 
     @classmethod
     def of(cls, config: RunConfig) -> RunPaths:
-        root = Path(config.results_root)
+        return cls.named(config.results_root, config.run_name)
+
+    @classmethod
+    def named(cls, results_root: str | Path, run_name: str) -> RunPaths:
+        root = Path(results_root)
         return cls(
-            results_json=root / "runs" / f"{config.run_name}.json",
-            logits=root / "logits" / f"{config.run_name}.npz",
+            results_json=root / "runs" / f"{run_name}.json",
+            logits=root / "logits" / f"{run_name}.npz",
             manifest=root / MANIFEST_NAME,
         )
 
@@ -165,16 +171,19 @@ def read_training_summary(model_dir: Path) -> dict[str, object]:
 def archive_metadata(config: RunConfig, training: dict[str, object]) -> dict[str, object]:
     commit, dirty = git_state()
     return {
-        "format_version": 1,
+        "format_version": FORMAT_VERSION,
         "run_name": config.run_name,
         "model_name": config.model_name,
         "model_revision": config.model_revision,
         "seed": config.seed,
         "per_intent": config.per_intent,
+        "k_shot": config.k_shot,
         "train_rows": training["train_rows"],
         "oos_train_rows": training["oos_train_rows"],
         "eval_per_intent": config.eval_per_intent,
         "dataset_revision": DATASET_REVISION,
+        # load_split verified every file against these before anything read it.
+        "dataset_sha256": pinned_dataset_sha256(),
         "label_space_sha256": load_label_space().sha256,
         "git_commit": commit,
         "git_dirty": dirty,

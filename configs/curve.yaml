@@ -1,0 +1,15 @@
+# Learning-curve hyperparameters (docs/PLAN.md section 4, hyperparameter
+# protocol). Filled in by hand from the pilot outputs:
+#   make pilot-lr     -> results/pilots/lr.json    -> models.<model>.learning_rate
+#   make pilot-steps  -> results/pilots/steps.json -> min_train_steps
+# null means that pilot has not been run; `make curve` refuses to start.
+# Allowed values: learning_rate in {1.0e-5, 2.0e-5, 5.0e-5} (write the
+# ".0": YAML reads 5e-5 as a string), min_train_steps in {100, 200, 400}.
+min_train_steps: null
+models:
+  bert:
+    config: configs/bert-base.yaml
+    learning_rate: null
+  modernbert:
+    config: configs/modernbert-base.yaml
+    learning_rate: null
