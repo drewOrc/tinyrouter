@@ -1,0 +1,38 @@
+{
+  "format_version": 1,
+  "files": {
+    "bert-base-uncased-full-seed42.npz": {
+      "sha256": "673a4c11200dd61ddd6310f174ab9fb27580cf5b512c7ba3b5db19088958bab2",
+      "bytes": 4824207,
+      "run_name": "bert-base-uncased-full-seed42",
+      "git_commit": "b3a59e2debe8bf210ba749ec6d34033b9be6cab8",
+      "created_at": "2026-09-23T03:37:16+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-full-seed43.npz": {
+      "sha256": "b6963da29f5886b915d2c5626391721fbd18c7f54a68b7720bf2d10d6cc2c58f",
+      "bytes": 4822394,
+      "run_name": "bert-base-uncased-full-seed43",
+      "git_commit": "b3a59e2debe8bf210ba749ec6d34033b9be6cab8",
+      "created_at": "2026-09-23T03:51:50+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    },
+    "bert-base-uncased-full-seed44.npz": {
+      "sha256": "0324b20d4736ca9ad913b97269100b398475ab06a2bd130f653af55de239c277",
+      "bytes": 4823526,
+      "run_name": "bert-base-uncased-full-seed44",
+      "git_commit": "b3a59e2debe8bf210ba749ec6d34033b9be6cab8",
+      "created_at": "2026-09-23T04:05:58+00:00",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      }
+    }
+  }
+}
