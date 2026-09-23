@@ -80,6 +80,36 @@
 
 ---
 
+## 2026-09-23 (晚)：learning rate pilot（validation only）
+
+### 本次工作 / 執行摘要
+- `make pilot-lr`：k=100、seed 42，兩個 encoder 各掃 {1e-5, 2e-5, 5e-5}，只看 validation。BERT 5e-5 重用 AC2 seed 42（判定為等價 run），其餘 5 次新訓練。
+- Drew 確認兩者都用 5e-5，寫入 `configs/curve.yaml`。
+
+### 核心發現 / 數據
+| 模型 | 1e-5 | 2e-5 | 5e-5 |
+|---|---:|---:|---:|
+| BERT（val in-scope / OOS recall） | 90.17% / 45% | 95.73% / 66% | **96.73% / 68%** |
+| ModernBERT | 94.77% / 67% | 95.93% / 72% | **97.13% / 75%** |
+
+- **兩個模型的最佳值都在掃描範圍上限。** 只能說「在 {1e-5, 2e-5, 5e-5} 中 5e-5 最好」，真正的最佳 LR 可能更高。Drew 決定照凍結的協定接受 5e-5，不在看到結果後擴充範圍；兩者停在同一個邊界，比較仍對稱。README 需寫明此限制。
+- LR 太小會學不完：BERT 1e-5 在第 5 個 epoch 的 loss 仍有 0.40（5e-5 為 0.03），val in-scope 低 6.5pp。
+- 單一 seed、val 只有 100 筆 OOS，ModernBERT 與 BERT 的 OOS recall 差 7 筆，不下結論。
+- 每次 run 時間（M4）：BERT 約 15 分鐘，ModernBERT 約 21 到 23 分鐘。
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] `make pilot-steps`（k=5、seed 42，S_min ∈ {100, 200, 400}）→ Drew 確認 → 寫入 `configs/curve.yaml`
+- [ ] `make curve MODEL=bert`、`make curve MODEL=modernbert`、`make oos-ablation`
+
+### Files / Budget
+- `results/pilots/lr.json`、`configs/curve.yaml`
+- API 花費：US$0
+
+---
+
 ## 2026-09-23：AC2 通過（BERT 流程正確性檢查）
 
 ### 本次工作 / 執行摘要
