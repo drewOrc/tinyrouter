@@ -11,8 +11,10 @@ import argparse
 import json
 import shutil
 import time
+from dataclasses import asdict
 from pathlib import Path
 
+from tinyrouter.archive import git_state
 from tinyrouter.config import RunConfig, load_config
 from tinyrouter.data import Split, load_split, subsample_per_intent
 from tinyrouter.efficiency import (
@@ -128,8 +130,13 @@ def train(config: RunConfig, train_split: Split, output_dir: Path) -> Path:
     trainer.save_model(str(final_dir))
     for leftover in output_dir.glob("checkpoint-*"):
         shutil.rmtree(leftover)
+    commit, dirty = git_state()
     summary = {
         "run_name": config.run_name,
+        "seed": config.seed,
+        "config": asdict(config),
+        "git_commit": commit,
+        "git_dirty": dirty,
         "device": device,
         "train_rows": len(train_split),
         "oos_train_rows": int((train_split.intents == labels.oos_intent_id).sum()),

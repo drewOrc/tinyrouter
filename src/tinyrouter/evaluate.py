@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import platform
+import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -61,6 +62,7 @@ def predict_logits(model_dir: Path, split: Split, config: RunConfig) -> SplitLog
     device = pick_device(config.device)
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = AutoModelForSequenceClassification.from_pretrained(model_dir).to(device).eval()
+    check_model_labels(model.config.id2label, model_dir)
     chunks: list[np.ndarray] = []
     with torch.inference_mode():
         for start in range(0, len(split), config.eval_batch_size):
@@ -74,6 +76,26 @@ def predict_logits(model_dir: Path, split: Split, config: RunConfig) -> SplitLog
             ).to(device)
             chunks.append(model(**batch).logits.float().cpu().numpy())
     return SplitLogits(split.name, np.concatenate(chunks), split.intents)
+
+
+class LabelMismatchError(ValueError):
+    """The model's output columns are not the intents the current label space lists."""
+
+
+def check_model_labels(id2label: dict, model_dir: Path) -> None:
+    """Refuse a model whose id2label differs from resources/intent_names.json, in order."""
+    names = load_label_space().intent_names
+    model_names = tuple(str(label) for _, label in sorted((int(k), v) for k, v in id2label.items()))
+    if model_names != names:
+        diff = next(
+            (i for i, (a, b) in enumerate(zip(model_names, names, strict=False)) if a != b),
+            min(len(model_names), len(names)),
+        )
+        raise LabelMismatchError(
+            f"{model_dir}: model id2label ({len(model_names)} labels) differs from "
+            f"intent_names.json ({len(names)}) first at column {diff}; logit column i "
+            "would not mean intent i"
+        )
 
 
 def score(val: SplitLogits, test: SplitLogits) -> dict[str, object]:
@@ -91,15 +113,37 @@ def score(val: SplitLogits, test: SplitLogits) -> dict[str, object]:
     return out
 
 
-def environment() -> dict[str, str]:
+def device_name(device: str) -> str:
+    import torch
+
+    if device == "cuda":
+        return torch.cuda.get_device_name()
+    if platform.system() == "Darwin":
+        try:
+            return subprocess.run(
+                ["sysctl", "-n", "machdep.cpu.brand_string"],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+        except (OSError, subprocess.CalledProcessError):
+            pass
+    return platform.processor() or platform.machine()
+
+
+def environment(config: RunConfig) -> dict[str, object]:
     import torch
     import transformers
 
+    device = pick_device(config.device)
     return {
         "python": platform.python_version(),
         "torch": torch.__version__,
         "transformers": transformers.__version__,
         "platform": platform.platform(),
+        "device": device,
+        "device_name": device_name(device),
+        "deterministic_algorithms": torch.are_deterministic_algorithms_enabled(),
         "dataset_revision": DATASET_REVISION,
     }
 
@@ -141,6 +185,8 @@ def archive_metadata(config: RunConfig, training: dict[str, object]) -> dict[str
 def evaluate(config: RunConfig, model_dir: Path) -> dict[str, object]:
     """Score the model, archive its logits, and write the results JSON; return the record."""
     paths = RunPaths.of(config)
+    # A crash below must not leave the previous run's JSON next to this run's archive.
+    paths.results_json.unlink(missing_ok=True)
     training = read_training_summary(model_dir)
     val = predict_logits(model_dir, eval_split("validation", config), config)
     test = predict_logits(model_dir, eval_split("test", config), config)
@@ -151,7 +197,7 @@ def evaluate(config: RunConfig, model_dir: Path) -> dict[str, object]:
     record = {
         "run_name": config.run_name,
         "config": asdict(config),
-        "environment": environment(),
+        "environment": environment(config),
         "training": training,
         "logits": {"file": paths.logits.name, "sha256": entry["sha256"], "bytes": entry["bytes"]},
         "metrics": score(archived.validation, archived.test),

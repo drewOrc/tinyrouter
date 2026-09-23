@@ -168,3 +168,28 @@ def test_manifest_check_fails_for_an_unlisted_or_missing_file(tmp_path):
 
 def test_git_state_outside_a_repository_says_unknown(tmp_path):
     assert git_state(tmp_path) == ("unknown", True)
+
+
+def test_git_state_ignores_changes_under_results_but_not_elsewhere(tmp_path):
+    import subprocess
+
+    def git(*args):
+        subprocess.run(
+            ["git", "-c", "user.email=t@example.com", "-c", "user.name=t", *args],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
+    (tmp_path / "results").mkdir()
+    (tmp_path / "results" / "logits-manifest.json").write_text("{}")
+    (tmp_path / "code.py").write_text("x = 1\n")
+    git("init", "-q")
+    git("add", ".")
+    git("commit", "-q", "-m", "init")
+    commit, dirty = git_state(tmp_path)
+    assert len(commit) == 40 and dirty is False
+    (tmp_path / "results" / "logits-manifest.json").write_text('{"files": {}}')
+    assert git_state(tmp_path)[1] is False
+    (tmp_path / "code.py").write_text("x = 2\n")
+    assert git_state(tmp_path)[1] is True

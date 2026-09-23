@@ -71,8 +71,10 @@ class LogitsArchive:
 
 
 def git_state(repo_dir: Path | None = None) -> tuple[str, bool]:
-    """Current commit and whether the working tree has uncommitted changes.
+    """Current commit and whether tracked files outside ``results/`` have uncommitted changes.
 
+    ``results/`` is excluded because runs rewrite it themselves (the
+    manifest, results JSON); counting that would mark every later run dirty.
     Returns ``("unknown", True)`` outside a git checkout, so the archive
     still says it cannot be traced to a commit instead of omitting the key.
     """
@@ -82,7 +84,7 @@ def git_state(repo_dir: Path | None = None) -> tuple[str, bool]:
             ["git", "rev-parse", "HEAD"], cwd=cwd, capture_output=True, text=True, check=True
         ).stdout.strip()
         status = subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=no"],
+            ["git", "status", "--porcelain", "--untracked-files=no", "--", ":(top,exclude)results"],
             cwd=cwd,
             capture_output=True,
             text=True,
@@ -209,12 +211,25 @@ def record_in_manifest(manifest_path: Path, archive_path: Path) -> dict[str, obj
     }
     files = read_manifest(manifest_path)
     files[archive_path.name] = entry
+    write_manifest(manifest_path, files)
+    return entry
+
+
+def write_manifest(manifest_path: Path, files: dict[str, dict[str, object]]) -> None:
     body = {"format_version": FORMAT_VERSION, "files": dict(sorted(files.items()))}
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     tmp = manifest_path.with_name(manifest_path.name + ".tmp")
     tmp.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
     os.replace(tmp, manifest_path)
-    return entry
+
+
+def remove_from_manifest(manifest_path: Path, archive_name: str) -> bool:
+    """Drop one entry; returns whether it was there."""
+    files = read_manifest(manifest_path)
+    if files.pop(archive_name, None) is None:
+        return False
+    write_manifest(manifest_path, files)
+    return True
 
 
 def check_against_manifest(manifest_path: Path, archive_path: Path) -> None:

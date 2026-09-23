@@ -28,10 +28,14 @@ Other targets:
 | `make test-network` | tests that download from the Hugging Face Hub (dataset checksums) |
 | `make train CONFIG=configs/bert-base.yaml SEED=42` | fine-tune; final weights in `checkpoints/<run>/final` |
 | `make evaluate CONFIG=... SEED=...` | score validation and test, write `results/runs/<run>.json` and the logits archive |
-| `make ac2` | bert-base-uncased, full data, seeds 42/43/44; writes `results/ac2.json`, exits 1 on FAIL; resumes, `FORCE=1` reruns |
+| `make ac2` | bert-base-uncased, full data, seeds 42/43/44; writes `results/ac2.json`, exits 1 on FAIL; resumes only runs made with the current config, `FORCE=1` clears and reruns all three |
 | `make verify-logits` | check every archive in `results/logits/` against `results/logits-manifest.json` |
 | `make report` | build `results/summary.md` from `results/runs/*.json` |
 | `make clean-checkpoints` | delete all trained weights |
+
+Run every target from the repository root: `checkpoint_root` and `results_root` in the configs are relative paths.
+
+**Tuning after an AC2 FAIL uses validation only.** `results/ac2.json` and the `make ac2` printout list each seed's validation in-scope accuracy, 8-way accuracy and OOS recall for that purpose; the test numbers are the verdict and are not looked at while choosing hyperparameters.
 
 Put `HF_TOKEN` and `ANTHROPIC_API_KEY` in a `.env` (copy `.env.example`) if you need them; the Makefile passes it to `uv run`. Nothing in the tests or the smoke run calls a paid API.
 

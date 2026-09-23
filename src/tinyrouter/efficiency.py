@@ -11,8 +11,10 @@ comparable across devices. Each result names what was measured:
   process, cached allocator pools included) and
   ``torch.mps.current_allocated_memory()`` (live tensors only) after each
   backward pass and each optimizer step, and keeps the maxima. The driver
-  number is the headline: freed activation blocks stay in the pool, so it
-  approximates the high-water mark from above. The tensor number is
+  number is the headline. Freed activation blocks usually stay in the
+  allocator pool, so it is usually at or above the true tensor peak, but
+  that is not guaranteed: the pool can release memory between samples, and
+  a short-lived peak can fall between two samples. The tensor number is
   sampled between passes and misses activations that are freed before the
   sample, so it is a lower bound.
 - cpu: ``resource.getrusage(RUSAGE_SELF).ru_maxrss``, the process's peak
@@ -66,8 +68,8 @@ def cuda_probe() -> dict[str, int]:
 
 MEASURES = {
     "mps": "sampled after each backward and optimizer step: torch.mps.driver_allocated_memory "
-    "(Metal driver, includes allocator cache; headline) and current_allocated_memory "
-    "(live tensors; lower bound)",
+    "(Metal driver, includes allocator cache; headline, usually at or above the tensor "
+    "peak but not guaranteed) and current_allocated_memory (live tensors; lower bound)",
     "cuda": "torch.cuda.max_memory_allocated after reset_peak_memory_stats (tensor peak)",
     "cpu": "resource.getrusage ru_maxrss: process peak RSS since start, not training only",
 }
