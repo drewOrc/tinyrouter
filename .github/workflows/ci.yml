@@ -1,0 +1,151 @@
+name: CI
+
+# Three jobs, fastest first so a red light arrives early:
+#   test            offline: tracked-files guard, ruff, em dash check, pytest.
+#   commit-hygiene  commit messages carry no tool-attribution trailers.
+#   network         the two targets that download from the Hugging Face Hub.
+# Branch protection requires `test` and `commit-hygiene` only. `network`
+# depends on a third-party service being up, so it reports but does not
+# block a merge; see docs/OPERATIONS.md for the reasoning.
+# No job needs a secret: the dataset and the smoke model are public, and
+# nothing here calls a paid API. A fork's PR runs this unchanged.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly, cache bypassed: the Hub pins (dataset commit, model commit,
+    # SHA-256 per file) can break with no commit here, e.g. an upstream repo
+    # deleted or made gated. This is the only run that would notice.
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  # Cancel superseded PR runs, but let every push to main finish so each
+  # main commit keeps its own result.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # Same uv as the machine that wrote uv.lock, so `--locked` compares like
+  # with like.
+  UV_VERSION: "0.10.2"
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Tracked-files guard (no .env, weights, envs or caches in git)
+        # .gitignore already covers these, but `git add -f` does not read
+        # .gitignore. The repo is public from its first commit, so the check
+        # runs before anything else.
+        run: |
+          if git ls-files | grep -E '(^|/)\.env$|\.(safetensors|bin|pt|onnx|pem|key)$|(^|/)\.venv|\.nosync(/|$)|(^|/)checkpoints(/|$)|__pycache__'; then
+            echo "::error::tracked files above match the guard pattern"
+            exit 1
+          fi
+          echo "clean: $(git ls-files | wc -l) tracked files, none match"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install dependencies (fails if uv.lock is out of date)
+        run: uv sync --locked
+
+      - name: make lint (ruff check, ruff format --check, em dash check)
+        run: make lint
+
+      - name: make test (offline; network-marked tests excluded)
+        run: make test
+
+  commit-hygiene:
+    name: commit-hygiene
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: No tool-attribution trailers in commit messages
+        # Project rule: commit messages carry no AI attribution. A rule kept
+        # by memory fails on the day someone is in a hurry, so it is a check.
+        # PRs: every commit on the branch (head.sha, not HEAD, because
+        # checkout on pull_request lands on GitHub's synthetic merge commit).
+        # Pushes to main: the pushed range, which is where a squash merge
+        # message edited in the web UI shows up. Patterns live in
+        # .github/disallowed-trailers.txt.
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            range="$PR_BASE..$PR_HEAD"
+          elif [ -z "$PUSH_BEFORE" ] || [ "$PUSH_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            range="$PUSH_AFTER"
+          else
+            range="$PUSH_BEFORE..$PUSH_AFTER"
+          fi
+          patterns="$(grep -vE '^[[:space:]]*(#|$)' .github/disallowed-trailers.txt | paste -sd'|' -)"
+          if [ -z "$patterns" ]; then
+            echo "::error::.github/disallowed-trailers.txt has no patterns"
+            exit 1
+          fi
+          bad="$(git log "$range" --format='%h %s%n%b' | grep -iE "$patterns" || true)"
+          if [ -n "$bad" ]; then
+            echo "::error::commit messages must not carry tool-attribution trailers:"
+            echo "$bad"
+            exit 1
+          fi
+          echo "clean: $(git rev-list --count "$range") commit(s) in $range"
+
+  network:
+    name: network
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HF_HOME: ${{ github.workspace }}/.hf-home
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Restore Hugging Face cache (skipped on the weekly run)
+        # Keyed on the files that hold the pinned revisions and checksums;
+        # changing a pin starts a fresh cache. A cache hit still runs the
+        # SHA-256 and row-count checks on the cached files.
+        if: github.event_name != 'schedule'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .hf-home
+          key: hf-${{ hashFiles('src/tinyrouter/data.py', 'configs/smoke.yaml') }}
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: make test-network (Hub dataset matches pinned checksums and label names)
+        run: make test-network
+
+      - name: make smoke (download, train one step on CPU, evaluate)
+        run: make smoke

@@ -1,0 +1,69 @@
+[project]
+name = "tinyrouter"
+version = "0.1.0"
+description = "A fine-tuned local intent router for CLINC150, calibrated and cascaded to an LLM only when unsure."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Bo-Yu Chen" }]
+requires-python = "==3.12.*"
+# Exact pins for every direct dependency. uv.lock pins the transitive set.
+dependencies = [
+    "accelerate==1.15.0",
+    "datasets==5.0.1",
+    "huggingface-hub==1.32.0",
+    "numpy==2.5.3",
+    "pyarrow==25.0.1",
+    "pyyaml==6.0.3",
+    "scikit-learn==1.9.1",
+    "torch==2.14.0",
+    "transformers==5.17.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tinyrouter"]
+
+[dependency-groups]
+# The Claude Haiku baseline and cascade fallback. Not installed by
+# `uv sync`; `uv sync --group llm` installs it. Nothing in the unit tests
+# imports it (tinyrouter/llm.py defers the import to call time).
+llm = [
+    "anthropic==1.8.0",
+]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.16.8",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.uv.sources]
+# CPU-only torch wheels on Linux (CI runners have no GPU; the default PyPI
+# wheel pulls several GB of CUDA libraries). macOS resolves the normal
+# PyPI wheel (MPS included).
+torch = [
+    { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "network: downloads from the Hugging Face Hub (dataset or model files)",
+]
+addopts = "-m 'not network'"

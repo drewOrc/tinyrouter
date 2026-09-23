@@ -1,0 +1,39 @@
+# Secrets
+.env
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Environments and model output live in *.nosync directories (iCloud never
+# syncs that suffix) behind symlinks at the usual names. Ignore both: the
+# directory-only pattern `.venv/` does not match a symlink.
+.venv
+.venv/
+checkpoints
+checkpoints/
+*.nosync/
+*.nosync
+
+# Model weights never go in git
+*.safetensors
+*.bin
+*.pt
+*.onnx
+
+# Run outputs (results/*.json are small and will be committed once real runs exist)
+results/summary.md
+
+# iCloud conflict copies ("name 2")
+* [0-9]*
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,15 @@
+# bert-base-uncased on the full train split: the AC2 reference run
+# (Larson et al. 2019 report 96.7% in-scope accuracy for BERT, oos-train).
+# Hyperparameters are starting values, not tuned yet.
+model_name: google-bert/bert-base-uncased
+model_revision: 86b5e0934494bd15c9632b12f734a8a67f723594
+seed: 42
+per_intent: null
+max_length: 64
+learning_rate: 5.0e-5
+weight_decay: 0.01
+warmup_ratio: 0.1
+num_train_epochs: 5
+train_batch_size: 32
+eval_batch_size: 128
+device: auto

@@ -1,0 +1,9 @@
+# Extended regex patterns (case-insensitive) that the commit-hygiene CI
+# job rejects in any commit message, one per line. Blank lines and lines
+# starting with '#' are ignored. Add a line here to widen the check;
+# .github/workflows/ci.yml does not need to change.
+#
+# Human co-authors stay allowed; only tool attribution is rejected.
+co-authored-by:.*(anthropic|claude|openai|chatgpt|copilot|gemini|cursor)
+generated (with|by) \[?(claude|chatgpt|copilot|gemini|cursor)
+noreply@anthropic\.com

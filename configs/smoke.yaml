@@ -1,0 +1,14 @@
+# Wiring check only: a ~1 MB random-weight BERT, one row per intent
+# (151 rows) for train, validation and test, one optimizer step, on CPU.
+model_name: hf-internal-testing/tiny-random-bert
+model_revision: f171d7baecaf37b5da5a3616d8833b9969753535
+seed: 42
+per_intent: 1
+eval_per_intent: 1
+max_length: 32
+max_steps: 1
+warmup_ratio: 0.0
+train_batch_size: 16
+eval_batch_size: 64
+device: cpu
+replace_classifier_head: true
