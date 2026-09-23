@@ -64,6 +64,6 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
-    "network: downloads from the Hugging Face Hub (dataset or model files)",
+    "network: downloads from the Hugging Face Hub or the pinned clinc/oos-eval commit on GitHub",
 ]
 addopts = "-m 'not network'"
