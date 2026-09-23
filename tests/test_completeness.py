@@ -420,3 +420,43 @@ def test_verify_index_refuses_an_index_with_a_point_twice(baseline_results, tmp_
             root,
             "baselines",
         )
+
+
+def test_the_index_checked_is_the_file_on_disk_not_the_body_in_memory(
+    tmp_path, protocol, monkeypatch
+):
+    """A write that loses a point must fail the check even though the body in memory is whole."""
+    real_write = Path.write_text
+
+    def short_write(self, text, *args, **kwargs):
+        if self.name == "modernbert.json.tmp":
+            body = json.loads(text)
+            body["points"] = body["points"][:-1]
+            text = json.dumps(body)
+        return real_write(self, text, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", short_write)
+    log = Log()
+    with pytest.raises(IncompleteError, match=r"modernbert: .*missing \[\(100, 44, None\)\]"):
+        run_modernbert(protocol, log)
+    assert_nothing_published(tmp_path, "modernbert", log)
+
+
+def test_baseline_index_is_refused_when_two_points_share_one_archive(baseline_copy, monkeypatch):
+    real = baselines.index_entry
+    seen: dict[tuple[str, int, int], dict] = {}
+
+    def sharing(name, k, seed, record):
+        entry = real(name, k, seed, record)
+        seen[(name, k, seed)] = entry
+        if (name, k, seed) == ("majority", 25, 44):
+            donor = seen[("majority", 25, 43)]
+            for field in ("run_name", "logits_file", "logits_sha256"):
+                entry[field] = donor[field]
+        return entry
+
+    monkeypatch.setattr(baselines, "index_entry", sharing)
+    log = Log()
+    with pytest.raises(IncompleteError, match="share one logits archive"):
+        rerun_baselines(baseline_copy, log)
+    assert log.completed() == []

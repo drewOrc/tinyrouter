@@ -11,8 +11,11 @@ both checks pass:
    each once (``check_points``);
 2. after running, the index read back from disk has exactly the expected
    set, each once, and every point's archive has the same SHA-256 on
-   disk, in the manifest and in the index (``publish_index``). The index
-   is moved into place only after this passes.
+   disk, in the manifest and in the index, and no two points share an
+   archive (``publish_index``). The index is written to a temporary file
+   and that file, not the in-memory body, is what gets checked, so a
+   short or failed write is caught too; it is moved into place only after
+   this passes.
 
 The expected sets are written out here as literals, not derived from
 ``sampling.CURVE_KS`` or ``protocol.SEEDS``: a check that reads the same
@@ -69,11 +72,18 @@ def check_points(keys: Iterable[Key], expected: frozenset[Key], what: str) -> No
 
 
 def check_archives(points: Sequence[dict], results_root: Path, what: str) -> None:
-    """Each point's archive exists, with one SHA-256 on disk, in the manifest and in the index."""
+    """Each point has its own archive, whose SHA-256 agrees on disk, in manifest and index."""
     manifest = read_manifest(results_root / MANIFEST_NAME)
+    owner: dict[object, object] = {}
     for point in points:
         paths = RunPaths.named(results_root, str(point["run_name"]))
         name = paths.logits.name
+        for held in (point.get("logits_file"), point.get("logits_sha256")):
+            if held in owner:
+                raise IncompleteError(
+                    f"{what}: {point['run_name']} and {owner[held]} share one logits archive"
+                )
+            owner[held] = point["run_name"]
         if point.get("logits_file") != name:
             raise IncompleteError(
                 f"{what}: {point['run_name']} lists archive {point.get('logits_file')}"

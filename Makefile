@@ -15,6 +15,16 @@ UV_ENV := $(if $(ENV_FILE),--env-file $(ENV_FILE),)
 # checkpoint, and can evict files mid-training. See README "iCloud".
 NOSYNC_LINKS := .venv checkpoints
 
+# No default target. On 2026-09-23 a zsh loop ran `make $t` with
+# t="curve MODEL=bert"; make got one argument, read it as a variable
+# assignment, ran the first target (setup) and exited 0, and two curves
+# were reported done with no point run. A bare `make` (or only variable
+# assignments) now fails instead of silently running setup.
+# tests/test_makefile.py pins this.
+ifeq ($(strip $(MAKECMDGOALS)),)
+$(error no target given; a quoted "curve MODEL=bert" is one variable assignment, not a target)
+endif
+
 setup:
 	@for name in $(NOSYNC_LINKS); do \
 		if [ -L "$$name" ]; then continue; fi; \
@@ -73,6 +83,13 @@ ac2:
 # never edit configs/curve.yaml. Curves and the ablation resume like ac2 and
 # keep no weights, only logits. `curve` runs the cheap baselines first.
 # `make baselines` runs them alone.
+# Completion: each command's last line is `completed N/N ...` only after its
+# index passed the checks in src/tinyrouter/completeness.py. `make curve`
+# prints `completed 36/36 baseline points` before the curve starts, so a
+# curve that fails later still has one completed line in its output. To
+# decide a curve is done, match the whole line
+# `completed 18/18 encoder points (<model>)` (the ablation:
+# `completed 3/3 ablation points`), never just `completed`.
 pilot-lr:
 	uv run $(UV_ENV) python -m tinyrouter.pilots lr
 
