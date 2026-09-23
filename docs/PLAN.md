@@ -9,6 +9,7 @@
 更細的資料量刻度、OOS 訓練量對齊、多種不確定性訊號、risk-coverage 評估、oracle 上限、兩個層級分開報。
 **同日再擴充**：把生成式 LLM 微調（LoRA、QLoRA，RQ6）與推論優化及服務化（RQ7）拉回 v0.1，因為這兩項是「訓練完之後怎麼用」與「生成模型微調」的證據，encoder 分類單獨撐不起來。
 **凍結前最後一輪（外部審查第三、四輪）**：主模型改 ModernBERT-base，BERT 降為歷史基準與流程檢查；AC2 措辭改為工程驗收、不宣稱重現；RQ 分三層優先序（§3.1），RQ6 不得阻塞 RQ1 到 RQ5；新增 OOS 靜默誤派指標與多數類基準；RQ5 不宣稱真實標註成本；資料量刻度修正（CLINC150 每個 intent 正好 100 筆，所以 k=100 就是全量）。**此後 v0.1 範圍凍結**，新想法進 §9 待辦，不改驗收條件。
+**凍結後釐清（第五輪審查，不改範圍）**：OOS 誤派拆成兩個定義明確的指標（§3）；BERT 與 ModernBERT 的比較加上參數量、訓練時間、峰值記憶體、延遲（AC5）；資料來源已逐筆比對原作者檔案（`docs/DATA.md`）。
 **不採納進 v0**：自建 RoutingBench（含 multi-intent，需要多標籤模型、且自造資料的可信度問題）。第二個 benchmark 排 v0.2，見 §8。
 
 ## 1. 問題陳述
@@ -29,7 +30,7 @@ TinyRouter 問三件事：**小模型要多少標註資料才夠？它知不知�
 | | 問題 | 產出 |
 |---|---|---|
 | RQ1 資料效率 | 每個 intent k = 1 / 5 / 10 / 25 / 50 / 100 筆（k=100 即全量，CLINC150 每個 intent 正好 100 筆）時，ModernBERT 與 BERT 在兩個層級的準確率與 OOS 指標怎麼變？8 類在哪一點追上 Haiku？ | 學習曲線（3 seeds mean ± std） |
-| RQ2 OOS | OOS 偵測隨資料量怎麼變？**完全沒有 OOS 訓練資料時**（實務常態），只靠不確定性能攔下多少？ | OOS recall / precision / F1 / AUROC / AUPRC，以及 **OOS 靜默誤派率**：真 OOS 被有把握地派給某個 in-scope agent（沒被攔、也沒交給 LLM）的比例。交給 LLM 只是多花錢，靜默誤派會讓系統執行錯的動作，是 production 最危險的錯 |
+| RQ2 OOS | OOS 偵測隨資料量怎麼變？**完全沒有 OOS 訓練資料時**（實務常態），只靠不確定性能攔下多少？ | OOS recall / precision / F1 / AUROC / AUPRC，以及兩個誤派指標。**OOS 誤派率** = 被派給任何 in-scope agent 的真 OOS ÷ 全部真 OOS（與門檻無關，等於 1 減 OOS recall）。**高信心 OOS 誤派率** = 被派給 in-scope agent 且信心 ≥ 門檻 τ（所以沒交給 LLM）的真 OOS ÷ 全部真 OOS，這才是「靜默誤派」，隨 τ 報成曲線。交給 LLM 只是多花錢，靜默誤派會讓系統執行錯的動作，是 production 最危險的錯 |
 | RQ3 不確定性 | MSP、entropy、margin、temperature-scaled MSP，哪個最能預測錯誤？ | risk-coverage 曲線、AURC、reliability diagram |
 | RQ4 LLM fallback | 在目標錯誤率下，小模型能自己處理多少？交給 Haiku 救回多少錯誤？離 oracle 上限差多少？ | coverage @ 目標 risk、LLM 呼叫率、錯誤回收率 |
 | RQ5 成本 | 查詢量多大時，「本機推論 + 一次性訓練算力」比只用 LLM 便宜？一次性：訓練算力（實測時間 × 硬體換算）；經常性：API 費用（實測 token）與本機推論（實測延遲）。**CLINC150 是現成資料，不宣稱真實標註成本**；標註成本只做假設性敏感度分析（每筆標註假設 US$0.05 / 0.2 / 1 三檔） | 一張表 + 一句結論 |
@@ -53,7 +54,7 @@ TinyRouter 問三件事：**小模型要多少標註資料才夠？它知不知�
 | 決策 | 選擇 | 為什麼不選另外的 |
 |---|---|---|
 | 標籤粒度 | 訓練 151 類（150 intent + oos），推論時對應到 8 類；兩層都報 | 8 類直接訓練：丟掉細粒度訊號，也無法對照 Larson |
-| 資料量抽樣 | in-scope 每個 intent 抽 k 筆；**OOS 抽 ⌈2.5k⌉ 筆**（無條件進位，寫死對照表：k=1→3、5→13、10→25、25→63、50→125、100→250），維持全量資料原本的比例（250 OOS 對每個 intent 100 筆），所以 k=100 的端點正好等於全量資料與 Larson 的 OOS+ 設定；每個 seed 抽樣不同、固定可重現 | OOS 永遠給全量：曲線把「資料量」與「OOS 比例」混在一起；OOS 也抽 k 筆：端點不等於全量，無法對照原論文 |
+| 資料量抽樣 | in-scope 每個 intent 抽 k 筆；**OOS 抽 ⌈2.5k⌉ 筆**（無條件進位，寫死對照表：k=1→3、5→13、10→25、25→63、50→125、100→250），維持 OOS+ 訓練集的比例（250 筆 OOS 對每個 intent 100 筆；這是 Larson OOS+ 設定的比例，不是真實流量的 OOS 比例），所以 k=100 的端點正好等於完整的 OOS+ 訓練集；測試集（18.2% 為 OOS）不抽樣；每個 seed 抽樣不同、固定可重現 | OOS 永遠給全量：曲線把「資料量」與「OOS 比例」混在一起；OOS 也抽 k 筆：端點不等於全量，無法對照原論文 |
 | OOS 消融 | ModernBERT，in-scope 全量（k=100）下，OOS 訓練 0 筆 vs 250 筆（後者即曲線端點） | 只有一條曲線：分不出 OOS 能力來自 OOS 資料還是不確定性 |
 | Encoder 模型 | **主模型 `answerdotai/ModernBERT-base`**（2024，Apache-2.0，約 149M）；**歷史基準 `bert-base-uncased`**（2018，也負責 AC2 流程檢查）。兩者都跑完整學習曲線；小刻度每次只要數十秒，多一條曲線成本低，卻能用實驗回答「為什麼不用 BERT」 | 只用 BERT：2026 年的作品選 2018 年的模型當主角，技術選型顯舊；DeBERTa-v3-small：刪除，範圍控制 |
 | ModernBERT 相容性 | 開跑曲線前先試跑：MPS 上能否訓練（Flash Attention 與 unpadding 只支援 CUDA，MPS 走一般 attention）、Optimum 能否匯出 ONNX。匯出不行時，RQ7 改用 BERT，並在 README 寫明原因 | 不試跑直接開跑：跑到一半才發現不相容，浪費時間 |
@@ -81,8 +82,8 @@ TinyRouter 問三件事：**小模型要多少標註資料才夠？它知不知�
 | AC2 | **BERT 流程正確性檢查**：`bert-base-uncased` 在全量資料（k=100、OOS 250）訓練 151 類，150 類 in-scope 準確率在 3 seeds 下都 ≥ 95.7%。**這是從原論文 96.7% 推出的工程驗收門檻，不宣稱精確重現原論文**（實作、超參數、tokenizer、評估程式都可能與原論文不同）。第一次沒過先用 validation 調參，不下結論。BERT 是基準，不是主要結果 | `results/` JSON + report-check |
 | AC3 | 每一次訓練都把 val 與 test 的**逐筆 logits** 存檔（含 split、seed、k、模型 revision），之後所有 RQ2–RQ5 分析只讀存檔，不重跑模型 | 測試：分析函式只接受存檔格式 |
 | AC4 | **test 不參與任何調整**：T、門檻、聚合方式只由 validation 決定；有測試守住 | pytest（已有 `LeakageError`） |
-| AC5 | RQ1 兩個模型 × 六個刻度 × 3 seeds 全跑完；抽樣有測試（每個 intent 正好 k 筆、OOS 筆數符合寫死的對照表、k=100 等於全量、不同 seed 抽樣不同、同 seed 相同）；多數類與 TF-IDF 基準在每個刻度都有 | pytest + results JSON |
-| AC6 | RQ4 報 test 上 coverage、selective risk、整體準確率、OOS recall、**OOS 靜默誤派率**、LLM 呼叫率、每 1K 成本，並列 oracle 上限與「不確定性抓到的可回收錯誤比例」；Haiku 與小模型用同一批查詢、同一個 8 類標籤空間、同一支解析程式；Haiku 花費 ≤ US$5 | results JSON 含實際 token 用量與花費 |
+| AC5 | RQ1 兩個模型 × 六個刻度 × 3 seeds 全跑完；抽樣有測試（每個 intent 正好 k 筆、OOS 筆數符合寫死的對照表、k=100 等於全量、不同 seed 抽樣不同、同 seed 相同）；多數類與 TF-IDF 基準在每個刻度都有；BERT 與 ModernBERT 另列一張效率表：參數量、訓練時間、訓練峰值記憶體、8 類準確率、OOS recall、ECE、CPU 推論延遲（回答「好是因為架構新，還是只因為模型大」；README 寫明 BERT 是歷史基準、ModernBERT 是主模型） | pytest + results JSON |
+| AC6 | RQ4 報 test 上 coverage、selective risk、整體準確率、OOS recall、**OOS 誤派率與高信心 OOS 誤派率**、LLM 呼叫率、每 1K 成本，並列 oracle 上限與「不確定性抓到的可回收錯誤比例」；Haiku 與小模型用同一批查詢、同一個 8 類標籤空間、同一支解析程式；Haiku 花費 ≤ US$5 | results JSON 含實際 token 用量與花費 |
 | AC7 | CI 綠燈：ruff、pytest、em dash 守門、commit hygiene | GitHub Actions |
 | AC8 | README 首屏數字全部由 `make report` 從 JSON 產生，不手打；結論依結果寫；兩個層級不混比；README 明寫兩種 8 類聚合方式（argmax intent 再對應 vs 按 agent 加總機率），以及最終採用哪種是只用 validation 決定的 | report-check 比對 |
 | AC9 | 模型上 Hugging Face Hub，model card 寫明限制（英文、CLINC 領域、OOS 數字） | **上架前需 Drew 同意** |

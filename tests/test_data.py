@@ -113,3 +113,38 @@ def test_hub_split_matches_pins_and_label_space(name):
     assert split.intents.min() >= 0 and split.intents.max() < labels.num_intents
     assert (split.intents == labels.oos_intent_id).any()
     assert len(np.unique(split.intents)) == labels.num_intents
+
+
+# Provenance: the Hub `plus` config must be Larson et al.'s OOS+ release, not a re-cut.
+# Verified 2026-09-23 against clinc/oos-eval data_oos_plus.json; see docs/DATA.md.
+OOS_EVAL_COMMIT = "828f8093932c8fe6ca7936c3d2e52903b1c523de"
+OOS_EVAL_SHA256 = "bfcca9ae515623541dc1983c94c4ed7cae9d26b42ae47d74b972e51bb6f7a21f"
+OOS_EVAL_KEYS = {
+    "train": ("train", "oos_train"),
+    "validation": ("val", "oos_val"),
+    "test": ("test", "oos_test"),
+}
+
+
+@pytest.fixture(scope="module")
+def oos_eval_plus():
+    import hashlib
+    import urllib.request
+
+    url = f"https://raw.githubusercontent.com/clinc/oos-eval/{OOS_EVAL_COMMIT}/data/data_oos_plus.json"
+    raw = urllib.request.urlopen(url, timeout=60).read()
+    assert hashlib.sha256(raw).hexdigest() == OOS_EVAL_SHA256
+    return json.loads(raw)
+
+
+@pytest.mark.network
+@pytest.mark.parametrize("name", ["train", "validation", "test"])
+def test_hub_split_is_identical_to_original_oos_plus_release(name, oos_eval_plus):
+    from collections import Counter
+
+    names = load_label_space().intent_names
+    split = data.load_split(name)
+    hub = Counter((t, names[int(i)]) for t, i in zip(split.texts, split.intents, strict=True))
+    in_key, oos_key = OOS_EVAL_KEYS[name]
+    original = Counter((t, lab) for t, lab in oos_eval_plus[in_key] + oos_eval_plus[oos_key])
+    assert hub == original
