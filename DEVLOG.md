@@ -80,6 +80,32 @@
 
 ---
 
+## 2026-09-23 (夜)：兩條學習曲線與 OOS 消融完成
+
+### 本次工作 / 執行摘要
+- 協定凍結後（lr 5e-5、S_min 400、5 epochs）依序單獨執行，每條以程式印出的完成行為證據（不看離開碼）：
+  - `make curve MODEL=bert`：`completed 18/18 encoder points (bert)`，18:26 到 19:24。k=1 到 50 的 15 點新訓練；k=100 的 3 點重用 AC2（判定為等價 run，archive 完整）。
+  - `make curve MODEL=modernbert`：`completed 18/18 encoder points (modernbert)`，19:25 到 21:47，18 點全部新訓練。
+  - `make oos-ablation`：`completed 3/3 ablation points`，21:48 到 22:47（ModernBERT、k=100、OOS 訓練 0 筆 × 3 seeds）。
+- `make verify-logits`：75 個 archive 全部與 manifest SHA-256 一致（AC2 3 + 基準 36 + BERT 新 15 + ModernBERT 18 + 消融 3）。
+- 曲線權重全部刪除，只保留 logits。
+
+### 核心發現 / 數據
+- (本條只記錄執行完成；數字分析在步驟 4 由分析程式從 logits 產生，不在此手抄)
+
+### Blockers / 遇到的問題
+- 第一次開跑（17:22）的 shell 迴圈在 zsh 下沒拆 `make $t`，兩條曲線沒跑卻 exit 0。PR #11 加上完成性檢查與 Makefile 無目標防護（`make "curve MODEL=bert"` 現在 exit 2），並有測試對應這次事故。
+
+### Next
+- [ ] logits 附到 GitHub Release
+- [ ] 步驟 4：重跑 Haiku（需 `ANTHROPIC_API_KEY`，預算 ≤ US$5）→ 不確定性分析、fallback、oracle
+
+### Files / Budget
+- `results/curves/{bert,modernbert,oos-ablation}.json`、`results/runs/*.json`、`results/logits-manifest.json`
+- API 花費：US$0
+
+---
+
 ## 2026-09-23 (晚 2)：S_min pilot（validation only），協定凍結
 
 ### 本次工作 / 執行摘要

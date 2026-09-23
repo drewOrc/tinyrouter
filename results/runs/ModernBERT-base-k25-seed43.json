@@ -1,0 +1,150 @@
+{
+  "run_name": "ModernBERT-base-k25-seed43",
+  "config": {
+    "model_name": "answerdotai/ModernBERT-base",
+    "model_revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8",
+    "seed": 43,
+    "per_intent": null,
+    "k_shot": 25,
+    "oos_train": null,
+    "max_length": 64,
+    "learning_rate": 5e-05,
+    "weight_decay": 0.01,
+    "warmup_ratio": 0.1,
+    "num_train_epochs": 5,
+    "max_steps": -1,
+    "min_train_steps": 400,
+    "train_batch_size": 32,
+    "eval_batch_size": 128,
+    "device": "auto",
+    "replace_classifier_head": false,
+    "checkpoint_root": "checkpoints",
+    "results_root": "results",
+    "eval_per_intent": null
+  },
+  "environment": {
+    "python": "3.12.12",
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "device": "mps",
+    "device_name": "Apple M4",
+    "deterministic_algorithms": false,
+    "dataset_revision": "155b9c710419136e17307b80d0a13e68cd46b4ec"
+  },
+  "training": {
+    "run_name": "ModernBERT-base-k25-seed43",
+    "seed": 43,
+    "config": {
+      "model_name": "answerdotai/ModernBERT-base",
+      "model_revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8",
+      "seed": 43,
+      "per_intent": null,
+      "k_shot": 25,
+      "oos_train": null,
+      "max_length": 64,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.01,
+      "warmup_ratio": 0.1,
+      "num_train_epochs": 5,
+      "max_steps": -1,
+      "min_train_steps": 400,
+      "train_batch_size": 32,
+      "eval_batch_size": 128,
+      "device": "auto",
+      "replace_classifier_head": false,
+      "checkpoint_root": "checkpoints",
+      "results_root": "results",
+      "eval_per_intent": null
+    },
+    "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+    "git_dirty": false,
+    "device": "mps",
+    "train_rows": 3813,
+    "oos_train_rows": 63,
+    "per_intent": null,
+    "k_shot": 25,
+    "train_sample_sha256": "92f91be6e0948dbc01e82b81485c72829dd232443955fa0ae214b1451a0a704f",
+    "step_plan": {
+      "epoch_steps": 600,
+      "min_train_steps": 400,
+      "planned_steps": 600,
+      "decided_by": "epochs",
+      "max_steps_arg": -1
+    },
+    "global_step": 600,
+    "train_loss": 1.1246477735042573,
+    "parameters": {
+      "total": 149720983,
+      "trainable": 149720983
+    },
+    "train_wall_seconds": 301.325,
+    "peak_memory": {
+      "device": "mps",
+      "measures": "sampled after each backward and optimizer step: torch.mps.driver_allocated_memory (Metal driver, includes allocator cache; headline, usually at or above the tensor peak but not guaranteed) and current_allocated_memory (live tensors; lower bound)",
+      "samples": 1202,
+      "driver_allocated_bytes": 5261443072,
+      "tensor_allocated_bytes": 2450603776
+    }
+  },
+  "logits": {
+    "file": "ModernBERT-base-k25-seed43.npz",
+    "sha256": "ac640bffd502ea71d7dd5b5f9cc18d7068b6b8b1b950acbf3a2fd58a3c50f1b6",
+    "bytes": 4833666
+  },
+  "metrics": {
+    "temperature": 0.9479710330394893,
+    "validation": {
+      "raw": {
+        "accuracy_8": 0.9548387096774194,
+        "oos_recall_8": 0.41,
+        "accuracy_8_summed": 0.954516129032258,
+        "oos_recall_8_summed": 0.36,
+        "in_scope_accuracy_150": 0.9036666666666666,
+        "oos_recall_151": 0.41,
+        "ece_151": 0.010969482942210248,
+        "ece_8_summed": 0.019063760727659744,
+        "nll_151": 0.41825109788820103,
+        "n": 3100
+      },
+      "calibrated": {
+        "accuracy_8": 0.9548387096774194,
+        "oos_recall_8": 0.41,
+        "accuracy_8_summed": 0.9548387096774194,
+        "oos_recall_8_summed": 0.37,
+        "in_scope_accuracy_150": 0.9036666666666666,
+        "oos_recall_151": 0.41,
+        "ece_151": 0.013912018072524134,
+        "ece_8_summed": 0.015554030062465345,
+        "nll_151": 0.41686162189056986,
+        "n": 3100
+      }
+    },
+    "test": {
+      "raw": {
+        "accuracy_8": 0.8592727272727273,
+        "oos_recall_8": 0.365,
+        "accuracy_8_summed": 0.8494545454545455,
+        "oos_recall_8_summed": 0.305,
+        "in_scope_accuracy_150": 0.9064444444444445,
+        "oos_recall_151": 0.365,
+        "ece_151": 0.01728390469011367,
+        "ece_8_summed": 0.03300547658995442,
+        "nll_151": 0.8325383350650202,
+        "n": 5500
+      },
+      "calibrated": {
+        "accuracy_8": 0.8592727272727273,
+        "oos_recall_8": 0.365,
+        "accuracy_8_summed": 0.8501818181818181,
+        "oos_recall_8_summed": 0.311,
+        "in_scope_accuracy_150": 0.9064444444444445,
+        "oos_recall_151": 0.365,
+        "ece_151": 0.026375631657722408,
+        "ece_8_summed": 0.04085960590320895,
+        "nll_151": 0.8389104013528332,
+        "n": 5500
+      }
+    }
+  }
+}

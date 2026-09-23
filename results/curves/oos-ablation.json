@@ -1,0 +1,60 @@
+{
+  "name": "oos-ablation",
+  "model_name": "answerdotai/ModernBERT-base",
+  "model_revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8",
+  "learning_rate": 5e-05,
+  "min_train_steps": 400,
+  "points": [
+    {
+      "k": 100,
+      "seed": 42,
+      "oos_train": 0,
+      "run_name": "ModernBERT-base-k100-oos0-seed42",
+      "logits_file": "ModernBERT-base-k100-oos0-seed42.npz",
+      "logits_sha256": "c83e3c569facc09d5eb14cc3f837883fb59b0d5d68583257e9366e3750066be6",
+      "train_rows": 15000,
+      "oos_train_rows": 0,
+      "train_sample_sha256": "88418dcc1027e9ccb3d1bf8230bbf9471a749d252302ee65f154e0228fc9b81d",
+      "train_sample_sha256_source": "recorded by train()",
+      "planned_steps": 2345,
+      "epoch_steps": 2345,
+      "decided_by": "epochs",
+      "global_step": 2345,
+      "reused_from": null
+    },
+    {
+      "k": 100,
+      "seed": 43,
+      "oos_train": 0,
+      "run_name": "ModernBERT-base-k100-oos0-seed43",
+      "logits_file": "ModernBERT-base-k100-oos0-seed43.npz",
+      "logits_sha256": "09029343a7529ac08bbc145fef45edcc1bfb04f6b976dc956473c6c546175343",
+      "train_rows": 15000,
+      "oos_train_rows": 0,
+      "train_sample_sha256": "88418dcc1027e9ccb3d1bf8230bbf9471a749d252302ee65f154e0228fc9b81d",
+      "train_sample_sha256_source": "recorded by train()",
+      "planned_steps": 2345,
+      "epoch_steps": 2345,
+      "decided_by": "epochs",
+      "global_step": 2345,
+      "reused_from": null
+    },
+    {
+      "k": 100,
+      "seed": 44,
+      "oos_train": 0,
+      "run_name": "ModernBERT-base-k100-oos0-seed44",
+      "logits_file": "ModernBERT-base-k100-oos0-seed44.npz",
+      "logits_sha256": "6edfa2106d6d72ae26449b5598cff759ae601c44c42648de129ceab6e5530a61",
+      "train_rows": 15000,
+      "oos_train_rows": 0,
+      "train_sample_sha256": "88418dcc1027e9ccb3d1bf8230bbf9471a749d252302ee65f154e0228fc9b81d",
+      "train_sample_sha256_source": "recorded by train()",
+      "planned_steps": 2345,
+      "epoch_steps": 2345,
+      "decided_by": "epochs",
+      "global_step": 2345,
+      "reused_from": null
+    }
+  ]
+}

@@ -1,0 +1,150 @@
+{
+  "run_name": "bert-base-uncased-k25-seed44",
+  "config": {
+    "model_name": "google-bert/bert-base-uncased",
+    "model_revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+    "seed": 44,
+    "per_intent": null,
+    "k_shot": 25,
+    "oos_train": null,
+    "max_length": 64,
+    "learning_rate": 5e-05,
+    "weight_decay": 0.01,
+    "warmup_ratio": 0.1,
+    "num_train_epochs": 5,
+    "max_steps": -1,
+    "min_train_steps": 400,
+    "train_batch_size": 32,
+    "eval_batch_size": 128,
+    "device": "auto",
+    "replace_classifier_head": false,
+    "checkpoint_root": "checkpoints",
+    "results_root": "results",
+    "eval_per_intent": null
+  },
+  "environment": {
+    "python": "3.12.12",
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "device": "mps",
+    "device_name": "Apple M4",
+    "deterministic_algorithms": false,
+    "dataset_revision": "155b9c710419136e17307b80d0a13e68cd46b4ec"
+  },
+  "training": {
+    "run_name": "bert-base-uncased-k25-seed44",
+    "seed": 44,
+    "config": {
+      "model_name": "google-bert/bert-base-uncased",
+      "model_revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+      "seed": 44,
+      "per_intent": null,
+      "k_shot": 25,
+      "oos_train": null,
+      "max_length": 64,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.01,
+      "warmup_ratio": 0.1,
+      "num_train_epochs": 5,
+      "max_steps": -1,
+      "min_train_steps": 400,
+      "train_batch_size": 32,
+      "eval_batch_size": 128,
+      "device": "auto",
+      "replace_classifier_head": false,
+      "checkpoint_root": "checkpoints",
+      "results_root": "results",
+      "eval_per_intent": null
+    },
+    "git_commit": "f19592f99a9e3f5738435ce45b822812bfb8a13d",
+    "git_dirty": false,
+    "device": "mps",
+    "train_rows": 3813,
+    "oos_train_rows": 63,
+    "per_intent": null,
+    "k_shot": 25,
+    "train_sample_sha256": "790cd7cf9eb24143276f6c59c7bac29c4a0b42f14bef38e9634e96253e6315fb",
+    "step_plan": {
+      "epoch_steps": 600,
+      "min_train_steps": 400,
+      "planned_steps": 600,
+      "decided_by": "epochs",
+      "max_steps_arg": -1
+    },
+    "global_step": 600,
+    "train_loss": 2.8521534983317056,
+    "parameters": {
+      "total": 109598359,
+      "trainable": 109598359
+    },
+    "train_wall_seconds": 206.632,
+    "peak_memory": {
+      "device": "mps",
+      "measures": "sampled after each backward and optimizer step: torch.mps.driver_allocated_memory (Metal driver, includes allocator cache; headline, usually at or above the tensor peak but not guaranteed) and current_allocated_memory (live tensors; lower bound)",
+      "samples": 1202,
+      "driver_allocated_bytes": 4648648704,
+      "tensor_allocated_bytes": 1809169408
+    }
+  },
+  "logits": {
+    "file": "bert-base-uncased-k25-seed44.npz",
+    "sha256": "c4de18e8e6d5e96011ab20178ec669bd2462c6aae44cd2fd40ae8ba3ce077f30",
+    "bytes": 4818898
+  },
+  "metrics": {
+    "temperature": 0.35758235214673606,
+    "validation": {
+      "raw": {
+        "accuracy_8": 0.9658064516129032,
+        "oos_recall_8": 0.54,
+        "accuracy_8_summed": 0.9474193548387096,
+        "oos_recall_8_summed": 0.07,
+        "in_scope_accuracy_150": 0.9203333333333333,
+        "oos_recall_151": 0.54,
+        "ece_151": 0.643871313760336,
+        "ece_8_summed": 0.44914044797815217,
+        "nll_151": 1.5195780894850688,
+        "n": 3100
+      },
+      "calibrated": {
+        "accuracy_8": 0.9658064516129032,
+        "oos_recall_8": 0.54,
+        "accuracy_8_summed": 0.9641935483870968,
+        "oos_recall_8_summed": 0.49,
+        "in_scope_accuracy_150": 0.9203333333333333,
+        "oos_recall_151": 0.54,
+        "ece_151": 0.02477818643648947,
+        "ece_8_summed": 0.007214920474403505,
+        "nll_151": 0.4080676107434186,
+        "n": 3100
+      }
+    },
+    "test": {
+      "raw": {
+        "accuracy_8": 0.8654545454545455,
+        "oos_recall_8": 0.353,
+        "accuracy_8_summed": 0.8069090909090909,
+        "oos_recall_8_summed": 0.034,
+        "in_scope_accuracy_150": 0.9144444444444444,
+        "oos_recall_151": 0.353,
+        "ece_151": 0.5731156997259947,
+        "ece_8_summed": 0.36150164273348634,
+        "nll_151": 1.8975552673941638,
+        "n": 5500
+      },
+      "calibrated": {
+        "accuracy_8": 0.8654545454545455,
+        "oos_recall_8": 0.353,
+        "accuracy_8_summed": 0.862,
+        "oos_recall_8_summed": 0.324,
+        "in_scope_accuracy_150": 0.9144444444444444,
+        "oos_recall_151": 0.353,
+        "ece_151": 0.02885174629406659,
+        "ece_8_summed": 0.0659482101510376,
+        "nll_151": 1.0970270922714995,
+        "n": 5500
+      }
+    }
+  }
+}
