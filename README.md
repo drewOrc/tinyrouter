@@ -29,6 +29,11 @@ Other targets:
 | `make train CONFIG=configs/bert-base.yaml SEED=42` | fine-tune; final weights in `checkpoints/<run>/final` |
 | `make evaluate CONFIG=... SEED=...` | score validation and test, write `results/runs/<run>.json` and the logits archive |
 | `make ac2` | bert-base-uncased, full data, seeds 42/43/44; writes `results/ac2.json`, exits 1 on FAIL; resumes only runs made with the current config, `FORCE=1` clears and reruns all three, including deleting seed 42's kept weights; after `make clean-checkpoints` only `FORCE=1` brings seed 42's weights back |
+| `make pilot-lr` | validation-only pilot: each encoder at k=100, seed 42, lr in {1e-5, 2e-5, 5e-5}; writes `results/pilots/lr.json` and prints the choice (BERT at 5e-5 reuses AC2 seed 42 when it is the same run) |
+| `make pilot-steps` | validation-only pilot: both encoders at k=5, seed 42, S_min in {100, 200, 400}; writes `results/pilots/steps.json`. Needs the learning rates in `configs/curve.yaml` |
+| `make baselines` | majority-class and TF-IDF centroid baselines on every (k, seed) sample, archived like an encoder run |
+| `make curve MODEL=bert\|modernbert` | baselines, then 6 values of k x 3 seeds with the lr and S_min from `configs/curve.yaml`; writes `results/curves/<model>.json`; keeps no weights |
+| `make oos-ablation` | ModernBERT, k=100, no OOS training rows, 3 seeds; writes `results/curves/oos-ablation.json` |
 | `make verify-logits` | check every archive in `results/logits/` against `results/logits-manifest.json` |
 | `make report` | build `results/summary.md` from `results/runs/*.json` |
 | `make clean-checkpoints` | delete all trained weights |
@@ -44,17 +49,19 @@ Put `HF_TOKEN` and `ANTHROPIC_API_KEY` in a `.env` (copy `.env.example`) if you 
 - **Labels.** The model is trained on all 151 CLINC150 intents (150 plus `oos`). Each intent maps to one of 8 routing targets (7 agents plus `oos`) through `src/tinyrouter/resources/intent_to_agent.json`.
 - **Data.** `clinc/clinc_oos`, `plus` config, from the Hugging Face Hub at a pinned commit. Each parquet file is checked against its SHA-256 and row count (15,250 / 3,100 / 5,500), and the label names inside it must match the committed `intent_names.json`.
 - **Calibration.** Temperature scaling, fitted on validation logits only. `fit_temperature` raises `LeakageError` if given anything else, and a test checks that.
-- **Logits archive.** Every evaluation stores per-example validation and test logits (float32) with gold labels and metadata (model and revision, seed, k, OOS training rows, dataset revision, label-space hash, git commit, time) in `results/logits/<run>.npz`. Later analysis reads only these files. They are not committed (about 5 MB per bert-base run); their SHA-256 goes into the committed `results/logits-manifest.json`, and the files are attached to a GitHub Release.
+- **Logits archive.** Every evaluation stores per-example validation and test logits (float32) with gold labels and metadata (model and revision, seed, k, OOS training rows, dataset revision and the SHA-256 of the three split files, label-space hash, git commit, time) in `results/logits/<run>.npz`. Later analysis reads only these files. They are not committed (about 5 MB per bert-base run); their SHA-256 goes into the committed `results/logits-manifest.json`, and the files are attached to a GitHub Release.
 - **Training cost.** Each results JSON records parameter counts, training wall time, steps, device and peak memory. How memory is measured depends on the device (sampled Metal driver memory on MPS, the allocator peak on CUDA, process peak RSS on CPU) and is written next to the number; see `src/tinyrouter/efficiency.py`.
-- **Metrics.** 8-way accuracy, 150-way in-scope accuracy and OOS recall (as defined in Larson et al. 2019), ECE, and NLL. They are computed before and after calibration on both splits.
+- **Learning-curve protocol.** Each curve point trains for max(S_min, 5 epochs) steps. The learning rate of each encoder and the one S_min are chosen by validation-only pilots (`docs/PLAN.md` section 4.1) and written into `configs/curve.yaml` by hand. The pilot code raises `LeakageError` if handed the test split.
+- **Metrics.** 8-way accuracy, 150-way in-scope accuracy and OOS recall (as defined in Larson et al. 2019), ECE, and NLL. They are computed before and after calibration on both splits. `wilson_interval` gives the confidence interval for OOS recall.
 
 ## Layout
 
 ```
-configs/            run configs (bert-base.yaml, smoke.yaml); unknown keys are an error
+configs/            run configs (bert-base.yaml, modernbert-base.yaml, smoke.yaml; unknown keys
+                    are an error) and curve.yaml, the pilot-chosen lr and S_min
 docs/PLAN.md        research questions and acceptance criteria
 docs/OPERATIONS.md  CI jobs, branch protection, rollback
-scripts/            check_em_dash.py
+scripts/            check_em_dash.py; compat_trial.py and export_onnx.py (encoder trial runs)
 src/tinyrouter/
   data.py           pinned download, checksum, per-intent subsampling
   labels.py         151 intents <-> 8 routing targets
@@ -64,6 +71,13 @@ src/tinyrouter/
   evaluate.py       logits, temperature fit, metrics, results JSON
   archive.py        per-example logits archive (.npz) and SHA-256 manifest
   efficiency.py     parameter counts, wall time, peak memory per device
+  sampling.py       k-shot training samples (k per intent, ceil(2.5k) oos from a fixed table)
+  steps.py          training steps = max(S_min, epoch steps), checked after training
+  runs.py           resume rules and when an existing run counts as the same run
+  protocol.py       configs/curve.yaml: pilot-chosen lr per encoder and S_min
+  pilots.py         validation-only lr and S_min pilots
+  curves.py         learning curves and the OOS ablation (reuses AC2 at k=100 when equivalent)
+  baselines.py      majority-class and TF-IDF centroid baselines per curve point
   ac2.py            AC2 run over three seeds and PASS/FAIL verdict
   llm.py            Claude Haiku zero-shot router (baseline and fallback; not run yet)
   report.py         results/*.json -> results/summary.md
