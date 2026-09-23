@@ -1,4 +1,4 @@
-"""Build results/summary.md from results/*.json. Minimal for now.
+"""Build results/summary.md from results/runs/*.json. Minimal for now.
 
 Tables are generated, never typed by hand (docs/PLAN.md AC7). With no
 results yet this says so and exits 0; the README section it will feed is
@@ -31,9 +31,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--results-dir", default="results")
     args = parser.parse_args(argv)
     results_dir = Path(args.results_dir)
-    paths = sorted(results_dir.glob("*.json")) if results_dir.is_dir() else []
+    runs_dir = results_dir / "runs"
+    paths = sorted(runs_dir.glob("*.json")) if runs_dir.is_dir() else []
     if not paths:
-        print(f"no results in {results_dir}/ yet; run `make train evaluate` first")
+        print(f"no results in {runs_dir}/ yet; run `make train evaluate` first")
         return
     records = [json.loads(p.read_text(encoding="utf-8")) for p in paths]
     out = results_dir / "summary.md"

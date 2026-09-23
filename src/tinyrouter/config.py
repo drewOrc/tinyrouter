@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, fields, replace
+from dataclasses import asdict, dataclass, fields, replace
 from pathlib import Path
 from typing import Literal
 
 import yaml
 
 Device = Literal["auto", "cpu", "mps", "cuda"]
+
+# Where output goes, not what it is: two configs differing only here produce the same run.
+LOCATION_FIELDS = frozenset({"checkpoint_root", "results_root"})
 
 
 @dataclass(frozen=True)
@@ -45,6 +48,22 @@ class RunConfig:
         size = "full" if self.per_intent is None else f"k{self.per_intent}"
         short = self.model_name.rstrip("/").split("/")[-1]
         return f"{short}-{size}-seed{self.seed}"
+
+    def identity(self) -> dict[str, object]:
+        """Every field that can change the trained model or its scores.
+
+        Deliberately conservative: fields that only affect evaluation
+        (``eval_batch_size``, ``eval_per_intent``) also count, so changing
+        one of them retrains instead of just re-scoring. This could later be
+        split into a training identity and an evaluation identity.
+        """
+        return {k: v for k, v in asdict(self).items() if k not in LOCATION_FIELDS}
+
+    def matches(self, recorded: object) -> bool:
+        """Whether a config dict saved with earlier output describes this same run."""
+        if not isinstance(recorded, dict):
+            return False
+        return {k: v for k, v in recorded.items() if k not in LOCATION_FIELDS} == self.identity()
 
     def with_seed(self, seed: int) -> RunConfig:
         return replace(self, seed=seed)

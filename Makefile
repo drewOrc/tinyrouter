@@ -1,4 +1,4 @@
-.PHONY: setup lint format test test-network smoke train evaluate report clean-checkpoints
+.PHONY: setup lint format test test-network smoke train evaluate ac2 verify-logits report clean-checkpoints
 
 CONFIG ?= configs/bert-base.yaml
 SEED ?= 42
@@ -53,6 +53,20 @@ train:
 
 evaluate:
 	uv run $(UV_ENV) python -m tinyrouter.evaluate --config $(CONFIG) --seed $(SEED)
+
+# AC2: bert-base-uncased, full data, seeds 42/43/44 -> results/ac2.json; exit 1 on FAIL.
+# Resumes: seeds already scored and archived are skipped. FORCE=1 reruns all.
+# Weights of seeds 43 and 44 are deleted after their logits are archived.
+# FORCE=1 also deletes seed 42's kept weights before retraining. After
+# `make clean-checkpoints`, seed 42's weights are not rebuilt by a plain
+# `make ac2` (its results already exist); getting them back takes FORCE=1,
+# which retrains all three seeds.
+ac2:
+	uv run $(UV_ENV) python -m tinyrouter.ac2 --config configs/bert-base.yaml $(if $(filter 1,$(FORCE)),--force,)
+
+# Every archive listed in results/logits-manifest.json is present and matches its SHA-256.
+verify-logits:
+	uv run python -m tinyrouter.archive
 
 report:
 	uv run python -m tinyrouter.report

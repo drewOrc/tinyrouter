@@ -26,8 +26,14 @@ checkpoints/
 *.pt
 *.onnx
 
-# Run outputs (results/*.json are small and will be committed once real runs exist)
+# Run outputs. Committed: results/runs/*.json, results/ac2.json and
+# results/logits-manifest.json (SHA-256 of every logits archive). Not
+# committed: the archives themselves (about 5 MB each, about 40 runs);
+# they are attached to a GitHub Release and checked with `make verify-logits`.
 results/summary.md
+results/logits/
+*.npz
+*.tmp
 
 # iCloud conflict copies ("name 2")
 * [0-9]*
