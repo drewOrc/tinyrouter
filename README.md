@@ -1,5 +1,7 @@
 # TinyRouter
 
+[![CI](https://github.com/drewOrc/tinyrouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/drewOrc/tinyrouter/actions/workflows/ci.yml)
+
 A small fine-tuned encoder that routes CLINC150 queries to 7 agents (or out-of-scope) on a laptop in milliseconds, calibrated so it can hand the queries it is unsure about to Claude Haiku.
 
 ## Results
