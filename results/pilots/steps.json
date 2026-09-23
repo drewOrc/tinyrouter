@@ -1,0 +1,316 @@
+{
+  "pilot": "min_train_steps",
+  "split": "validation",
+  "k": 5,
+  "seed": 42,
+  "grid": [
+    100,
+    200,
+    400
+  ],
+  "rule": "sum of both models' validation in_scope_correct, then smaller S_min",
+  "points": [
+    {
+      "model": "bert",
+      "value": 100,
+      "run_name": "bert-base-uncased-k5-seed42",
+      "config": {
+        "model_name": "google-bert/bert-base-uncased",
+        "model_revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+        "seed": 42,
+        "per_intent": null,
+        "k_shot": 5,
+        "oos_train": null,
+        "max_length": 64,
+        "learning_rate": 5e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "num_train_epochs": 5,
+        "max_steps": -1,
+        "min_train_steps": 100,
+        "train_batch_size": 32,
+        "eval_batch_size": 128,
+        "device": "auto",
+        "replace_classifier_head": false,
+        "eval_per_intent": null
+      },
+      "source": "trained",
+      "training": {
+        "train_rows": 763,
+        "oos_train_rows": 13,
+        "k_shot": 5,
+        "train_sample_sha256": "bfabf08971d3a16a502e25b2d5a7f1ce204504a526d5b3cb34fec9346dd8caa7",
+        "step_plan": {
+          "epoch_steps": 120,
+          "min_train_steps": 100,
+          "planned_steps": 120,
+          "decided_by": "epochs",
+          "max_steps_arg": -1
+        },
+        "global_step": 120,
+        "train_wall_seconds": 45.059
+      },
+      "validation": {
+        "in_scope_correct": 292,
+        "in_scope_n": 3000,
+        "in_scope_accuracy_150": 0.09733333333333333,
+        "oos_correct": 10,
+        "oos_n": 100,
+        "oos_recall_151": 0.1,
+        "n": 3100
+      }
+    },
+    {
+      "model": "modernbert",
+      "value": 100,
+      "run_name": "ModernBERT-base-k5-seed42",
+      "config": {
+        "model_name": "answerdotai/ModernBERT-base",
+        "model_revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8",
+        "seed": 42,
+        "per_intent": null,
+        "k_shot": 5,
+        "oos_train": null,
+        "max_length": 64,
+        "learning_rate": 5e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "num_train_epochs": 5,
+        "max_steps": -1,
+        "min_train_steps": 100,
+        "train_batch_size": 32,
+        "eval_batch_size": 128,
+        "device": "auto",
+        "replace_classifier_head": false,
+        "eval_per_intent": null
+      },
+      "source": "trained",
+      "training": {
+        "train_rows": 763,
+        "oos_train_rows": 13,
+        "k_shot": 5,
+        "train_sample_sha256": "bfabf08971d3a16a502e25b2d5a7f1ce204504a526d5b3cb34fec9346dd8caa7",
+        "step_plan": {
+          "epoch_steps": 120,
+          "min_train_steps": 100,
+          "planned_steps": 120,
+          "decided_by": "epochs",
+          "max_steps_arg": -1
+        },
+        "global_step": 120,
+        "train_wall_seconds": 66.097
+      },
+      "validation": {
+        "in_scope_correct": 1686,
+        "in_scope_n": 3000,
+        "in_scope_accuracy_150": 0.562,
+        "oos_correct": 16,
+        "oos_n": 100,
+        "oos_recall_151": 0.16,
+        "n": 3100
+      }
+    },
+    {
+      "model": "bert",
+      "value": 200,
+      "run_name": "bert-base-uncased-k5-seed42",
+      "config": {
+        "model_name": "google-bert/bert-base-uncased",
+        "model_revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+        "seed": 42,
+        "per_intent": null,
+        "k_shot": 5,
+        "oos_train": null,
+        "max_length": 64,
+        "learning_rate": 5e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "num_train_epochs": 5,
+        "max_steps": -1,
+        "min_train_steps": 200,
+        "train_batch_size": 32,
+        "eval_batch_size": 128,
+        "device": "auto",
+        "replace_classifier_head": false,
+        "eval_per_intent": null
+      },
+      "source": "trained",
+      "training": {
+        "train_rows": 763,
+        "oos_train_rows": 13,
+        "k_shot": 5,
+        "train_sample_sha256": "bfabf08971d3a16a502e25b2d5a7f1ce204504a526d5b3cb34fec9346dd8caa7",
+        "step_plan": {
+          "epoch_steps": 120,
+          "min_train_steps": 200,
+          "planned_steps": 200,
+          "decided_by": "min_train_steps",
+          "max_steps_arg": 200
+        },
+        "global_step": 200,
+        "train_wall_seconds": 71.255
+      },
+      "validation": {
+        "in_scope_correct": 1102,
+        "in_scope_n": 3000,
+        "in_scope_accuracy_150": 0.36733333333333335,
+        "oos_correct": 45,
+        "oos_n": 100,
+        "oos_recall_151": 0.45,
+        "n": 3100
+      }
+    },
+    {
+      "model": "modernbert",
+      "value": 200,
+      "run_name": "ModernBERT-base-k5-seed42",
+      "config": {
+        "model_name": "answerdotai/ModernBERT-base",
+        "model_revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8",
+        "seed": 42,
+        "per_intent": null,
+        "k_shot": 5,
+        "oos_train": null,
+        "max_length": 64,
+        "learning_rate": 5e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "num_train_epochs": 5,
+        "max_steps": -1,
+        "min_train_steps": 200,
+        "train_batch_size": 32,
+        "eval_batch_size": 128,
+        "device": "auto",
+        "replace_classifier_head": false,
+        "eval_per_intent": null
+      },
+      "source": "trained",
+      "training": {
+        "train_rows": 763,
+        "oos_train_rows": 13,
+        "k_shot": 5,
+        "train_sample_sha256": "bfabf08971d3a16a502e25b2d5a7f1ce204504a526d5b3cb34fec9346dd8caa7",
+        "step_plan": {
+          "epoch_steps": 120,
+          "min_train_steps": 200,
+          "planned_steps": 200,
+          "decided_by": "min_train_steps",
+          "max_steps_arg": 200
+        },
+        "global_step": 200,
+        "train_wall_seconds": 104.118
+      },
+      "validation": {
+        "in_scope_correct": 1903,
+        "in_scope_n": 3000,
+        "in_scope_accuracy_150": 0.6343333333333333,
+        "oos_correct": 21,
+        "oos_n": 100,
+        "oos_recall_151": 0.21,
+        "n": 3100
+      }
+    },
+    {
+      "model": "bert",
+      "value": 400,
+      "run_name": "bert-base-uncased-k5-seed42",
+      "config": {
+        "model_name": "google-bert/bert-base-uncased",
+        "model_revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+        "seed": 42,
+        "per_intent": null,
+        "k_shot": 5,
+        "oos_train": null,
+        "max_length": 64,
+        "learning_rate": 5e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "num_train_epochs": 5,
+        "max_steps": -1,
+        "min_train_steps": 400,
+        "train_batch_size": 32,
+        "eval_batch_size": 128,
+        "device": "auto",
+        "replace_classifier_head": false,
+        "eval_per_intent": null
+      },
+      "source": "trained",
+      "training": {
+        "train_rows": 763,
+        "oos_train_rows": 13,
+        "k_shot": 5,
+        "train_sample_sha256": "bfabf08971d3a16a502e25b2d5a7f1ce204504a526d5b3cb34fec9346dd8caa7",
+        "step_plan": {
+          "epoch_steps": 120,
+          "min_train_steps": 400,
+          "planned_steps": 400,
+          "decided_by": "min_train_steps",
+          "max_steps_arg": 400
+        },
+        "global_step": 400,
+        "train_wall_seconds": 146.499
+      },
+      "validation": {
+        "in_scope_correct": 2276,
+        "in_scope_n": 3000,
+        "in_scope_accuracy_150": 0.7586666666666667,
+        "oos_correct": 47,
+        "oos_n": 100,
+        "oos_recall_151": 0.47,
+        "n": 3100
+      }
+    },
+    {
+      "model": "modernbert",
+      "value": 400,
+      "run_name": "ModernBERT-base-k5-seed42",
+      "config": {
+        "model_name": "answerdotai/ModernBERT-base",
+        "model_revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8",
+        "seed": 42,
+        "per_intent": null,
+        "k_shot": 5,
+        "oos_train": null,
+        "max_length": 64,
+        "learning_rate": 5e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "num_train_epochs": 5,
+        "max_steps": -1,
+        "min_train_steps": 400,
+        "train_batch_size": 32,
+        "eval_batch_size": 128,
+        "device": "auto",
+        "replace_classifier_head": false,
+        "eval_per_intent": null
+      },
+      "source": "trained",
+      "training": {
+        "train_rows": 763,
+        "oos_train_rows": 13,
+        "k_shot": 5,
+        "train_sample_sha256": "bfabf08971d3a16a502e25b2d5a7f1ce204504a526d5b3cb34fec9346dd8caa7",
+        "step_plan": {
+          "epoch_steps": 120,
+          "min_train_steps": 400,
+          "planned_steps": 400,
+          "decided_by": "min_train_steps",
+          "max_steps_arg": 400
+        },
+        "global_step": 400,
+        "train_wall_seconds": 215.494
+      },
+      "validation": {
+        "in_scope_correct": 2016,
+        "in_scope_n": 3000,
+        "in_scope_accuracy_150": 0.672,
+        "oos_correct": 27,
+        "oos_n": 100,
+        "oos_recall_151": 0.27,
+        "n": 3100
+      }
+    }
+  ],
+  "selected": 400,
+  "note": "not applied automatically; copy into configs/curve.yaml by hand"
+}

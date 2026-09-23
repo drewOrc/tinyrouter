@@ -80,6 +80,36 @@
 
 ---
 
+## 2026-09-23 (晚 2)：S_min pilot（validation only），協定凍結
+
+### 本次工作 / 執行摘要
+- `make pilot-steps`：k=5（每個 intent 5 筆、OOS 13 筆）、seed 42、lr 5e-5，兩個 encoder 各試 S_min ∈ {100, 200, 400}，只看 validation。
+- 規則：兩個模型 val in-scope 答對數加總最高者，平手取較小 S_min。選出 400，Drew 確認，寫入 `configs/curve.yaml`。
+- **超參數協定至此全部凍結**：lr 5e-5（兩個模型）、S_min 400、5 epochs、batch 32、max_length 64。正式曲線開跑後不再依中途結果修改任何一項。
+
+### 核心發現 / 數據
+| S_min（實際步數） | BERT val in-scope / OOS | ModernBERT val in-scope / OOS |
+|---|---:|---:|
+| 100（120） | 9.73% / 10% | 56.20% / 16% |
+| 200（200） | 36.73% / 45% | 63.43% / 21% |
+| 400（400） | **75.87% / 47%** | **67.20% / 27%** |
+
+- **又落在範圍上限，而且小 k 尚未訓練飽和**：BERT 從 200 到 400 步仍大幅上升（37% → 76%）。所以 k=1、5、10 的曲線點量的是「400 步預算下」的表現，不是模型極限；README 必須寫明。k ≥ 25 時 5 個 epoch 已超過 400 步，S_min 不生效。
+- **學習速度 vs 最終表現**：步數很少時 ModernBERT 學得快很多（120 步 56% vs 10%），到 400 步 BERT 反超。「誰比較有效率」取決於訓練預算。單一 seed，不下結論，等正式曲線。
+- `S_min=100` 在 k=5 實際是 120 步，因為 5 個 epoch = 120 步 > 100，符合 max(S_min, epoch 步數) 的定義。
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] `make curve MODEL=bert`、`make curve MODEL=modernbert`、`make oos-ablation`（約 5 小時）
+
+### Files / Budget
+- `results/pilots/steps.json`、`configs/curve.yaml`
+- API 花費：US$0
+
+---
+
 ## 2026-09-23 (晚)：learning rate pilot（validation only）
 
 ### 本次工作 / 執行摘要

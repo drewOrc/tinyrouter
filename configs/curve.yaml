@@ -5,7 +5,8 @@
 # null means that pilot has not been run; `make curve` refuses to start.
 # Allowed values: learning_rate in {1.0e-5, 2.0e-5, 5.0e-5} (write the
 # ".0": YAML reads 5e-5 as a string), min_train_steps in {100, 200, 400}.
-min_train_steps: null
+# results/pilots/steps.json: sum of val in-scope correct (both models, k=5) 1978 / 3005 / 4292 at 100 / 200 / 400
+min_train_steps: 400
 models:
   bert:
     config: configs/bert-base.yaml
