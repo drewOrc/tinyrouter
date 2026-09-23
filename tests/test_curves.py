@@ -82,10 +82,12 @@ def test_an_ac2_seed_whose_archive_changed_is_retrained_not_reused(tmp_path):
     ac2_runs(protocol)
     archive = RunPaths.of(protocol.base("bert").with_seed(43)).logits
     archive.write_bytes(archive.read_bytes() + b"x")
-    configs = [c for c in protocol.curve_configs("bert") if c.k_shot == 100]
     fake = FakeRuns()
-    body = run_curve("bert", configs, protocol, fake.train, fake.evaluate, quiet)
-    assert [p["reused_from"] is not None for p in body["points"]] == [True, False, True]
+    body = run_curve(
+        "bert", protocol.curve_configs("bert"), protocol, fake.train, fake.evaluate, quiet
+    )
+    full = [p for p in body["points"] if p["k"] == 100]
+    assert [p["reused_from"] is not None for p in full] == [True, False, True]
 
 
 def test_curve_keeps_no_weights_and_leaves_ac2_seed_42_weights(tmp_path):
@@ -242,7 +244,7 @@ def test_curve_writes_no_index_when_an_evaluation_leaves_a_broken_archive(tmp_pa
 
 def test_a_point_trained_on_another_sample_than_curve_sample_now_gives_is_refused(tmp_path):
     protocol = make_protocol(tmp_path, s_min=400, bert_lr=5e-5, modern_lr=2e-5)
-    configs = protocol.curve_configs("modernbert")[:3]
+    configs = protocol.curve_configs("modernbert")
     fake = FakeRuns()
     run_curve("modernbert", configs, protocol, fake.train, fake.evaluate, quiet)
 
@@ -258,10 +260,12 @@ def test_reused_ac2_points_get_the_fingerprint_computed_now_and_say_so(tmp_path)
 
     protocol = make_protocol(tmp_path, s_min=400, bert_lr=5e-5, modern_lr=2e-5)
     ac2_runs(protocol)
-    configs = [c for c in protocol.curve_configs("bert") if c.k_shot == 100]
+    configs = protocol.curve_configs("bert")
     fake = FakeRuns()
     body = run_curve("bert", configs, protocol, fake.train, fake.evaluate, quiet)
-    for point, config in zip(body["points"], configs, strict=True):
+    full = [(p, c) for p, c in zip(body["points"], configs, strict=True) if c.k_shot == 100]
+    assert len(full) == 3
+    for point, config in full:
         assert point["reused_from"] is not None
         assert point["train_sample_sha256"] == fake_fingerprint(config)
         assert point["train_sample_sha256_source"] == BACKFILLED_SAMPLE

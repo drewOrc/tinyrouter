@@ -39,13 +39,19 @@ them the same way. How the scores are defined:
   (docs/PLAN.md section 4.1). The factor was chosen so that the
   temperature fit (T in [0.05, 100]) has an interior optimum: on plain
   cosines it hit the lower bound at every k >= 5.
+
+``run_all`` checks its own completion (completeness.py): the plan must be
+exactly 2 baselines x 6 values of k x 3 seeds, each once, before anything
+is fit; the index is read back and must hold the same 36 points with
+every archive's SHA-256 equal on disk, in the manifest and in the index
+before it is moved into place and ``completed 36/36 baseline points`` is
+printed.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 from collections.abc import Callable
 from pathlib import Path
 
@@ -61,6 +67,7 @@ from tinyrouter.archive import (
     utc_now,
 )
 from tinyrouter.calibrate import SplitLogits
+from tinyrouter.completeness import BASELINE_KEY, BASELINE_POINTS, check_points, publish_index
 from tinyrouter.data import DATASET_REVISION, Split, load_split
 from tinyrouter.evaluate import RunPaths, score
 from tinyrouter.labels import load_label_space
@@ -221,25 +228,34 @@ def environment() -> dict[str, object]:
     }
 
 
+def planned_points() -> list[tuple[str, int, int]]:
+    """(baseline, k, seed) in run order: every baseline of one (k, seed) shares its sample."""
+    return [(name, k, seed) for k in CURVE_KS for seed in SEEDS for name in BASELINES]
+
+
 def run_all(
     results_root: Path,
     sample_fn: SampleFn = curve_sample,
     eval_fn: EvalFn = load_split,  # type: ignore[assignment]
     log: Log = print,
 ) -> dict[str, object]:
-    """Every baseline at every (k, seed); writes results/curves/baselines.json."""
+    """Every baseline at every (k, seed); writes and verifies results/curves/baselines.json."""
+    plan = planned_points()
+    check_points(plan, BASELINE_POINTS, "baselines plan")
     evals = {name: eval_fn(name) for name in ("validation", "test")}
     entries = []
-    for k in CURVE_KS:
-        for seed in SEEDS:
-            train = sample_fn(k, seed)
-            for name in BASELINES:
-                record = run_baseline(name, k, seed, train, evals, results_root)
-                entries.append(index_entry(name, k, seed, record))
+    samples: dict[tuple[int, int], Split] = {}
+    for name, k, seed in plan:
+        if (k, seed) not in samples:
+            samples[(k, seed)] = sample_fn(k, seed)
+        record = run_baseline(name, k, seed, samples[(k, seed)], evals, results_root)
+        entries.append(index_entry(name, k, seed, record))
+        if name == BASELINES[-1]:
             log(f"baselines k={k} seed={seed}: done")
     body = {"baselines": {n: definition(n) for n in BASELINES}, "points": entries}
     out = results_root / "curves" / "baselines.json"
-    write_index(out, body)
+    count = publish_index(out, body, BASELINE_KEY, BASELINE_POINTS, results_root, "baselines")
+    log(f"completed {count}/{len(BASELINE_POINTS)} baseline points")
     return body
 
 
@@ -259,19 +275,11 @@ def index_entry(name: str, k: int, seed: int, record: dict[str, object]) -> dict
     }
 
 
-def write_index(path: Path, body: dict[str, object]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
-    os.replace(tmp, path)
-
-
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-root", default="results")
     args = parser.parse_args(argv)
-    body = run_all(Path(args.results_root))
-    print(f"wrote {len(body['points'])} baseline runs")  # type: ignore[arg-type]
+    run_all(Path(args.results_root))
 
 
 if __name__ == "__main__":
