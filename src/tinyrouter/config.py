@@ -50,7 +50,13 @@ class RunConfig:
         return f"{short}-{size}-seed{self.seed}"
 
     def identity(self) -> dict[str, object]:
-        """Every field that can change the trained model or its scores."""
+        """Every field that can change the trained model or its scores.
+
+        Deliberately conservative: fields that only affect evaluation
+        (``eval_batch_size``, ``eval_per_intent``) also count, so changing
+        one of them retrains instead of just re-scoring. This could later be
+        split into a training identity and an evaluation identity.
+        """
         return {k: v for k, v in asdict(self).items() if k not in LOCATION_FIELDS}
 
     def matches(self, recorded: object) -> bool:

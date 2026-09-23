@@ -2,7 +2,9 @@
 
 Pass means every seed's 150-way in-scope test accuracy is at least 95.7%
 (docs/PLAN.md AC2; derived from Larson et al.'s 96.7%, not a claim of
-exact reproduction). Writes ``results/ac2.json`` and exits 1 on FAIL.
+exact reproduction). Writes ``results/ac2.json`` (with the config and
+each seed's logits SHA-256) and exits 1 on FAIL. Any earlier ``ac2.json``
+is deleted first, so a run that fails partway leaves no verdict behind.
 
 Tuning after a FAIL uses the validation numbers only; ``ac2.json`` and the
 printout list them for that purpose. The test numbers are the verdict and
@@ -162,6 +164,7 @@ def judge(records: dict[int, dict[str, object]]) -> dict:
         test = split_numbers(records[seed], "test")
         per_seed[str(seed)] = {
             "run_name": records[seed]["run_name"],
+            "logits_sha256": records[seed]["logits"]["sha256"],  # type: ignore[index]
             "validation": split_numbers(records[seed], "validation"),
             "test": test,
             "passed": test["in_scope_accuracy_150"] >= THRESHOLD,
@@ -184,6 +187,11 @@ def run_ac2(
     force: bool = False,
     log: Log = print,
 ) -> dict:
+    out = Path(base.results_root) / "ac2.json"
+    if out.exists():
+        # A verdict from an earlier config must not survive a run that fails partway.
+        out.unlink()
+        log(f"removed previous {out}")
     if force:
         for seed in SEEDS:
             clear_outputs(base.with_seed(seed), log)
@@ -194,8 +202,8 @@ def run_ac2(
         path = RunPaths.of(config).results_json
         records[seed] = json.loads(path.read_text(encoding="utf-8"))
     result = judge(records)
+    result["config"] = {k: v for k, v in base.identity().items() if k != "seed"}
     result["weights_kept"] = {str(s): run_dir(base.with_seed(s)).exists() for s in SEEDS}
-    out = Path(base.results_root) / "ac2.json"
     out.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     log(f"wrote {out}: {result['verdict']}")
     return result

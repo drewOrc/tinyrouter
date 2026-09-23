@@ -28,7 +28,7 @@ Other targets:
 | `make test-network` | tests that download from the Hugging Face Hub (dataset checksums) |
 | `make train CONFIG=configs/bert-base.yaml SEED=42` | fine-tune; final weights in `checkpoints/<run>/final` |
 | `make evaluate CONFIG=... SEED=...` | score validation and test, write `results/runs/<run>.json` and the logits archive |
-| `make ac2` | bert-base-uncased, full data, seeds 42/43/44; writes `results/ac2.json`, exits 1 on FAIL; resumes only runs made with the current config, `FORCE=1` clears and reruns all three |
+| `make ac2` | bert-base-uncased, full data, seeds 42/43/44; writes `results/ac2.json`, exits 1 on FAIL; resumes only runs made with the current config, `FORCE=1` clears and reruns all three, including deleting seed 42's kept weights; after `make clean-checkpoints` only `FORCE=1` brings seed 42's weights back |
 | `make verify-logits` | check every archive in `results/logits/` against `results/logits-manifest.json` |
 | `make report` | build `results/summary.md` from `results/runs/*.json` |
 | `make clean-checkpoints` | delete all trained weights |

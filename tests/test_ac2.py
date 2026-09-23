@@ -293,3 +293,53 @@ def test_fail_verdict_makes_the_command_exit_nonzero(base, monkeypatch, capsys):
         ac2.main(["--config", "unused.yaml"])
     assert exc.value.code == 1
     assert "val in-scope" in capsys.readouterr().out
+
+
+def test_ac2_json_records_the_config_and_each_seeds_logits_sha(base):
+    result = run_ac2(base, FakePipeline().train, FakePipeline().evaluate, log=quiet)
+    on_disk = json.loads((Path(base.results_root) / "ac2.json").read_text())
+    assert on_disk == json.loads(json.dumps(result))
+    assert "seed" not in on_disk["config"]
+    assert on_disk["config"]["learning_rate"] == base.learning_rate
+    for seed in SEEDS:
+        stored = json.loads(RunPaths.of(base.with_seed(seed)).results_json.read_text())
+        assert on_disk["seeds"][str(seed)]["logits_sha256"] == stored["logits"]["sha256"]
+
+
+def test_changed_config_that_fails_partway_leaves_no_ac2_verdict(base):
+    run_ac2(base, FakePipeline().train, FakePipeline().evaluate, log=quiet)
+    verdict = Path(base.results_root) / "ac2.json"
+    assert json.loads(verdict.read_text())["verdict"] == "PASS"
+    crashing = FakePipeline(fail_train=43)
+    with pytest.raises(RuntimeError, match="simulated"):
+        run_ac2(replace(base, learning_rate=3e-5), crashing.train, crashing.evaluate, log=quiet)
+    assert not verdict.exists()
+
+
+def rewrite_results_sha(config: RunConfig, sha: str) -> None:
+    path = RunPaths.of(config).results_json
+    rec = json.loads(path.read_text())
+    rec["logits"]["sha256"] = sha
+    path.write_text(json.dumps(rec))
+
+
+def test_not_done_when_the_manifest_disagrees_with_json_and_file(base):
+    run_ac2(base, FakePipeline().train, FakePipeline().evaluate, log=quiet)
+    config = base.with_seed(43)
+    paths = RunPaths.of(config)
+    manifest = json.loads(paths.manifest.read_text())
+    manifest["files"][paths.logits.name]["sha256"] = "f" * 64
+    paths.manifest.write_text(json.dumps(manifest))
+    assert not is_done(config)
+
+
+def test_not_done_when_the_archive_belongs_to_another_seed(base):
+    from tinyrouter.data import sha256_of
+
+    run_ac2(base, FakePipeline().train, FakePipeline().evaluate, log=quiet)
+    config = base.with_seed(43)
+    paths = RunPaths.of(config)
+    save_logits(paths.logits, fake_splits(seed=43), fake_metadata(seed=42))
+    record_in_manifest(paths.manifest, paths.logits)
+    rewrite_results_sha(config, sha256_of(paths.logits))
+    assert not is_done(config)

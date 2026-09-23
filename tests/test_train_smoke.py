@@ -122,11 +122,14 @@ def test_train_then_evaluate_archives_logits_and_records_training_cost(
     from tinyrouter.archive import check_against_manifest, load_logits
     from tinyrouter.evaluate import RunPaths, evaluate
 
-    config = replace(smoke_config(tiny_model_dir, tmp_path), results_root=str(tmp_path / "res"))
+    # A seed other than 42, so a summary that hardcodes 42 is caught.
+    config = replace(
+        smoke_config(tiny_model_dir, tmp_path), results_root=str(tmp_path / "res"), seed=43
+    )
     final_dir = train(config, synthetic_split("train"), tmp_path / "ckpt" / config.run_name)
 
     summary = json.loads((final_dir / "train_summary.json").read_text())
-    assert summary["seed"] == config.seed and config.matches(summary["config"])
+    assert summary["seed"] == 43 and config.matches(summary["config"])
     assert len(summary["git_commit"]) in (7, 40) or summary["git_commit"] == "unknown"
     assert summary["parameters"]["total"] == summary["parameters"]["trainable"] > 0
     assert summary["global_step"] == 2 and summary["train_wall_seconds"] > 0
@@ -249,3 +252,27 @@ def test_model_whose_id2label_differs_from_intent_names_is_refused(tiny_model_di
     config = smoke_config(tiny_model_dir, tmp_path)
     with pytest.raises(LabelMismatchError):
         predict_logits(tiny_model_dir, synthetic_split("test"), config)
+
+
+def test_evaluate_removes_the_old_results_json_before_it_can_fail(tmp_path, monkeypatch):
+    import json
+
+    from tinyrouter import evaluate as evaluate_module
+    from tinyrouter.evaluate import RunPaths, evaluate
+
+    config = replace(smoke_config(Path("unused"), tmp_path), results_root=str(tmp_path / "res"))
+    old = RunPaths.of(config).results_json
+    old.parent.mkdir(parents=True)
+    old.write_text(json.dumps({"from": "an earlier run"}))
+    model_dir = tmp_path / "model"
+    model_dir.mkdir()
+    (model_dir / "train_summary.json").write_text('{"train_rows": 1, "oos_train_rows": 0}')
+
+    def boom(*_):
+        raise RuntimeError("prediction failed")
+
+    monkeypatch.setattr(evaluate_module, "predict_logits", boom)
+    monkeypatch.setattr(evaluate_module, "eval_split", lambda name, _: synthetic_split(name))
+    with pytest.raises(RuntimeError, match="prediction failed"):
+        evaluate(config, model_dir)
+    assert not old.exists()
