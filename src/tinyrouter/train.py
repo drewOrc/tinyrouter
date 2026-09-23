@@ -10,11 +10,20 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import time
 from pathlib import Path
 
 from tinyrouter.config import RunConfig, load_config
 from tinyrouter.data import Split, load_split, subsample_per_intent
+from tinyrouter.efficiency import (
+    count_parameters,
+    memory_report,
+    sampler_callback,
+    start_measurement,
+)
 from tinyrouter.labels import LabelSpace, load_label_space
+
+SUMMARY_NAME = "train_summary.json"
 
 
 def pick_device(requested: str = "auto") -> str:
@@ -88,7 +97,12 @@ def training_arguments(config: RunConfig, output_dir: Path, device: str) -> obje
 
 
 def train(config: RunConfig, train_split: Split, output_dir: Path) -> Path:
-    """Train on ``train_split`` and return the directory holding the final weights."""
+    """Train on ``train_split`` and return the directory holding the final weights.
+
+    ``final/train_summary.json`` records the training set size, parameter
+    counts, wall time, steps and peak memory; evaluation copies it into the
+    results JSON, because the weights (and this file) may be deleted later.
+    """
     from transformers import DataCollatorWithPadding, Trainer, set_seed
 
     if train_split.name != "train":
@@ -97,32 +111,36 @@ def train(config: RunConfig, train_split: Split, output_dir: Path) -> Path:
     labels = load_label_space()
     device = pick_device(config.device)
     model, tokenizer = load_model_and_tokenizer(config, labels)
+    sampler = start_measurement(device)
     trainer = Trainer(
         model=model,  # type: ignore[arg-type]
         args=training_arguments(config, output_dir, device),  # type: ignore[arg-type]
         train_dataset=to_hf_dataset(train_split, tokenizer, config.max_length),  # type: ignore[arg-type]
         data_collator=DataCollatorWithPadding(tokenizer),  # type: ignore[arg-type]
         processing_class=tokenizer,  # type: ignore[arg-type]
+        callbacks=[sampler_callback(sampler)],  # type: ignore[list-item]
     )
+    started = time.perf_counter()
     result = trainer.train()
+    wall_seconds = time.perf_counter() - started
+    sampler.sample()
     final_dir = output_dir / "final"
     trainer.save_model(str(final_dir))
     for leftover in output_dir.glob("checkpoint-*"):
         shutil.rmtree(leftover)
-    (final_dir / "train_summary.json").write_text(
-        json.dumps(
-            {
-                "run_name": config.run_name,
-                "device": device,
-                "train_rows": len(train_split),
-                "global_step": result.global_step,
-                "train_loss": result.training_loss,
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    summary = {
+        "run_name": config.run_name,
+        "device": device,
+        "train_rows": len(train_split),
+        "oos_train_rows": int((train_split.intents == labels.oos_intent_id).sum()),
+        "per_intent": config.per_intent,
+        "global_step": result.global_step,
+        "train_loss": result.training_loss,
+        "parameters": count_parameters(model),
+        "train_wall_seconds": round(wall_seconds, 3),
+        "peak_memory": memory_report(device, sampler),
+    }
+    (final_dir / SUMMARY_NAME).write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     return final_dir
 
 

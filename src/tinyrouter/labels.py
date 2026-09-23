@@ -9,6 +9,7 @@ made in the 8-way agent space (7 agents + oos). Both files under
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from functools import cache
@@ -57,6 +58,19 @@ class LabelSpace:
     def agents_of(self, intent_ids: np.ndarray) -> np.ndarray:
         """Map integer intent ids (any shape) to integer agent ids."""
         return self.intent_to_agent_id[np.asarray(intent_ids, dtype=np.int64)]
+
+    @property
+    def sha256(self) -> str:
+        """Fingerprint of intent order plus the intent-to-agent map.
+
+        Two archives with the same fingerprint agree on what every logit
+        column means and which agent it rolls up to.
+        """
+        canonical = json.dumps(
+            [[name, self.intent_to_agent[name]] for name in self.intent_names],
+            separators=(",", ":"),
+        )
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     def aggregate_probs(self, intent_probs: np.ndarray) -> np.ndarray:
         """Sum 151-way probabilities into 8-way agent probabilities.

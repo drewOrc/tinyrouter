@@ -1,7 +1,8 @@
 """End-to-end smoke run: real data, tiny random model, one training step, full scoring path.
 
 Checks that every piece connects (download and checksum, label mapping,
-training, logits, temperature fit, metrics, JSON output). The numbers it
+training, logits, logits archive and manifest, temperature fit, metrics,
+JSON output). The numbers it
 prints are meaningless; the model is random and sees about 150 rows.
 Everything is written to a temporary directory and removed afterwards.
 """
@@ -15,8 +16,9 @@ import time
 from dataclasses import replace
 from pathlib import Path
 
+from tinyrouter.archive import check_against_manifest, load_logits
 from tinyrouter.config import load_config
-from tinyrouter.evaluate import evaluate
+from tinyrouter.evaluate import RunPaths, evaluate
 from tinyrouter.train import prepare_train_split, train
 
 
@@ -33,7 +35,12 @@ def main(argv: list[str] | None = None) -> None:
         )
         train_split = prepare_train_split(config)
         final_dir = train(config, train_split, Path(config.checkpoint_root) / config.run_name)
-        record = evaluate(config, final_dir, Path(config.results_root) / "smoke.json")
+        record = evaluate(config, final_dir)
+        paths = RunPaths.of(config)
+        check_against_manifest(paths.manifest, paths.logits)
+        archive = load_logits(paths.logits)
+        logits_bytes = paths.logits.stat().st_size
+        logits_cells = sum(s.logits.size for s in archive.splits.values())
     metrics = record["metrics"]
     assert isinstance(metrics, dict)
     temperature = float(metrics["temperature"])
@@ -51,6 +58,11 @@ def main(argv: list[str] | None = None) -> None:
     print(
         f"smoke OK: train_rows={len(train_split)} val_rows={val_n} test_rows={test_n} "
         f"T={temperature:.3f} elapsed={time.monotonic() - started:.1f}s"
+    )
+    print(
+        f"smoke logits archive: {logits_bytes} bytes for {logits_cells} float32 logits "
+        f"({logits_bytes / logits_cells:.2f} bytes each), sha256 in manifest, load_logits OK; "
+        f"peak memory {record['training']['peak_memory']}"
     )
 
 

@@ -110,3 +110,45 @@ def test_smoke_config_file_uses_cpu_and_one_step():
     config = load_config(Path(__file__).parent.parent / "configs" / "smoke.yaml")
     assert (config.device, config.max_steps, config.warmup_ratio) == ("cpu", 1, 0.0)
     assert replace(config, seed=7).run_name.endswith("seed7")
+
+
+@pytest.mark.filterwarnings("ignore::tinyrouter.calibrate.TemperatureBoundWarning")
+def test_train_then_evaluate_archives_logits_and_records_training_cost(
+    tiny_model_dir, tmp_path, monkeypatch
+):
+    import json
+
+    from tinyrouter import evaluate as evaluate_module
+    from tinyrouter.archive import check_against_manifest, load_logits
+    from tinyrouter.evaluate import RunPaths, evaluate
+
+    config = replace(smoke_config(tiny_model_dir, tmp_path), results_root=str(tmp_path / "res"))
+    final_dir = train(config, synthetic_split("train"), tmp_path / "ckpt" / config.run_name)
+
+    summary = json.loads((final_dir / "train_summary.json").read_text())
+    assert summary["parameters"]["total"] == summary["parameters"]["trainable"] > 0
+    assert summary["global_step"] == 2 and summary["train_wall_seconds"] > 0
+    assert summary["oos_train_rows"] == 1 and summary["train_rows"] == 32
+    memory = summary["peak_memory"]
+    assert memory["device"] == "cpu" and memory["process_peak_rss_bytes"] > 10_000_000
+    assert memory["samples"] >= 3
+
+    monkeypatch.setattr(evaluate_module, "eval_split", lambda name, _: synthetic_split(name))
+    record = evaluate(config, final_dir)
+    paths = RunPaths.of(config)
+    check_against_manifest(paths.manifest, paths.logits)
+    archive = load_logits(paths.logits)
+    assert archive.metadata["seed"] == config.seed
+    assert archive.metadata["oos_train_rows"] == 1
+    assert archive.test.logits.shape == (32, 151)
+    assert record["training"] == summary
+    assert record["logits"]["file"] == f"{config.run_name}.npz"
+    on_disk = json.loads(paths.results_json.read_text())
+    assert on_disk["metrics"]["test"]["raw"]["n"] == 32
+
+
+def test_evaluate_refuses_a_model_dir_without_a_training_summary(tmp_path):
+    from tinyrouter.evaluate import read_training_summary
+
+    with pytest.raises(FileNotFoundError, match="train_summary.json"):
+        read_training_summary(tmp_path)
