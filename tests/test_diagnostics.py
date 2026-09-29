@@ -30,14 +30,15 @@ def test_prior_weights_hit_the_share_and_average_one():
 
 def test_kept_rates_by_hand():
     # Kept at tau 0.5: rows 0-2. Row 1 in-scope error, row 2 kept OOS routed to finance.
-    r = routed("test", [F, T, F, OOS], [F, F, OOS, OOS], [0.9, 0.8, 0.7, 0.2])
+    # Row 4 is OOS routed to finance too, but deferred, so it is not a high-confidence misroute.
+    r = routed("test", [F, T, F, OOS, F], [F, F, OOS, OOS, OOS], [0.9, 0.8, 0.7, 0.2, 0.1])
     got = kept_rates(r, "msp", 0.5)
-    assert got["coverage"] == pytest.approx(3 / 4)
+    assert got["coverage"] == pytest.approx(3 / 5)
     assert got["selective_risk"] == pytest.approx(2 / 3)
     assert got["in_scope_risk"] == pytest.approx(1 / 2)
     assert got["kept_oos_error_rate"] == 1.0
     assert got["kept_oos_share"] == pytest.approx(1 / 3)
-    assert got["high_conf_oos_misroute_rate"] == pytest.approx(1 / 2)
+    assert got["high_conf_oos_misroute_rate"] == pytest.approx(1 / 3)
 
 
 def test_reweighting_moves_risk_by_the_oos_share_by_hand():
