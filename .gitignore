@@ -36,6 +36,7 @@ results/logits/
 # GitHub Release like the logits; results/llm-manifest.json and
 # results/llm/haiku-8way.json are committed. The smoke run is scratch.
 results/llm/*.jsonl
+results/llm/*.lock
 results/llm-smoke/
 *.npz
 *.tmp

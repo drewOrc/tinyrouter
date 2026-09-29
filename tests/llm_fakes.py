@@ -45,7 +45,7 @@ class FakeMessages:
         failures: dict[str, list[BaseException]] | None = None,
         input_tokens: int = 250,
         output_tokens: int = 4,
-        base_tokens: int = 240,
+        base_tokens: int = 250,
     ) -> None:
         self.reply = reply
         self.failures = {k: list(v) for k, v in (failures or {}).items()}
@@ -54,6 +54,8 @@ class FakeMessages:
         self.base_tokens = base_tokens
         self.calls: list[dict] = []
         self.count_calls = 0
+        self.count_failures: list[BaseException] = []
+        self.response_override = None
         self._lock = threading.Lock()
 
     def create(self, **kwargs):
@@ -65,6 +67,8 @@ class FakeMessages:
         if error is not None:
             raise error
         n = len(self.calls)
+        if self.response_override is not None:
+            return self.response_override
         return SimpleNamespace(
             content=[SimpleNamespace(type="text", text=self.reply(query))],
             usage=SimpleNamespace(
@@ -79,6 +83,8 @@ class FakeMessages:
 
     def count_tokens(self, **kwargs):
         self.count_calls += 1
+        if self.count_failures:
+            raise self.count_failures.pop(0)
         return SimpleNamespace(input_tokens=self.base_tokens)
 
     def queries_called(self) -> list[str]:
@@ -89,7 +95,7 @@ def fake_client(**kwargs) -> SimpleNamespace:
     return SimpleNamespace(messages=FakeMessages(**kwargs))
 
 
-def fake_split(name: str, n: int) -> Split:
-    """``n`` rows named ``<name>-<i>``, alternating intents 0 and 1."""
-    texts = tuple(f"{name}-{i}" for i in range(n))
+def fake_split(name: str, n: int, prefix: str | None = None) -> Split:
+    """``n`` rows named ``<prefix or name>-<i>``, alternating intents 0 and 1."""
+    texts = tuple(f"{prefix or name}-{i}" for i in range(n))
     return Split(name, texts, np.array([i % 2 for i in range(n)], dtype=np.int64))  # type: ignore[arg-type]

@@ -4,6 +4,34 @@
 
 ---
 
+## 2026-09-29（晚）：PR #14 審查修正（4 medium、6 low）
+
+### 本次工作 / 執行摘要
+- 單一執行鎖：`results/llm/<name>.lock` 用 `flock(LOCK_EX|LOCK_NB)`，run 與 finalize 都要拿鎖；拿不到就 exit 2。審查實測兩個行程並行時各自花到上限，合計到 144%。
+- parser：`oos` 以單字邊界也算候選，候選數 ≥ 2 就判 oos 並標 `parse_failed`。`"oos (not travel_agent)"` 原本會被判成 travel_agent，是 RQ2 最危險的靜默誤派。
+- journal 尾行：先修尾再載入。完整但缺換行的尾行保留並補換行（那筆已付費），只有無法解析的半行才截掉。原本是先載入再截尾，會把記憶體裡算成功、磁碟上已刪掉的那筆再付一次費。
+- `count_tokens` 走同一套重試與遮罩（529 會重試、錯誤字串遮 key）。
+- `settle` 把非預期例外也記成 failed 並停跑；Ctrl-C 時先等在途呼叫回來並記帳再往外拋；回應的 input 或 output 超過上界就停跑（`bound violated`，exit 1）。
+- summary 新增 `parser_sha256`（重新解析用的是當下的 parser，而 parser 不在 identity 裡）與 `cap_scope`。
+- 補五個守門的測試：非 ASCII 的上界（bytes 不是字元數）、journal 混入別的身分、gold 被改、只改 manifest 的 SHA、同一列成功兩次。
+
+### 核心發現 / 數據
+- **上限的範圍是「每個身分 × 每個 target」**：smoke 與改 prompt 之前的花費不算在內。AC6 的總花費要手動把 `results/llm/haiku-8way.json` 與 smoke 的 summary 加總。
+- 上限看不到的部分：client 端逾時但伺服器已計費的請求，重試時沿用同一份預留；每次這種逾時最多多出一個單筆上界，並行時一波約 workers 個上界。
+- (無實跑數據)
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] 下一個分析 PR 同時報新舊兩種解析規則（舊：子字串比對取第一個命中），以及兩者判定不一致的列數
+
+### Files / Budget
+- `src/tinyrouter/llm.py`、`src/tinyrouter/llm_run.py`、`tests/test_llm.py`、`tests/test_llm_run.py`、`tests/llm_fakes.py`、`.gitignore`
+- API 花費：US$0
+
+---
+
 ## 2026-09-29：步驟 4 之一，Haiku 8 類執行器（尚未實跑）
 
 ### 本次工作 / 執行摘要

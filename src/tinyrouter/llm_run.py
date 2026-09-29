@@ -21,10 +21,23 @@ Files, for target ``haiku-8way`` under ``results/llm/``:
 - ``haiku-8way.json``: summary with identity, pricing, tokens and dollars.
 
 Cost cap: before each call the runner reserves an upper bound on that
-call's cost (input tokens counted by the API for the prompt plus one byte
-per token of query, output at ``max_tokens``) and does not start a call
-that could take cumulative spend for this identity past ``--max-usd``.
-Actual cost comes from each response's ``usage``.
+call's cost (input tokens counted by the API for the prompt plus one token
+per UTF-8 byte of query, output at ``max_tokens``) and does not start a
+call that could take cumulative spend past ``--max-usd``. Actual cost
+comes from each response's ``usage``; a response that uses more than its
+bound stops the run ("bound violated", exit 1). The cap covers one
+identity of one target: the smoke run and journals of other identities
+(an earlier prompt, say) are not counted, so AC6's total is this summary
+plus the smoke summary, added by hand. What the cap cannot see: a request
+that times out on the client after the server billed it is retried under
+the same reservation, so each such timeout can add up to one bound; with
+``workers`` calls in flight that is at most about ``workers`` bounds per
+wave of timeouts. Calls in flight when the run is interrupted (Ctrl-C)
+are waited for and journaled before the interrupt is re-raised.
+
+One process per target: the runner holds an exclusive ``flock`` on
+``<name>.lock`` next to the journal. A second process started while the
+first runs exits 2 instead of spending from the same cap.
 
 Completion: the predictions file, read back from disk, must hold exactly
 the expected (split, index) pairs once each, all with this identity, and
@@ -36,14 +49,16 @@ row counts are literals here, not read from ``data.SPLIT_FILES``.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
 import sys
 import time
 from collections import Counter
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TextIO
@@ -62,6 +77,10 @@ DEFAULT_MAX_USD = 5.0
 DEFAULT_WORKERS = 6
 MAX_WORKERS = 8
 MANIFEST_NAME = "llm-manifest.json"
+CAP_SCOPE = (
+    "per identity and target: totals and the cap cover this target's journal for this "
+    "identity only; the smoke run and other identities are not included"
+)
 RECORD_FIELDS: dict[str, type | tuple[type, ...]] = {
     "split": str,
     "index": int,
@@ -95,6 +114,10 @@ class IncompleteError(RuntimeError):
     """The predictions file is not exactly the expected rows, once each."""
 
 
+class RunLockedError(RuntimeError):
+    """Another process holds this target's lock."""
+
+
 @dataclass(frozen=True)
 class Target:
     name: str
@@ -108,6 +131,10 @@ class Target:
 
     def journal(self, identity_sha: str) -> Path:
         return self.out_dir / f"{self.name}.{identity_sha[:12]}.journal.jsonl"
+
+    @property
+    def lock(self) -> Path:
+        return self.out_dir / f"{self.name}.lock"
 
     @property
     def predictions(self) -> Path:
@@ -215,14 +242,44 @@ def read_jsonl(path: Path, allow_torn_tail: bool) -> list[dict[str, Any]]:
     return out
 
 
-def trim_torn_tail(path: Path) -> None:
-    """Cut a half-written last line, so the next append starts on a line of its own."""
+@contextmanager
+def exclusive(target: Target) -> Iterator[None]:
+    """Hold ``target.lock`` for the block; RunLockedError at once if another process has it."""
+    target.lock.parent.mkdir(parents=True, exist_ok=True)
+    with target.lock.open("a") as fh:
+        try:
+            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise RunLockedError(
+                f"{target.lock} is held by another process; wait for it to finish"
+            ) from None
+        try:
+            yield
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
+
+
+def repair_tail(path: Path) -> None:
+    """Make the journal end in a newline before it is read or appended to.
+
+    A last line without its newline is either a whole record whose newline
+    was not written (kept: the call was paid for; the newline is added) or
+    half a record (cut: that row is called again).
+    """
     if not path.exists():
         return
     data = path.read_bytes()
-    if data and not data.endswith(b"\n"):
+    if not data or data.endswith(b"\n"):
+        return
+    start = data.rfind(b"\n") + 1
+    try:
+        json.loads(data[start:])
+    except ValueError:
         with path.open("r+b") as fh:
-            fh.truncate(data.rfind(b"\n") + 1)
+            fh.truncate(start)
+        return
+    with path.open("ab") as fh:
+        fh.write(b"\n")
 
 
 def load_journal(path: Path, queries: dict[Key, Query], identity_sha: str) -> dict[Key, dict]:
@@ -230,7 +287,7 @@ def load_journal(path: Path, queries: dict[Key, Query], identity_sha: str) -> di
     if not path.exists():
         return {}
     done: dict[Key, dict[str, Any]] = {}
-    for n, record in enumerate(read_jsonl(path, allow_torn_tail=True), 1):
+    for n, record in enumerate(read_jsonl(path, allow_torn_tail=False), 1):
         if record.get("status") == "failed":
             continue
         where = f"{path}:{n}"
@@ -301,20 +358,19 @@ def run(
 ) -> Outcome:
     """Call the model for every query without a stored record, within the cost cap."""
     identity_sha = llm.identity_sha256()
-    by_key = {q.key: q for q in queries}
     journal = target.journal(identity_sha)
-    records = load_journal(journal, by_key, identity_sha)
-    outcome = Outcome(records, spent_before=sum(r["cost_usd"] for r in records.values()))
-    todo = [q for q in queries if q.key not in records]
-    if not todo:
-        return outcome
-    base = llm.prompt_base_tokens(client)
-    announce_estimate(todo, base, outcome, max_usd, log)
-    journal.parent.mkdir(parents=True, exist_ok=True)
-    trim_torn_tail(journal)
-    with journal.open("a", encoding="utf-8") as fh, ThreadPoolExecutor(workers) as pool:
-        session = Session(client, base, max_usd, workers, outcome, fh, sleep, log, identity_sha)
-        dispatch(session, todo, pool)
+    with exclusive(target):
+        repair_tail(journal)
+        records = load_journal(journal, {q.key: q for q in queries}, identity_sha)
+        outcome = Outcome(records, spent_before=sum(r["cost_usd"] for r in records.values()))
+        todo = [q for q in queries if q.key not in records]
+        if not todo:
+            return outcome
+        base = llm.prompt_base_tokens(client, sleep)
+        announce_estimate(todo, base, outcome, max_usd, log)
+        with journal.open("a", encoding="utf-8") as fh, ThreadPoolExecutor(workers) as pool:
+            session = Session(client, base, max_usd, workers, outcome, fh, sleep, log, identity_sha)
+            dispatch(session, todo, pool)
     return outcome
 
 
@@ -324,52 +380,82 @@ def dispatch(session: Session, todo: list[Query], pool: ThreadPoolExecutor) -> N
     pending = list(reversed(todo))
     inflight: dict[Future, tuple[Query, float]] = {}
     reserved = 0.0
-    while pending or inflight:
-        while pending and len(inflight) < session.workers and outcome.stopped is None:
-            bound = query_cost_bound(pending[-1], session.base_tokens)
-            if session.spent() + reserved + bound > session.max_usd:
-                outcome.stopped = "cost cap"
+    try:
+        while pending or inflight:
+            while pending and len(inflight) < session.workers and outcome.stopped is None:
+                bound = query_cost_bound(pending[-1], session.base_tokens)
+                if session.spent() + reserved + bound > session.max_usd:
+                    outcome.stopped = "cost cap"
+                    break
+                query = pending.pop()
+                call = pool.submit(llm.classify, query.text, session.client, session.sleep)
+                inflight[call] = (query, bound)
+                reserved += bound
+            if not inflight:
                 break
-            query = pending.pop()
-            call = pool.submit(llm.classify, query.text, session.client, session.sleep)
-            inflight[call] = (query, bound)
-            reserved += bound
-        if not inflight:
-            break
-        finished, _ = wait(inflight, return_when=FIRST_COMPLETED)
-        for future in finished:
-            query, bound = inflight.pop(future)
-            reserved -= bound
-            settle(session, future, query)
+            finished, _ = wait(inflight, return_when=FIRST_COMPLETED)
+            for future in finished:
+                query, bound = inflight.pop(future)
+                reserved -= bound
+                settle(session, future, query)
+    except BaseException:
+        outcome.stopped = "interrupted"
+        drain(session, inflight)
+        raise
+
+
+def drain(session: Session, inflight: dict[Future, tuple[Query, float]]) -> None:
+    """Wait for calls already sent (they are paid for) and journal them."""
+    for future in list(inflight):
+        query, _ = inflight.pop(future)
+        future.exception()  # blocks until the call returns
+        settle(session, future, query)
 
 
 def settle(session: Session, future: Future, query: Query) -> None:
     """Journal one finished call and update the running totals."""
-    outcome = session.outcome
     try:
         pred = future.result()
     except llm.LLMCallError as exc:
-        failure = {
-            "status": "failed",
-            "split": query.split,
-            "index": query.index,
-            "attempts": exc.attempts,
-            "retryable": exc.retryable,
-            "error": llm.redact(exc.detail),
-            "identity_sha256": session.identity_sha,
-            "created_at": utc_now(),
-        }
-        write_line(session.journal, failure)
-        outcome.failures.append(failure)
-        session.log(f"FAILED {query.key} after {exc.attempts} attempt(s): {failure['error']}")
-        if not exc.retryable and outcome.stopped is None:
-            outcome.stopped = "non-retryable API error"
+        stop = None if exc.retryable else "non-retryable API error"
+        record_failure(session, query, exc.detail, exc.attempts, exc.retryable, stop)
+        return
+    except Exception as exc:  # a bug or an unexpected response shape; the call may be paid
+        record_failure(session, query, llm.describe_error(exc), 1, False, "unexpected error")
         return
     record = make_record(query, pred, session.identity_sha)
     write_line(session.journal, record)
+    outcome = session.outcome
     outcome.records[query.key] = record
     outcome.spent_now += record["cost_usd"]
     outcome.calls_now += 1
+    input_bound = session.base_tokens + len(query.text.encode("utf-8"))
+    if pred.input_tokens > input_bound or pred.output_tokens > llm.MAX_TOKENS:
+        session.log(
+            f"BOUND VIOLATED {query.key}: {pred.input_tokens} input (bound {input_bound}), "
+            f"{pred.output_tokens} output (bound {llm.MAX_TOKENS}); the cap is not safe"
+        )
+        outcome.stopped = "bound violated"
+
+
+def record_failure(
+    session: Session, query: Query, detail: str, attempts: int, retryable: bool, stop: str | None
+) -> None:
+    failure = {
+        "status": "failed",
+        "split": query.split,
+        "index": query.index,
+        "attempts": attempts,
+        "retryable": retryable,
+        "error": llm.redact(detail),
+        "identity_sha256": session.identity_sha,
+        "created_at": utc_now(),
+    }
+    write_line(session.journal, failure)
+    session.outcome.failures.append(failure)
+    session.log(f"FAILED {query.key} after {attempts} attempt(s): {failure['error']}")
+    if stop is not None and session.outcome.stopped is None:
+        session.outcome.stopped = stop
 
 
 def write_line(fh: TextIO, record: dict[str, Any]) -> None:
@@ -446,6 +532,8 @@ def summary_body(target: Target, outcome: Outcome, max_usd: float, sha: str) -> 
         "rows": target.rows,
         "pricing_usd_per_mtok": llm.PRICE_USD_PER_MTOK,
         "pricing_source": llm.PRICING_SOURCE,
+        "parser_sha256": llm.parser_sha256(),
+        "cap_scope": CAP_SCOPE,
         "predictions_file": target.predictions.name,
         "predictions_sha256": sha,
         "totals": totals(outcome.records.values()),
@@ -463,6 +551,11 @@ def summary_body(target: Target, outcome: Outcome, max_usd: float, sha: str) -> 
 
 def finalize(target: Target, outcome: Outcome, max_usd: float) -> int:
     """Write predictions, summary and manifest entry, then check that all three agree."""
+    with exclusive(target):
+        return write_outputs(target, outcome, max_usd)
+
+
+def write_outputs(target: Target, outcome: Outcome, max_usd: float) -> int:
     path = write_predictions(target, outcome.records)
     sha = sha256_of(path)
     body = summary_body(target, outcome, max_usd, sha)
@@ -554,16 +647,29 @@ def main(
         raise SystemExit(2) from None
     splits = {name: load(name) for name in target.rows}
     queries = build_queries(splits, target.rows)
-    outcome = run(
-        queries,
-        client,
-        target,
-        max_usd=args.max_usd,
-        workers=args.workers,
-        sleep=sleep,
-        log=log_redacted,
-    )
+    try:
+        outcome = run(
+            queries,
+            client,
+            target,
+            max_usd=args.max_usd,
+            workers=args.workers,
+            sleep=sleep,
+            log=log_redacted,
+        )
+    except RunLockedError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
+    except llm.LLMCallError as exc:
+        log_redacted(f"error: token count failed after {exc.attempts} attempt(s): {exc.detail}")
+        raise SystemExit(1) from None
     report_spend(target, outcome, log_redacted)
+    exit_unless_done(target, outcome)
+    print(f"completed {finalize(target, outcome, args.max_usd)}/{target.expected_total} {what}")
+
+
+def exit_unless_done(target: Target, outcome: Outcome) -> None:
+    """Exit 1 when rows are missing, or when the run stopped for a reason (bound violated)."""
     missing = target.expected_total - len(outcome.records)
     if missing:
         reason = outcome.stopped or f"{len(outcome.failures)} call(s) failed after retries"
@@ -572,7 +678,9 @@ def main(
             "only those rows are called"
         )
         raise SystemExit(1)
-    print(f"completed {finalize(target, outcome, args.max_usd)}/{target.expected_total} {what}")
+    if outcome.stopped is not None:
+        log_redacted(f"every row has a reply, but the run stopped: {outcome.stopped}")
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

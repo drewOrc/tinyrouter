@@ -3,7 +3,7 @@ import json
 import pytest
 
 from tinyrouter import llm, llm_run
-from tinyrouter.llm_run import IncompleteError, JournalError, Target
+from tinyrouter.llm_run import IncompleteError, JournalError, RunLockedError, Target
 
 pytest.importorskip("anthropic")
 
@@ -89,8 +89,8 @@ def test_summary_and_manifest_record_spend_and_the_same_sha256(tmp_path):
 
 
 def test_a_rerun_calls_only_the_rows_without_a_stored_reply(tmp_path):
-    # A cap that covers two calls' upper bound (base 240 + ~12 bytes, 20 out) stops the first run.
-    first_cap = 2.5 * llm.cost_usd(240 + 12, llm.MAX_TOKENS)
+    # A cap that covers two calls' upper bound (base 250 + ~12 bytes, 20 out) stops the first run.
+    first_cap = 2.2 * llm.cost_usd(250 + 12, llm.MAX_TOKENS)
     first = fake_client()
     outcome = run(tmp_path, first, max_usd=first_cap, workers=1)
     assert outcome.stopped == "cost cap" and len(outcome.records) == 2
@@ -159,7 +159,7 @@ def test_a_journal_record_that_does_not_match_its_dataset_row_is_refused(tmp_pat
 def test_the_cost_cap_is_never_passed_with_calls_in_flight(tmp_path):
     rows = {"validation": 40}
     cap = 10 * llm.cost_usd(240 + 20, llm.MAX_TOKENS)
-    client = fake_client(input_tokens=240 + 13, output_tokens=llm.MAX_TOKENS)
+    client = fake_client(input_tokens=240 + 12, output_tokens=llm.MAX_TOKENS, base_tokens=240)
     outcome = run(tmp_path, client, rows=rows, max_usd=cap, workers=8)
     assert outcome.stopped == "cost cap"
     assert 0 < len(client.messages.calls) < 40
@@ -168,7 +168,7 @@ def test_the_cost_cap_is_never_passed_with_calls_in_flight(tmp_path):
 
 
 def test_the_cap_counts_what_earlier_runs_spent(tmp_path):
-    run(tmp_path, fake_client(), max_usd=2.5 * llm.cost_usd(252, llm.MAX_TOKENS), workers=1)
+    run(tmp_path, fake_client(), max_usd=2.2 * llm.cost_usd(262, llm.MAX_TOKENS), workers=1)
     client = fake_client()
     outcome = run(tmp_path, client, max_usd=2 * CALL_COST)
     assert client.messages.calls == [] and outcome.stopped == "cost cap"
@@ -332,3 +332,178 @@ def journal_lines_full(tmp_path):
     target = llm_run.full_target(tmp_path)
     path = target.journal(llm.identity_sha256())
     return [json.loads(line) for line in path.read_text().splitlines()]
+
+
+def rewrite_first_journal_record(tmp_path, **changes):
+    path = small_target(tmp_path).journal(llm.identity_sha256())
+    lines = path.read_text().splitlines()
+    record = json.loads(lines[0])
+    record.update(changes)
+    path.write_text("\n".join([json.dumps(record), *lines[1:]]) + "\n")
+    return path, lines
+
+
+def test_a_journal_row_of_another_identity_is_refused(tmp_path):
+    run(tmp_path, fake_client())
+    rewrite_first_journal_record(tmp_path, identity_sha256="e" * 64)
+    with pytest.raises(JournalError, match="identity"):
+        run(tmp_path, fake_client())
+
+
+def test_a_journal_row_whose_gold_label_changed_is_refused(tmp_path):
+    run(tmp_path, fake_client())
+    rewrite_first_journal_record(tmp_path, gold_intent=7)
+    with pytest.raises(JournalError, match="gold label"):
+        run(tmp_path, fake_client())
+
+
+def test_a_row_recorded_twice_in_the_journal_is_refused(tmp_path):
+    run(tmp_path, fake_client())
+    path = small_target(tmp_path).journal(llm.identity_sha256())
+    first = path.read_text().splitlines()[0]
+    with path.open("a") as fh:
+        fh.write(first + "\n")
+    with pytest.raises(JournalError, match="recorded twice"):
+        run(tmp_path, fake_client())
+
+
+def test_verify_fails_when_only_the_manifest_sha256_changed(tmp_path):
+    target = completed_target(tmp_path)
+    body = json.loads(target.manifest.read_text())
+    body["files"][target.predictions.name]["sha256"] = "0" * 64
+    target.manifest.write_text(json.dumps(body))
+    with pytest.raises(IncompleteError, match="SHA-256 differs"):
+        llm_run.verify(target)
+
+
+def test_the_cost_bound_counts_utf8_bytes_not_characters(tmp_path):
+    """A non-ASCII query at its worst case (one token per byte) stays inside the cap."""
+    rows = {"validation": 30}
+    prefix = "\u00e9" * 10  # 10 characters, 20 bytes; the query is e.g. "éééééééééé-7"
+    splits = {"validation": fake_split("validation", 30, prefix=prefix)}
+    worst = 240 + len(f"{prefix}-0".encode())
+    client = fake_client(input_tokens=worst, output_tokens=llm.MAX_TOKENS, base_tokens=240)
+    cap = 7.5 * llm.cost_usd(worst, llm.MAX_TOKENS)
+    outcome = llm_run.run(
+        llm_run.build_queries(splits, rows),
+        client,
+        small_target(tmp_path, rows),
+        max_usd=cap,
+        workers=8,
+        sleep=lambda _: None,
+        log=lambda _: None,
+    )
+    assert outcome.stopped == "cost cap"
+    assert outcome.spent_now <= cap
+
+
+@pytest.mark.parametrize(("extra_in", "extra_out"), [(1, 0), (0, 1)])
+def test_a_response_over_its_bound_stops_the_run_and_exits_1(
+    small_rows, tmp_path, capsys, extra_in, extra_out
+):
+    # validation-0 is 12 bytes; base 250.
+    client = fake_client(input_tokens=250 + 12 + extra_in, output_tokens=llm.MAX_TOKENS + extra_out)
+    with pytest.raises(SystemExit) as info:
+        main(tmp_path, ["--workers", "1"], client)
+    assert info.value.code == 1
+    assert "bound violated" in capsys.readouterr().out
+    assert len(client.messages.calls) == 1
+    stored = journal_lines_full(tmp_path)
+    assert len(stored) == 1 and "status" not in stored[0]
+
+
+def test_a_second_runner_on_the_same_target_is_refused(tmp_path):
+    target = small_target(tmp_path)
+    client = fake_client()
+    with llm_run.exclusive(target), pytest.raises(RunLockedError):
+        run(tmp_path, client)
+    assert client.messages.calls == []
+    assert len(run(tmp_path, client).records) == 5
+
+
+def test_main_exits_2_when_another_process_holds_the_lock(small_rows, tmp_path, capsys):
+    import subprocess
+    import sys
+
+    target = llm_run.full_target(tmp_path)
+    target.out_dir.mkdir(parents=True)
+    holder = subprocess.Popen(
+        [
+            sys.executable,
+            "-c",
+            "import fcntl, sys, time; f = open(sys.argv[1], 'a'); "
+            "fcntl.flock(f, fcntl.LOCK_EX); print('held', flush=True); time.sleep(30)",
+            str(target.lock),
+        ],
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        assert holder.stdout.readline().strip() == "held"
+        client = fake_client()
+        with pytest.raises(SystemExit) as info:
+            main(tmp_path, [], client)
+        assert info.value.code == 2 and client.messages.calls == []
+        assert "held by another process" in capsys.readouterr().err
+    finally:
+        holder.kill()
+        holder.wait()
+
+
+def test_a_whole_last_record_without_its_newline_is_kept(tmp_path):
+    run(tmp_path, fake_client(), workers=1)
+    path = small_target(tmp_path).journal(llm.identity_sha256())
+    path.write_text(path.read_text().rstrip("\n"))
+    client = fake_client()
+    outcome = run(tmp_path, client)
+    assert client.messages.calls == [] and len(outcome.records) == 5
+    assert path.read_text().endswith("\n") and len(path.read_text().splitlines()) == 5
+
+
+def test_an_unexpected_exception_is_journaled_as_a_failure_and_stops_the_run(small_rows, tmp_path):
+    client = fake_client()
+    client.messages.response_override = object()  # no .content or .usage
+    with pytest.raises(SystemExit) as info:
+        main(tmp_path, ["--workers", "1"], client)
+    assert info.value.code == 1
+    failed = journal_lines_full(tmp_path)
+    assert len(failed) == 1 and failed[0]["status"] == "failed"
+    assert "AttributeError" in failed[0]["error"]
+
+
+def test_calls_in_flight_at_an_interrupt_are_journaled(tmp_path, monkeypatch):
+    real_wait = llm_run.wait
+    state = {"calls": 0}
+
+    def interrupted_wait(fs, return_when):
+        state["calls"] += 1
+        if state["calls"] == 1:
+            raise KeyboardInterrupt
+        return real_wait(fs, return_when=return_when)
+
+    monkeypatch.setattr(llm_run, "wait", interrupted_wait)
+    client = fake_client()
+    with pytest.raises(KeyboardInterrupt):
+        run(tmp_path, client, workers=3)
+    assert len(client.messages.calls) == 3
+    assert len(journal_lines(tmp_path)) == 3
+
+
+def test_token_count_failure_exits_1_without_the_key(small_rows, tmp_path, capsys, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", FAKE_KEY)
+    client = fake_client()
+    client.messages.count_failures = [api_error(401, f"invalid x-api-key {FAKE_KEY}")]
+    with pytest.raises(SystemExit) as info:
+        main(tmp_path, [], client)
+    assert info.value.code == 1
+    captured = capsys.readouterr()
+    assert "token count failed" in captured.out
+    assert FAKE_KEY not in captured.out + captured.err
+    assert client.messages.calls == []
+
+
+def test_summary_records_the_parser_hash_and_the_cap_scope(tmp_path):
+    target = completed_target(tmp_path)
+    summary = json.loads(target.summary.read_text())
+    assert summary["parser_sha256"] == llm.parser_sha256()
+    assert "smoke" in summary["cap_scope"]

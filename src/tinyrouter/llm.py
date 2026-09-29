@@ -17,8 +17,10 @@ errors or timeouts are retried with exponential backoff, honouring
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import os
+import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -33,6 +35,7 @@ MAX_ATTEMPTS = 5
 MAX_BACKOFF_S = 60.0
 RETRYABLE_STATUS = frozenset({408, 409, 429})
 KEY_ENV = "ANTHROPIC_API_KEY"
+OOS_WORD = re.compile(r"\boos\b")
 
 # USD per million tokens for Claude Haiku 4.5, from the claude-api skill's
 # "Current Models" table (cached 2026-06-24; first-party API rates), which
@@ -160,14 +163,29 @@ def identity_sha256() -> str:
 
 
 def parse_agent(raw_text: str) -> tuple[str, bool]:
-    """Map the model's reply to an agent; unparseable replies become oos and are flagged."""
+    """Map the model's reply to an agent; unparseable replies become oos and are flagged.
+
+    A reply that names exactly one label (an agent name anywhere, or ``oos``
+    as a word) gets that label. A reply naming two or more, such as
+    ``"oos (not travel_agent)"``, is ambiguous and becomes oos with the
+    flag: taking the agent there would route a query the model called out
+    of scope, the silent misroute RQ2 counts as the worst error.
+    """
     text = raw_text.strip().strip("\"'`.").lower()
     if text in AGENTS:
         return text, True
     hits = [agent for agent in AGENTS if agent != OOS and agent in text]
+    if OOS_WORD.search(text):
+        hits.append(OOS)
     if len(hits) == 1:
         return hits[0], True
     return OOS, False
+
+
+def parser_sha256() -> str:
+    """SHA-256 of ``parse_agent``'s source; stored replies are re-parsed with the current one."""
+    source = inspect.getsource(parse_agent) + OOS_WORD.pattern
+    return hashlib.sha256(source.encode("utf-8")).hexdigest()
 
 
 def redact(text: str) -> str:
@@ -218,17 +236,20 @@ def reply_text(response: Any) -> str:
     )
 
 
-def classify(
-    query: str,
-    client: Any,
+def with_retries(
+    call: Callable[[], Any],
     sleep: Callable[[float], None] = time.sleep,
     retryable: Callable[[BaseException], bool] = is_retryable,
-) -> LLMPrediction:
-    """One zero-shot call, retried per the module docstring; LLMCallError when it gives up."""
+) -> tuple[Any, int, int]:
+    """``call()`` retried per the module docstring: (result, attempts, latency of the last, ms).
+
+    Gives up with LLMCallError, whose message is ``describe_error`` (key
+    redacted) and which is not chained to the SDK exception.
+    """
     for attempt in range(1, MAX_ATTEMPTS + 1):
         started = time.monotonic()
         try:
-            response = client.messages.create(**request_params(query))
+            result = call()
         except Exception as exc:  # classified below; anything unknown is not retried
             can_retry = retryable(exc)
             if not can_retry or attempt == MAX_ATTEMPTS:
@@ -237,9 +258,22 @@ def classify(
                 ) from None
             sleep(retry_delay(exc, attempt))
             continue
-        latency_ms = round((time.monotonic() - started) * 1000)
-        return prediction_from(response, latency_ms, attempt)
+        return result, attempt, round((time.monotonic() - started) * 1000)
     raise AssertionError("unreachable")
+
+
+def classify(
+    query: str,
+    client: Any,
+    sleep: Callable[[float], None] = time.sleep,
+    retryable: Callable[[BaseException], bool] = is_retryable,
+) -> LLMPrediction:
+    """One zero-shot call, retried per the module docstring; LLMCallError when it gives up."""
+    params = request_params(query)
+    response, attempts, latency_ms = with_retries(
+        lambda: client.messages.create(**params), sleep, retryable
+    )
+    return prediction_from(response, latency_ms, attempts)
 
 
 def prediction_from(response: Any, latency_ms: int, attempts: int) -> LLMPrediction:
@@ -261,10 +295,16 @@ def prediction_from(response: Any, latency_ms: int, attempts: int) -> LLMPredict
     )
 
 
-def prompt_base_tokens(client: Any) -> int:
-    """Input tokens of the system prompt plus a one-character query (token counting endpoint)."""
-    counted = client.messages.count_tokens(
-        model=MODEL, system=SYSTEM_PROMPT, messages=[{"role": "user", "content": "x"}]
+def prompt_base_tokens(client: Any, sleep: Callable[[float], None] = time.sleep) -> int:
+    """Input tokens of the system prompt plus a one-character query (token counting endpoint).
+
+    Retried and redacted like ``classify``; LLMCallError when it gives up.
+    """
+    counted, _, _ = with_retries(
+        lambda: client.messages.count_tokens(
+            model=MODEL, system=SYSTEM_PROMPT, messages=[{"role": "user", "content": "x"}]
+        ),
+        sleep,
     )
     return int(counted.input_tokens)
 

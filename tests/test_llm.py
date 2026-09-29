@@ -27,6 +27,16 @@ OLD_PROJECT_PROMPT_SHA256 = "560d22c59164f1125e4ec787f9002b4c9bc6bf03b4cc7847255
         ("finance_agent or travel_agent", "oos", False),
         ("no idea", "oos", False),
         ("", "oos", False),
+        ("oos (not travel_agent)", "oos", False),
+        ("This is oos, not travel_agent", "oos", False),
+        ("travel_agent.", "travel_agent", True),
+        ("`travel_agent`", "travel_agent", True),
+        ("**travel_agent**", "travel_agent", True),
+        ("travel_agent\nThe query asks about flights.", "travel_agent", True),
+        ("**oos**", "oos", True),
+        ("travel agent", "oos", False),
+        ("out of scope", "oos", False),
+        ("noose", "oos", False),
     ],
 )
 def test_parse_agent(reply, agent, parsed):
@@ -132,3 +142,22 @@ def test_make_client_refuses_without_a_key_and_names_the_variable(monkeypatch):
 def test_make_client_turns_sdk_retries_off(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test-not-a-real-key")
     assert llm.make_client().max_retries == 0
+
+
+def test_parser_hash_follows_the_parser_source(monkeypatch):
+    before = llm.parser_sha256()
+    monkeypatch.setattr(llm, "OOS_WORD", __import__("re").compile(r"oos"))
+    assert llm.parser_sha256() != before
+
+
+def test_token_count_is_retried_and_its_errors_redacted(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-api03-FAKE-count-canary-99")
+    client = fake_client()
+    client.messages.count_failures = [api_error(529), connection_error()]
+    sleeps: list[float] = []
+    assert llm.prompt_base_tokens(client, sleeps.append) == client.messages.base_tokens
+    assert sleeps == [1.0, 2.0]
+    client.messages.count_failures = [api_error(401, "bad key sk-ant-api03-FAKE-count-canary-99")]
+    with pytest.raises(llm.LLMCallError) as info:
+        llm.prompt_base_tokens(client, sleeps.append)
+    assert "canary" not in str(info.value) and info.value.__cause__ is None
