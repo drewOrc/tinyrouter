@@ -340,7 +340,7 @@ def write_state(path: Path | None, state: dict[str, dict]) -> None:
 
 def run_git(args: list[str]) -> tuple[int, str]:
     done = subprocess.run(["git", *args], capture_output=True, text=True, check=False)
-    return done.returncode, done.stdout.strip()
+    return done.returncode, done.stdout.rstrip()
 
 
 def originals_changed(git: Git = run_git) -> str:

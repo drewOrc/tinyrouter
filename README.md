@@ -221,7 +221,7 @@ There are two levels, and only the second is the acceptance criterion (docs/PLAN
 make reproduce-artifacts
 ```
 
-It downloads the logits archives and the Haiku predictions from the `ac2-bert-logits`, `curves-logits` and `haiku-predictions` Releases, checks each file against the SHA-256 in the committed `results/logits-manifest.json` and `results/llm-manifest.json`, rebuilds the analysis, Haiku latency, cost, figures and report, and fails unless `results/` and this README are byte-identical to the commit. CPU latency is machine-dependent, so the committed `results/efficiency/cpu_latency.json` is used, not remeasured. The last line is `completed reproduce-artifacts: results/ and README.md byte-identical to HEAD`. CI runs it weekly and on demand. It checks that the published numbers follow from the stored predictions; it does not retrain anything.
+It downloads the logits archives and the Haiku predictions from the `ac2-bert-logits`, `curves-logits` and `haiku-predictions` Releases, checks each file against the SHA-256 in the committed `results/logits-manifest.json` and `results/llm-manifest.json`, rebuilds the analysis, Haiku latency, cost, figures and report, and fails unless `results/` and this README are byte-identical to the commit. CPU latency is machine-dependent, so the committed `results/efficiency/cpu_latency.json` is used, not remeasured. The last line is `completed reproduce-artifacts: results/ and README.md byte-identical to HEAD`. CI runs it weekly and on demand, on macOS arm64: on Linux every JSON file, the report and this README come out identical, but the PNG bytes of the figures differ. It checks that the published numbers follow from the stored predictions; it does not retrain anything.
 
 **AC1b, the whole study again.**
 
