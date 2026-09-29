@@ -4,6 +4,39 @@
 
 ---
 
+## 2026-09-29：步驟 4 之一，Haiku 8 類執行器（尚未實跑）
+
+### 本次工作 / 執行摘要
+- 新增 `src/tinyrouter/llm_run.py` 與 `make llm`、`make llm-smoke`、`make verify-llm`：validation 3,100 + test 5,500 逐筆呼叫 Haiku，逐筆寫入 journal（split、index、query 的 SHA-256、gold intent 與 agent、原始回覆、解析後標籤、`parse_failed`、tokens、花費、延遲、嘗試次數、request id）。
+- query 原文不存，只存 SHA-256：資料集公開且鎖定 revision，雜湊足以證明紀錄對應哪一列，續跑時也拿它比對資料有沒有變。
+- 續跑：journal 檔名含身分雜湊（模型、system prompt 的 SHA-256、temperature、max_tokens、user 內容格式）。身分一變就換新檔，舊回覆不會被拿來用；同身分重跑只補沒有成功紀錄的列。最後一行寫到一半（當機）會被截掉重做。
+- 成本上限：開跑前用 token counting 取 prompt 的基礎 token 數，印出上界估計；每筆開打前預留「基礎 + 每個 byte 算一個 token 的輸入、max_tokens 的輸出」的上界，累計花費（含之前幾次）加上在途預留會超過 `--max-usd` 就不開新呼叫。實際花費依回傳的 usage 計算。
+- 重試改由程式自己做（SDK 的 `max_retries=0`）：429、5xx、408、409、連線錯誤指數退避並尊重 retry-after，5 次用盡記為失敗、整體 exit 1；400、401、403、404 不重試，而且停止開新呼叫。
+- 完成判定比照 `completeness.py`：預測檔從磁碟讀回，(split, index) 恰為預期集合且各一次、身分一致，SHA-256 在檔案、summary、`results/llm-manifest.json` 三處相同，才印 `completed 8600/8600 llm predictions`。預期列數寫成字面值。
+- CI 的 test job 改裝 `--group llm`，讓重試與 key 遮蔽的測試用 SDK 真正的例外類別。仍不設 key、不打 API。
+- `classify` 原本把任何例外都當可重試，改為依錯誤類型判斷。
+
+### 核心發現 / 數據
+- system prompt 與 cost-aware-hybrid-router `src/routers/llm_router.py` 逐位元組相同（SHA-256 `560d22c5...5df574`，測試釘住）。模型、temperature 0、max_tokens 20、query 原樣當唯一 user 訊息，都與舊專案相同。
+- 解析規則與舊專案**不同**：舊版對回覆做子字串比對、取集合迭代到的第一個命中（順序不固定）；這裡只接受完整標籤，或恰好命中一個 in-scope agent，其餘判為 oos 並標 `parse_failed`。原始回覆都有存，要用舊規則重算不必再打 API。
+- 定價：Haiku 4.5 每百萬 tokens 輸入 US$1、輸出 US$5（claude-api skill 的模型表，快取日期 2026-06-24）。粗估全量約 US$2.5，上界約 US$3.5，低於 AC6 的 US$5。
+- (無實跑數據)
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] Drew：`.env` 放 key 後 `make llm-smoke`，看 20 筆的實際 token 與推估全量花費
+- [ ] `make llm`，把 `results/llm/haiku-8way.jsonl` 附到 Release
+- [ ] 下一個 PR：不確定性、risk-coverage、fallback、oracle（RQ3、RQ4、AC6）
+
+### Files / Budget
+- 新增：`src/tinyrouter/llm_run.py`、`tests/test_llm_run.py`、`tests/test_llm_deps.py`、`tests/llm_fakes.py`
+- 修改：`src/tinyrouter/llm.py`、`tests/test_llm.py`、`tests/test_makefile.py`、`Makefile`、`.github/workflows/ci.yml`、`.gitignore`、`pyproject.toml`（只改註解）、`README.md`、`docs/OPERATIONS.md`
+- API 花費：US$0
+
+---
+
 ## 2026-09-23（夜）：PR #7 審查修正
 
 ### 本次工作 / 執行摘要

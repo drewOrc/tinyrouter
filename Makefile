@@ -1,5 +1,5 @@
 .PHONY: setup lint format test test-network smoke train evaluate ac2 pilot-lr pilot-steps baselines \
-	curve oos-ablation verify-logits report clean-checkpoints
+	curve oos-ablation verify-logits llm-smoke llm verify-llm report clean-checkpoints
 
 CONFIG ?= configs/bert-base.yaml
 SEED ?= 42
@@ -111,6 +111,26 @@ oos-ablation:
 # Every archive listed in results/logits-manifest.json is present and matches its SHA-256.
 verify-logits:
 	uv run python -m tinyrouter.archive
+
+# Claude Haiku over CLINC150 in the 8-way routing space (docs/PLAN.md section 4,
+# AC6). Needs ANTHROPIC_API_KEY (in .env or exported); without it they exit 2.
+# Every call is journaled; a rerun calls only rows with no stored reply, and a
+# change of model, prompt, temperature or max_tokens starts a fresh journal.
+# A call is not started if it could take this run's identity past MAX_USD
+# (default 5). Exit 1 when stopped by the cap or when a call failed after
+# retries. `make llm-smoke` calls validation rows 0-19, writes under
+# results/llm-smoke/ and prints the extrapolated cost of all 8,600 rows.
+# Done means the whole last line `completed 8600/8600 llm predictions`.
+llm-smoke:
+	uv run --group llm $(UV_ENV) python -m tinyrouter.llm_run --smoke $(if $(MAX_USD),--max-usd $(MAX_USD),)
+
+llm:
+	uv run --group llm $(UV_ENV) python -m tinyrouter.llm_run $(if $(MAX_USD),--max-usd $(MAX_USD),)
+
+# results/llm/haiku-8way.jsonl has every row once and matches its SHA-256 in
+# results/llm-manifest.json and results/llm/haiku-8way.json.
+verify-llm:
+	uv run python -m tinyrouter.llm_run --verify
 
 report:
 	uv run python -m tinyrouter.report

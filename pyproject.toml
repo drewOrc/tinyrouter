@@ -28,8 +28,10 @@ packages = ["src/tinyrouter"]
 
 [dependency-groups]
 # The Claude Haiku baseline and cascade fallback. Not installed by
-# `uv sync`; `uv sync --group llm` installs it. Nothing in the unit tests
-# imports it (tinyrouter/llm.py defers the import to call time).
+# `uv sync`; `uv sync --group llm` installs it, and `make llm` / `make
+# llm-smoke` ask uv for it. tinyrouter/llm.py imports it only at call time.
+# CI installs it: the retry and redaction tests raise the SDK's real
+# exception classes at a fake client (they skip where it is missing).
 llm = [
     "anthropic==1.8.0",
 ]

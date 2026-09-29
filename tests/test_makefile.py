@@ -60,3 +60,13 @@ def test_an_explicit_setup_still_works():
     result = make_dry_run("setup")
     assert result.returncode == 0, result.stderr
     assert "uv sync --locked" in result.stdout
+
+
+def test_llm_targets_ask_for_the_llm_group_and_pass_the_cap():
+    full = make_dry_run("llm", "MAX_USD=3")
+    assert full.returncode == 0, full.stderr
+    assert "uv run --group llm" in full.stdout
+    assert "tinyrouter.llm_run --max-usd 3" in full.stdout
+    smoke = make_dry_run("llm-smoke")
+    assert "tinyrouter.llm_run --smoke" in smoke.stdout
+    assert "--max-usd" not in smoke.stdout
