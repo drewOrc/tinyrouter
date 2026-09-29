@@ -39,6 +39,12 @@ results/logits/
 results/llm/*.jsonl
 results/llm/*.lock
 results/llm-smoke/
+# Reruns (`make reproduce`, `make reproduce-artifacts`) write only under
+# reproduction/, a symlink into reproduction.nosync/ like checkpoints.
+reproduction
+reproduction/
+# Partial Release downloads (release.py moves a file into place once checked).
+*.part
 *.npz
 *.tmp
 

@@ -138,9 +138,11 @@ Other targets:
 | `make cost` | RQ5 from committed JSON: measured training time, latency and Haiku spend, assumed prices, break-even per scenario; writes `results/cost/cost.json` |
 | `make figures` | the four README figures from `results/analysis/*.json`; writes `results/figures/*.png` (byte-identical on rerun with the same matplotlib) |
 | `make report` | `results/report.md` and the generated block of this README, from committed JSON; `tests/test_report.py` fails when either is stale |
+| `make reproduce-artifacts` | AC1a: download the three Releases, check them against the committed manifests, rebuild everything offline, require `results/` and this README to be byte-identical to the commit (see Reproducing) |
+| `make reproduce` | AC1b: the whole study again into `reproduction/<id>/`, then a comparison with the committed results (see Reproducing) |
 | `make clean-checkpoints` | delete all trained weights |
 
-Run every target from the repository root: `checkpoint_root` and `results_root` in the configs are relative paths.
+Run every target from the repository root: `checkpoint_root` and `results_root` in the configs are relative paths. `RESULTS_ROOT=...` and `CHECKPOINT_ROOT=...` (and `README_OUT=...` for `make report`) move a target's output elsewhere without changing the run's identity; `make reproduce` uses them.
 
 There is no default target: a bare `make`, or a quoted `make "curve MODEL=bert"` (one argument: GNU make 3.81, the macOS default, reads it as a variable assignment and used to run `make setup` and exit 0; make 4.x reads it as an unknown target), stops with an error.
 
@@ -196,6 +198,9 @@ src/tinyrouter/
   cost.py           RQ5: measured costs, assumed prices, break-even
   figures.py        README figures from results/analysis/*.json
   report.py         results/*.json -> results/report.md and the README's generated block
+  release.py        download the Release files and check them against the committed manifests
+  reproduce.py      `make reproduce` (AC1b) and `make reproduce-artifacts` (AC1a)
+  comparison.py     AC1b: a rerun against the committed results, verdict and REVIEW REQUIRED items
   smoke.py          end-to-end wiring check
 tests/              pytest; `network` marker for Hub downloads
 ```
@@ -205,6 +210,32 @@ tests/              pytest; `network` marker for Hub downloads
 This repository sits in a folder synced by iCloud Drive. iCloud would otherwise try to upload the virtualenv (about 1 GB of torch) and every checkpoint (about 440 MB per bert-base run), and it can evict local files to save space in the middle of a run. iCloud skips any path ending in `.nosync`, so `make setup` creates `.venv.nosync/` and `checkpoints.nosync/` and puts symlinks at `.venv` and `checkpoints`. uv and the training code use the usual names and never notice. If you clone this somewhere outside iCloud, the symlinks do no harm.
 
 Disk is also tight, so training keeps at most one checkpoint (`save_total_limit=1`) and deletes it once the final weights are saved. `make ac2` also deletes the weights of seeds 43 and 44 after their logits are archived; only seed 42's are kept.
+
+## Reproducing
+
+There are two levels, and only the second is the acceptance criterion (docs/PLAN.md section 5).
+
+**AC1a, from the Release artifacts (minutes, no cost, no key).**
+
+```bash
+make reproduce-artifacts
+```
+
+It downloads the logits archives and the Haiku predictions from the `ac2-bert-logits`, `curves-logits` and `haiku-predictions` Releases, checks each file against the SHA-256 in the committed `results/logits-manifest.json` and `results/llm-manifest.json`, rebuilds the analysis, Haiku latency, cost, figures and report, and fails unless `results/` and this README are byte-identical to the commit. CPU latency is machine-dependent, so the committed `results/efficiency/cpu_latency.json` is used, not remeasured. The last line is `completed reproduce-artifacts: results/ and README.md byte-identical to HEAD`. CI runs it weekly and on demand. It checks that the published numbers follow from the stored predictions; it does not retrain anything.
+
+**AC1b, the whole study again.**
+
+```bash
+git clone https://github.com/drewOrc/tinyrouter.git && cd tinyrouter
+make setup
+ANTHROPIC_API_KEY=... make reproduce
+```
+
+This trains and evaluates everything again in the original order (AC2, both pilots, baselines, both learning curves, the OOS ablation), reruns Haiku on all 8,600 queries, then analysis, latency, cost, figures and report. It takes about 6 to 7 hours on an Apple M4. Haiku costs about US$3; that run is a separate reproduction-validation run with its own US$5 cap, and its cost is not part of the original experiment's US$3.19. It needs `ANTHROPIC_API_KEY` (exported or in `.env`), a clean checkout at a commit merged into `main`, `uv.lock` in sync and 8.8 GiB free; it refuses to start otherwise. Everything it writes goes under `reproduction/<id>/` (`<id>` is the first 12 characters of the commit), so `results/` and this README are never overwritten. It resumes after an interruption. The verdict and every difference go to `reproduction/<id>/comparison.json` and `comparison.md`: FAIL only when a step fails or AC2 fails (any seed below 95.7%); a number outside the original mean ± std is marked `REVIEW REQUIRED` and explained, not tuned away.
+
+Training on Apple MPS is not bit-for-bit deterministic, so a rerun is not expected to reproduce every digit; the comparison uses the three-seed spread as the yardstick.
+
+**Status: AC1b has not been run yet.** Until it has passed, the status is RQ1 to RQ5 complete, Tier 1 acceptance not complete.
 
 ## Reproducibility notes
 

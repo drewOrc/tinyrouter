@@ -116,7 +116,13 @@ def _on_grid(value: object, grid: tuple, name: str) -> None:
         raise ProtocolError(f"{name} = {value!r} is not one of the protocol's values {grid}")
 
 
-def load_protocol(path: str | Path = DEFAULT_PROTOCOL) -> CurveProtocol:
+def load_protocol(
+    path: str | Path = DEFAULT_PROTOCOL,
+    *,
+    results_root: str | Path | None = None,
+    checkpoint_root: str | Path | None = None,
+) -> CurveProtocol:
+    """Read ``configs/curve.yaml``; the two roots move every base config's output (config.py)."""
     raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     if not isinstance(raw, dict) or set(raw) != {"min_train_steps", "models"}:
         raise ProtocolError(f"{path}: top level must have exactly min_train_steps and models")
@@ -137,5 +143,7 @@ def load_protocol(path: str | Path = DEFAULT_PROTOCOL) -> CurveProtocol:
         lr = entry["learning_rate"]
         lrs[model] = None if lr is None else float(lr)
         paths[model] = str(entry["config"])
-        bases[model] = load_config(entry["config"])
+        bases[model] = load_config(
+            entry["config"], results_root=results_root, checkpoint_root=checkpoint_root
+        )
     return CurveProtocol(raw["min_train_steps"], lrs, bases, paths)
