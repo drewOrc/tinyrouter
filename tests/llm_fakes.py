@@ -46,7 +46,9 @@ class FakeMessages:
         input_tokens: int = 250,
         output_tokens: int = 4,
         base_tokens: int = 250,
+        input_tokens_for: Callable[[str], int] | None = None,
     ) -> None:
+        self.input_tokens_for = input_tokens_for
         self.reply = reply
         self.failures = {k: list(v) for k, v in (failures or {}).items()}
         self.input_tokens = input_tokens
@@ -72,7 +74,9 @@ class FakeMessages:
         return SimpleNamespace(
             content=[SimpleNamespace(type="text", text=self.reply(query))],
             usage=SimpleNamespace(
-                input_tokens=self.input_tokens,
+                input_tokens=(
+                    self.input_tokens_for(query) if self.input_tokens_for else self.input_tokens
+                ),
                 output_tokens=self.output_tokens,
                 cache_creation_input_tokens=0,
                 cache_read_input_tokens=None,

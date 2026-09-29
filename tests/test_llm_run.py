@@ -377,9 +377,11 @@ def test_verify_fails_when_only_the_manifest_sha256_changed(tmp_path):
 
 
 def test_the_cost_bound_counts_utf8_bytes_not_characters(tmp_path):
-    """A non-ASCII query at its worst case (one token per byte) stays inside the cap."""
+    """A non-ASCII query at its worst case (one token per byte) is inside its bound and the cap."""
     rows = {"validation": 30}
     prefix = "\u00e9" * 10  # 10 characters, 20 bytes; the query is e.g. "éééééééééé-7"
+    query = llm_run.Query("validation", 0, f"{prefix}-0", 0)
+    assert llm_run.input_token_bound(query, 240) == 240 + 22
     splits = {"validation": fake_split("validation", 30, prefix=prefix)}
     worst = 240 + len(f"{prefix}-0".encode())
     client = fake_client(input_tokens=worst, output_tokens=llm.MAX_TOKENS, base_tokens=240)
@@ -507,3 +509,17 @@ def test_summary_records_the_parser_hash_and_the_cap_scope(tmp_path):
     summary = json.loads(target.summary.read_text())
     assert summary["parser_sha256"] == llm.parser_sha256()
     assert "smoke" in summary["cap_scope"]
+
+
+def test_a_bound_violation_on_the_last_row_still_exits_1(small_rows, tmp_path, capsys):
+    """Every row has a reply, but one used more tokens than its bound: not a clean finish."""
+    client = fake_client(
+        input_tokens_for=lambda q: 250 + len(q.encode()) + (1 if q == "test-1" else 0)
+    )
+    with pytest.raises(SystemExit) as info:
+        main(tmp_path, ["--workers", "1"], client)
+    assert info.value.code == 1
+    out = capsys.readouterr().out
+    assert "every row has a reply, but the run stopped: bound violated" in out
+    assert "completed" not in out
+    assert len(client.messages.calls) == 5

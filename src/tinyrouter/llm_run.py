@@ -308,16 +308,21 @@ def load_journal(path: Path, queries: dict[Key, Query], identity_sha: str) -> di
     return done
 
 
+def input_token_bound(query: Query, base_tokens: int) -> int:
+    """Most input tokens one call can use: the prompt plus one token per UTF-8 byte of query."""
+    return base_tokens + len(query.text.encode("utf-8"))
+
+
 def query_cost_bound(query: Query, base_tokens: int) -> float:
-    """Upper bound on one call's cost: every query byte a token, output at max_tokens."""
-    return llm.cost_usd(base_tokens + len(query.text.encode("utf-8")), llm.MAX_TOKENS)
+    """Upper bound on one call's cost: ``input_token_bound`` in, max_tokens out."""
+    return llm.cost_usd(input_token_bound(query, base_tokens), llm.MAX_TOKENS)
 
 
 def announce_estimate(
     todo: list[Query], base_tokens: int, outcome: Outcome, max_usd: float, log: Log
 ) -> None:
     bound = sum(query_cost_bound(q, base_tokens) for q in todo)
-    in_bound = sum(base_tokens + len(q.text.encode("utf-8")) for q in todo)
+    in_bound = sum(input_token_bound(q, base_tokens) for q in todo)
     log(
         f"estimate: {len(todo)} calls to make; prompt is {base_tokens} input tokens with a "
         f"1-character query; upper bound {in_bound} input + {len(todo) * llm.MAX_TOKENS} output "
@@ -429,7 +434,7 @@ def settle(session: Session, future: Future, query: Query) -> None:
     outcome.records[query.key] = record
     outcome.spent_now += record["cost_usd"]
     outcome.calls_now += 1
-    input_bound = session.base_tokens + len(query.text.encode("utf-8"))
+    input_bound = input_token_bound(query, session.base_tokens)
     if pred.input_tokens > input_bound or pred.output_tokens > llm.MAX_TOKENS:
         session.log(
             f"BOUND VIOLATED {query.key}: {pred.input_tokens} input (bound {input_bound}), "
