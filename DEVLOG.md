@@ -18,6 +18,7 @@
 
 ### 核心發現 / 數據
 - AC1a 在乾淨副本實跑：76/76 個 Release 檔 SHA-256 通過，重建後 `results/` 與 `README.md` 與 HEAD 逐位元組相同（約 2 分鐘，含下載）。
+- CI 第一次在 ubuntu-latest 跑 AC1a：所有 JSON、`report.md`、README 逐位元組相同，但四張 PNG 不同（同一版 matplotlib，點陣化結果的位元組不同）。workflow 改在 macOS arm64（產生 commit 裡圖檔的平台）執行後通過；README 註明這一點。
 - 已提交的結果和自己比較：0 個 `REVIEW REQUIRED`、PASS（測試）。
 - AC1b 時間估計（M4，依既有 run 記錄）：AC2 約 45 分、pilot-lr 約 90 分、pilot-steps 約 15 分、BERT 曲線約 55 分、ModernBERT 曲線約 130 分、消融約 60 分、Haiku 約 15 分，合計約 6 到 7 小時。
 
