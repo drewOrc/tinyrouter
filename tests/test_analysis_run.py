@@ -246,3 +246,59 @@ def test_outputs_refuse_nan(tmp_path):
     with pytest.raises(ValueError):
         write_checked(out, {"x": float("nan")}, lambda _b: None)
     assert not out.exists()
+
+
+def test_combine_reports_no_std_when_fewer_than_two_seeds_have_a_value():
+    single = combine([None, 0.023, None])
+    assert single["mean"] == pytest.approx(0.023)
+    assert single["std"] is None and single["n"] == 1
+    assert single["values"] == [None, 0.023, None]
+
+
+def test_two_indexes_pointing_at_one_archive_stop_the_analysis(tmp_path):
+    root = fake_index_root(tmp_path)
+    path = root / "curves" / "oos-ablation.json"
+    body = json.loads(path.read_text(encoding="utf-8"))
+    shared = json.loads((root / "curves" / "modernbert.json").read_text(encoding="utf-8"))
+    donor = shared["points"][0]
+    for field in ("run_name", "logits_file", "logits_sha256"):
+        body["points"][0][field] = donor[field]
+    path.write_text(json.dumps(body), encoding="utf-8")
+    with pytest.raises(IncompleteError, match="75 points on 74 archives"):
+        collect_points(root)
+
+
+def stat(mean):
+    return {"mean": mean, "std": 0.0}
+
+
+def fake_group(argmax_auroc, summed_auroc):
+    def block(auroc):
+        return {"oos_detection": {"test": {"auroc": stat(auroc), "auprc": stat(auroc / 2)}}}
+
+    hybrid = {
+        k: stat(0.1)
+        for k in ("oos_recall", "high_conf_oos_misroute_rate", "llm_call_rate", "accuracy_8")
+    }
+    return {
+        "result": {
+            "argmax": block(argmax_auroc),
+            "summed": block(summed_auroc),
+            "final": {
+                "small_only": {"oos_recall": stat(0.6)},
+                "fallback": {"0.02": {"hybrid": {"test": hybrid}}},
+            },
+        }
+    }
+
+
+def test_ablation_detection_uses_one_fixed_aggregation_for_both_models():
+    groups = {
+        "modernbert/k100": fake_group(0.98, 0.5),
+        "modernbert-oos0/k100": fake_group(0.97, 0.9),
+    }
+    out = analysis_run.ablation_comparison(groups)
+    assert out["detection_aggregation"] == "argmax"
+    assert out["oos_250"]["oos_detection_test"]["auroc"]["mean"] == 0.98
+    assert out["oos_0"]["oos_detection_test"]["auroc"]["mean"] == 0.97
+    assert out["oos_0"]["hybrid_test"]["0.02"]["llm_call_rate"]["mean"] == 0.1

@@ -145,7 +145,12 @@ def load_haiku(results_root: Path) -> dict[str, HaikuSplit]:
 
 
 def combine(values: list, keep_values: bool = True) -> object:
-    """Seeds merged leaf by leaf: numbers -> mean, sample std (ddof=1) and the values."""
+    """Seeds merged leaf by leaf: numbers -> mean, sample std (ddof=1) and the values.
+
+    Seeds whose value is None (e.g. no feasible threshold) are left out of
+    the mean and counted in ``n``; with fewer than two numbers the std is
+    None, not 0.
+    """
     if all(v is None for v in values):
         return None
     if all(isinstance(v, dict) for v in values):
@@ -158,7 +163,7 @@ def combine(values: list, keep_values: bool = True) -> object:
         arr = np.array(numbers, dtype=np.float64)
         out: dict[str, object] = {
             "mean": float(arr.mean()),
-            "std": float(arr.std(ddof=1)) if arr.size > 1 else 0.0,
+            "std": float(arr.std(ddof=1)) if arr.size > 1 else None,
         }
         if len(numbers) < len(values):
             out["n"] = len(numbers)
@@ -182,7 +187,8 @@ def rounded(value: object) -> object:
 
 def llm_only(haiku: HaikuSplit) -> dict[str, object]:
     summary = summarize_split(haiku)["new_parser"]
-    assert isinstance(summary, dict)
+    if not isinstance(summary, dict):
+        raise TypeError(f"Haiku summary is {type(summary).__name__}, expected dict")
     return {
         **summary,
         "coverage": 0.0,
@@ -260,6 +266,16 @@ def protocol_record() -> dict[str, object]:
         "one_sided_z": ONE_SIDED_95_Z,
         "signal_choice": "largest validation coverage at the target, then lower validation AURC",
         "oracle": "defers exactly the queries the small model gets wrong (8-way)",
+        "oos_detection_score": (
+            "1 - max in-scope probability at the fitted T (151 intents for argmax, 8 agents "
+            "for summed); the four confidence signals are for RQ3"
+        ),
+        "threshold_result": (
+            "main result: thresholds chosen on validation only, reported as they do on test "
+            "(option a); diagnostics.sensitivity_reweighted_validation is option (b), "
+            "diagnosis only"
+        ),
+        "tie_at_tau": "a row whose confidence equals tau is kept by the small model",
         "error_recovery_rate": "small-model errors deferred and fixed by Haiku / small errors",
         "recoverable_caught": "errors deferred and fixed by Haiku / errors Haiku would fix",
         "high_conf_oos_misroute_rate": (
@@ -321,6 +337,42 @@ def input_record(results_root: Path, haiku_sha: str) -> dict[str, object]:
     }
 
 
+ABLATION_PAIR = {"oos_250": "modernbert/k100", "oos_0": "modernbert-oos0/k100"}
+ABLATION_AGGREGATION = "argmax"
+
+
+def mean_std(value: dict | None) -> dict[str, object] | None:
+    return None if value is None else {"mean": value["mean"], "std": value["std"]}
+
+
+def ablation_side(group: dict) -> dict[str, object]:
+    result = group["result"]
+    fixed = result[ABLATION_AGGREGATION]["oos_detection"]["test"]
+    final = result["final"]
+    routers = {}
+    for target, entry in final["fallback"].items():
+        hybrid = entry["hybrid"]["test"]
+        routers[target] = {
+            k: mean_std(hybrid[k])
+            for k in ("oos_recall", "high_conf_oos_misroute_rate", "llm_call_rate", "accuracy_8")
+        }
+    return {
+        "oos_detection_test": {k: mean_std(fixed[k]) for k in ("auroc", "auprc")},
+        "small_only_oos_recall": mean_std(final["small_only"]["oos_recall"]),
+        "hybrid_test": routers,
+    }
+
+
+def ablation_comparison(groups: dict[str, dict]) -> dict[str, object]:
+    """ModernBERT k=100 with 250 vs 0 OOS training rows: same score, same aggregation."""
+    return {
+        "detection_aggregation": ABLATION_AGGREGATION,
+        "detection_score": "1 - max in-scope probability at the fitted T",
+        "routers": "final router (validation-selected aggregation and signal)",
+        **{side: ablation_side(groups[name]) for side, name in ABLATION_PAIR.items()},
+    }
+
+
 def run(results_root: Path, log: Log = print) -> dict[str, int]:
     points = collect_points(results_root)
     haiku = load_haiku(results_root)
@@ -336,6 +388,7 @@ def run(results_root: Path, log: Log = print) -> dict[str, int]:
         "llm_only_test": llm_only(haiku["test"]),
         "groups": {g: group_body(e, keep_values=True) for g, e in sorted(scalars.items())},
     }
+    summary["ablation_comparison"] = ablation_comparison(summary["groups"])
     write_checked(out / "summary.json", summary, check_groups(expected))
     curve_body = {
         "format_version": FORMAT_VERSION,

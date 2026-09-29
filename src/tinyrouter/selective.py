@@ -35,10 +35,13 @@ def require_validation(split: str, what: str) -> None:
 
 
 def wilson_upper(successes: np.ndarray, n: np.ndarray, z: float) -> np.ndarray:
-    """Upper end of the Wilson score interval, elementwise; equals ``metrics.wilson_interval``."""
+    """Upper end of the Wilson score interval, elementwise; equals ``metrics.wilson_interval``.
+
+    Counts may be fractional (weighted rows); they must satisfy 0 <= successes <= n, n > 0.
+    """
     k, m = np.asarray(successes, dtype=np.float64), np.asarray(n, dtype=np.float64)
-    if np.any(m < 1) or np.any(k < 0) or np.any(k > m):
-        raise ValueError("need 0 <= successes <= n and n >= 1")
+    if np.any(m <= 0) or np.any(k < 0) or np.any(k > m):
+        raise ValueError("need 0 <= successes <= n and n > 0")
     p, z2 = k / m, z * z
     centre = (p + z2 / (2 * m)) / (1 + z2 / m)
     half = z * np.sqrt(p * (1 - p) / m + z2 / (4 * m * m)) / (1 + z2 / m)
@@ -145,6 +148,30 @@ def high_confidence_oos_misroute(
 
 
 @dataclass(frozen=True)
+class Scored:
+    """One split's confidence scores and 8-way errors, taken together from one routed split.
+
+    The threshold choosers take this object instead of a split name and
+    loose arrays, so the name they check and the numbers they use cannot
+    come from different splits. Build it with ``analysis.Routed.scored``.
+    ``weight`` (optional, one per row) reweights rows, e.g. to a declared
+    OOS share in the prior-shift diagnostic.
+    """
+
+    split: str
+    confidence: np.ndarray
+    error: np.ndarray
+    weight: np.ndarray | None = None
+
+    def __post_init__(self) -> None:
+        shapes = {np.shape(self.confidence), np.shape(self.error)}
+        if self.weight is not None:
+            shapes.add(np.shape(self.weight))
+        if len(shapes) != 1 or np.ndim(self.confidence) != 1 or np.size(self.confidence) == 0:
+            raise ValueError(f"confidence, error and weight must be equal 1-d arrays, got {shapes}")
+
+
+@dataclass(frozen=True)
 class ThresholdChoice:
     """The chosen confidence threshold and what it did on validation.
 
@@ -165,24 +192,35 @@ class ThresholdChoice:
         return self.tau is not None
 
 
+def deferred_below(confidence: np.ndarray, tau: float | None) -> np.ndarray:
+    """Rows sent to the LLM: confidence strictly below ``tau`` (a row equal to tau is kept).
+
+    ``tau`` None (no feasible threshold) defers every row.
+    """
+    confidence = np.asarray(confidence, dtype=np.float64)
+    if tau is None:
+        return np.ones(confidence.size, dtype=bool)
+    return confidence < tau
+
+
 def select_threshold(
-    split: str,
-    confidence: np.ndarray,
-    error: np.ndarray,
-    target_risk: float,
-    z: float = ONE_SIDED_95_Z,
+    scored: Scored, target_risk: float, z: float = ONE_SIDED_95_Z
 ) -> ThresholdChoice:
     """Largest-coverage threshold whose selective-risk Wilson upper bound is <= ``target_risk``.
 
     Candidates are the distinct validation scores; threshold t accepts
-    every row with confidence >= t.
+    every row with confidence >= t. With weights, the kept count and the
+    errors are weighted sums and coverage is the kept share of the total
+    weight.
     """
-    require_validation(split, "a deferral threshold")
-    confidence, error = np.asarray(confidence, dtype=np.float64), np.asarray(error, dtype=bool)
+    require_validation(scored.split, "a deferral threshold")
+    confidence = np.asarray(scored.confidence, dtype=np.float64)
+    error = np.asarray(scored.error, dtype=bool)
+    weight = np.ones(confidence.size) if scored.weight is None else np.asarray(scored.weight, float)
     order, starts, sizes = _tie_groups(confidence)
-    accepted = np.cumsum(sizes)
-    errors = np.cumsum(np.add.reduceat(error[order].astype(np.float64), starts))
-    upper = wilson_upper(errors, accepted, z)
+    accepted = np.cumsum(np.add.reduceat(weight[order], starts))
+    errors = np.cumsum(np.add.reduceat((weight * error)[order], starts))
+    upper = wilson_upper(np.minimum(errors, accepted), accepted, z)
     ok = np.flatnonzero(upper <= target_risk)
     if ok.size == 0:
         return ThresholdChoice(None, target_risk, 0.0, None, None, int(starts.size))
@@ -190,18 +228,16 @@ def select_threshold(
     return ThresholdChoice(
         tau=float(confidence[order][starts[best]]),
         target_risk=target_risk,
-        coverage=float(accepted[best] / confidence.size),
+        coverage=float(accepted[best] / weight.sum()),
         risk=float(errors[best] / accepted[best]),
         risk_upper=float(upper[best]),
         candidates=int(starts.size),
     )
 
 
-def coverage_thresholds(
-    split: str, confidence: np.ndarray, grid: tuple[float, ...] = COVERAGE_GRID
-) -> list[float]:
+def coverage_thresholds(scored: Scored, grid: tuple[float, ...] = COVERAGE_GRID) -> list[float]:
     """For each c in ``grid``, the score of the ceil(c * n)-th most confident validation row."""
-    require_validation(split, "operating-curve thresholds")
-    ranked = np.sort(np.asarray(confidence, dtype=np.float64))[::-1]
+    require_validation(scored.split, "operating-curve thresholds")
+    ranked = np.sort(np.asarray(scored.confidence, dtype=np.float64))[::-1]
     n = ranked.size
     return [float(ranked[max(1, int(np.ceil(c * n - 1e-9))) - 1]) for c in grid]

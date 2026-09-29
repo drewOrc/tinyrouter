@@ -25,6 +25,19 @@ log-probabilities at the fitted T. For argmax that gap is
 ``(z1 - z2) / T``, which ranks rows exactly as the raw score margin does,
 so it is the "score margin" PLAN section 4.1 asks for on TF-IDF.
 
+The threshold choosers (``selective.select_threshold`` and
+``coverage_thresholds``) take a ``Scored`` built by ``Routed.scored``, so
+the split name they check and the scores they use always come from the
+same routed split; there is no way to pass a validation name with test
+arrays short of building a ``Scored`` by hand. A test also replaces the
+test logits with noise and checks that no choice moves.
+
+RQ2 OOS detection uses its own score, ``1 - max in-scope probability``
+at the fitted T (151 intents for argmax, 8 agents for summed); the four
+confidence signals are for RQ3 selective prediction. Ranking OOS by low
+confidence would count a confident ``oos`` prediction as the least
+OOS-like row, which penalises exactly the models trained with OOS data.
+
 Which signals a run gets (PLAN section 4.1): encoders all four; TF-IDF
 only ``msp_t`` and ``margin`` (its 100x cosine scale distorts the T = 1
 signals and the raw ECE); majority none, and no temperature (every row
@@ -39,15 +52,18 @@ from dataclasses import dataclass
 import numpy as np
 
 from tinyrouter.calibrate import SplitLogits, TemperatureBoundWarning, fit_temperature
+from tinyrouter.diagnostics import threshold_diagnostics
 from tinyrouter.labels import AGENTS, OOS, LabelSpace
 from tinyrouter.metrics import expected_calibration_error, log_softmax, softmax, wilson_interval
 from tinyrouter.selective import (
     COVERAGE_GRID,
+    Scored,
     ThresholdChoice,
     aurc,
     auroc,
     average_precision,
     coverage_thresholds,
+    deferred_below,
     detection_counts,
     high_confidence_oos_misroute,
     require_validation,
@@ -74,10 +90,15 @@ class Routed:
     pred: np.ndarray
     gold: np.ndarray
     signals: dict[str, np.ndarray]
+    oos_score: np.ndarray | None = None
 
     @property
     def error(self) -> np.ndarray:
         return self.pred != self.gold
+
+    def scored(self, signal: str, weight: np.ndarray | None = None) -> Scored:
+        """This split's ``signal`` and errors, the only input the threshold choosers accept."""
+        return Scored(self.split, self.signals[signal], self.error, weight)
 
     @property
     def gold_oos(self) -> np.ndarray:
@@ -113,14 +134,17 @@ def route(
     if aggregation == "argmax":
         pred = space.agents_of(z.argmax(axis=1))
         signals = signals_of(raw, cal, log_softmax(z / temperature))
+        in_scope = np.delete(cal, space.oos_intent_id, axis=1)
     elif aggregation == "summed":
         raw8, cal8 = space.aggregate_probs(raw), space.aggregate_probs(cal)
         pred = cal8.argmax(axis=1)
         signals = signals_of(raw8, cal8, np.log(np.clip(cal8, 1e-300, None)))
+        in_scope = np.delete(cal8, OOS_AGENT, axis=1)
     else:
         raise ValueError(f"unknown aggregation {aggregation!r}; expected one of {AGGREGATIONS}")
     kept = {name: signals[name] for name in SIGNALS_BY_KIND[kind]}
-    return Routed(split.split, pred, space.agents_of(split.labels), kept)
+    oos_score = None if kind == "majority" else 1.0 - in_scope.max(axis=1)
+    return Routed(split.split, pred, space.agents_of(split.labels), kept, oos_score)
 
 
 def fit_run_temperature(val: SplitLogits, kind: str) -> tuple[float, dict[str, object]]:
@@ -185,6 +209,21 @@ def signal_quality(routed: Routed, signal: str) -> dict[str, object]:
     }
 
 
+def oos_detection(routed: Routed) -> dict[str, float] | None:
+    """RQ2 OOS detection with ``1 - max in-scope probability`` at T (None for majority).
+
+    Unlike a confidence signal, this score is high when the model puts its
+    mass on oos, so a model trained with OOS rows is not penalised for
+    confidently predicting oos.
+    """
+    if routed.oos_score is None:
+        return None
+    return {
+        "auroc": auroc(routed.oos_score, routed.gold_oos),
+        "auprc": average_precision(routed.oos_score, routed.gold_oos),
+    }
+
+
 def select_signal(val: Routed, choices: dict[str, ThresholdChoice]) -> str | None:
     """Signal with the largest validation coverage at the target (see module docstring)."""
     require_validation(val.split, "the hybrid's signal")
@@ -214,15 +253,10 @@ def fallback(
     """RQ4: per target risk, every signal's validation-chosen threshold applied to test."""
     out: dict[str, object] = {}
     for target in TARGET_RISKS:
-        choices = {
-            s: select_threshold(val.split, val.signals[s], val.error, target) for s in val.signals
-        }
+        choices = {s: select_threshold(val.scored(s), target) for s in val.signals}
         per_signal = {}
         for signal, choice in choices.items():
-            confidence = test.signals[signal]
-            deferred = np.ones(confidence.size, dtype=bool)
-            if choice.tau is not None:
-                deferred = confidence < choice.tau
+            deferred = deferred_below(test.signals[signal], choice.tau)
             test_metrics = router_metrics(test, llm_pred, llm_cost, deferred)
             per_signal[signal] = {**choice_record(choice), "test": test_metrics}
         chosen = select_signal(val, choices)
@@ -238,7 +272,7 @@ def operating_curve(
     val: Routed, test: Routed, llm_pred: np.ndarray, llm_cost: np.ndarray, signal: str
 ) -> dict[str, list[float | None]]:
     """For each validation coverage in the grid, its threshold and what it does on test."""
-    taus = coverage_thresholds(val.split, val.signals[signal])
+    taus = coverage_thresholds(val.scored(signal))
     keys = (
         "coverage",
         "selective_risk",
@@ -249,7 +283,8 @@ def operating_curve(
     )
     curve: dict[str, list[float | None]] = {"tau": taus, **{k: [] for k in keys}}
     for tau in taus:
-        metrics = router_metrics(test, llm_pred, llm_cost, test.signals[signal] < tau)
+        deferred = deferred_below(test.signals[signal], tau)
+        metrics = router_metrics(test, llm_pred, llm_cost, deferred)
         for k in keys:
             curve[k].append(metrics[k])
     return curve
@@ -264,6 +299,7 @@ def aggregation_block(
         "validation_accuracy_8": float(np.mean(~val.error)),
         "small_only": router_metrics(test, llm_pred, llm_cost, never),
         "oracle": router_metrics(test, llm_pred, llm_cost, test.error),
+        "oos_detection": {"validation": oos_detection(val), "test": oos_detection(test)},
         "signals": {
             s: {"validation": signal_quality(val, s), "test": signal_quality(test, s)}
             for s in test.signals
@@ -326,16 +362,21 @@ def analyze_run(
     for a, (v, t) in routed.items():
         scalars[a], curves[a] = aggregation_block(v, t, llm_pred, llm_cost)
     scalars["final"] = final_view(scalars[selected])
+    if kind == "encoder":
+        val_sel, test_sel = routed[selected]
+        scalars["diagnostics"] = threshold_diagnostics(val_sel, test_sel, scalars[selected])
     return scalars, curves
 
 
 def final_view(block: dict[str, object]) -> dict[str, object]:
     """The selected aggregation's router numbers, without the per-signal detail."""
     fallback_block = block["fallback"]
-    assert isinstance(fallback_block, dict)
+    if not isinstance(fallback_block, dict):
+        raise TypeError(f"fallback block is {type(fallback_block).__name__}, expected dict")
     return {
         "small_only": block["small_only"],
         "oracle": block["oracle"],
+        "oos_detection": block["oos_detection"],
         "signals": block["signals"],
         "fallback": {
             target: {"selected_signal": v["selected_signal"], "hybrid": v["hybrid"]}

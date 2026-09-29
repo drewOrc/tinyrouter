@@ -6,10 +6,12 @@ from tinyrouter.calibrate import LeakageError
 from tinyrouter.metrics import wilson_interval
 from tinyrouter.selective import (
     ONE_SIDED_95_Z,
+    Scored,
     aurc,
     auroc,
     average_precision,
     coverage_thresholds,
+    deferred_below,
     detection_counts,
     high_confidence_oos_misroute,
     risk_at_coverages,
@@ -95,7 +97,7 @@ def test_select_threshold_matches_a_brute_force_search(target):
     rng = np.random.default_rng(7)
     confidence = np.round(rng.random(400), 2)
     error = rng.random(400) < 0.3 * (1 - confidence)
-    choice = select_threshold("validation", confidence, error, target)
+    choice = select_threshold(Scored("validation", confidence, error), target)
     expected = brute_force_threshold(confidence, error, target)
     if expected is None:
         assert not choice.feasible and choice.coverage == 0.0
@@ -105,33 +107,39 @@ def test_select_threshold_matches_a_brute_force_search(target):
 
 
 def test_select_threshold_accepts_everything_when_the_target_is_loose():
-    choice = select_threshold("validation", np.array([3.0, 2.0, 1.0]), np.array([0, 1, 1]), 1.0)
+    choice = select_threshold(
+        Scored("validation", np.array([3.0, 2.0, 1.0]), np.array([0, 1, 1])), 1.0
+    )
     assert choice.tau == 1.0 and choice.coverage == 1.0 and choice.risk == pytest.approx(2 / 3)
 
 
 def test_select_threshold_reports_an_unreachable_target():
-    choice = select_threshold("validation", np.array([3.0, 2.0]), np.array([0, 0]), 1e-4)
+    choice = select_threshold(Scored("validation", np.array([3.0, 2.0]), np.array([0, 0])), 1e-4)
     assert choice.tau is None and not choice.feasible and choice.coverage == 0.0
 
 
 def test_select_threshold_never_splits_tied_scores():
     # Upper bounds: 1 row, 0 errors 0.73; 2 rows, 1 error 0.88; 3 rows, 1 error 0.746.
     # Splitting the tie would keep the error-free first row alone at target 0.74.
-    choice = select_threshold("validation", np.array([1.0, 1.0, 0.0]), np.array([0, 1, 0]), 0.74)
+    choice = select_threshold(
+        Scored("validation", np.array([1.0, 1.0, 0.0]), np.array([0, 1, 0])), 0.74
+    )
     assert choice.tau is None
 
 
 @pytest.mark.parametrize("split", ["test", "train"])
 def test_threshold_and_curve_choices_refuse_any_split_but_validation(split):
     with pytest.raises(LeakageError, match=split):
-        select_threshold(split, np.array([1.0, 0.0]), np.array([0, 1]), 0.05)
+        select_threshold(Scored(split, np.array([1.0, 0.0]), np.array([0, 1])), 0.05)
     with pytest.raises(LeakageError, match=split):
-        coverage_thresholds(split, np.array([1.0, 0.0]))
+        coverage_thresholds(Scored(split, np.array([1.0, 0.0]), np.array([0, 1])))
 
 
 def test_coverage_thresholds_are_the_validation_scores_at_each_coverage():
     scores = np.array([0.1, 0.9, 0.5, 0.7])
-    assert coverage_thresholds("validation", scores, (0.25, 0.5, 1.0)) == [0.9, 0.7, 0.1]
+    assert coverage_thresholds(
+        Scored("validation", scores, np.zeros(4, bool)), (0.25, 0.5, 1.0)
+    ) == [0.9, 0.7, 0.1]
 
 
 def test_detection_counts_by_hand_and_zero_precision_when_nothing_is_predicted():
@@ -154,5 +162,36 @@ def test_the_bound_is_one_sided_95_percent():
 
     assert ONE_SIDED_95_Z == pytest.approx(norm.ppf(0.95))
     # 60 rows, no error: upper 0.043 one-sided, 0.060 two-sided; the target sits between.
-    choice = select_threshold("validation", np.arange(60.0), np.zeros(60, bool), 0.05)
+    choice = select_threshold(Scored("validation", np.arange(60.0), np.zeros(60, bool)), 0.05)
     assert choice.coverage == 1.0
+
+
+def test_a_row_exactly_at_tau_is_kept_and_no_tau_defers_everything():
+    confidence = np.array([0.9, 0.5, 0.4999])
+    assert deferred_below(confidence, 0.5).tolist() == [False, False, True]
+    assert deferred_below(confidence, None).tolist() == [True, True, True]
+
+
+def test_scored_refuses_arrays_that_do_not_line_up():
+    with pytest.raises(ValueError, match="equal"):
+        Scored("validation", np.zeros(3), np.zeros(2, bool))
+    with pytest.raises(ValueError, match="equal"):
+        Scored("validation", np.zeros(3), np.zeros(3, bool), np.ones(4))
+
+
+def test_weighted_threshold_counts_weighted_rows_by_hand():
+    # Rows by confidence: ok, ok, error. Error weight 3, others 0.5 each (total 4).
+    scored = Scored(
+        "validation",
+        np.array([3.0, 2.0, 1.0]),
+        np.array([0, 0, 1], bool),
+        np.array([0.5, 0.5, 3.0]),
+    )
+    loose = select_threshold(scored, 1.0)
+    assert loose.coverage == 1.0 and loose.risk == pytest.approx(3 / 4)
+    # Kept weight 1 with no error: upper bound z^2 / (1 + z^2) = 0.73.
+    upper = ONE_SIDED_95_Z**2 / (1 + ONE_SIDED_95_Z**2)
+    mid = select_threshold(scored, upper + 1e-9)
+    assert mid.tau == 2.0 and mid.coverage == pytest.approx(1 / 4)
+    unweighted = select_threshold(Scored("validation", scored.confidence, scored.error), 0.75)
+    assert unweighted.coverage == 1.0

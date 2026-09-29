@@ -92,6 +92,7 @@ src/tinyrouter/
   selective.py      AURC, risk-coverage, AUROC, AUPRC, Wilson-bound threshold choice (validation only)
   haiku.py          stored Haiku predictions as arrays; old and new reply parsers
   analysis.py       one archive: 8-way aggregation, OOS, signals, ECE, fallback, oracle
+  diagnostics.py    why validation thresholds miss the target on test (OOS share, reweighting)
   analysis_run.py   `make analysis`: completion checks, label cross-checks, mean and std over seeds
   report.py         results/*.json -> results/summary.md
   smoke.py          end-to-end wiring check

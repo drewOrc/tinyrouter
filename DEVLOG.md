@@ -4,6 +4,38 @@
 
 ---
 
+## 2026-09-29（深夜，二）：PR #17 審查修正（守門缺口與兩個會誤導的結論）
+
+### 本次工作 / 執行摘要
+- 審查結論：計算正確（無洩漏、可逐位元重現、獨立重算吻合），退回原因是 9 條突變存活與兩個報告結論。這次一次修完 F1 到 F11。
+- **守門不再只看 split 名稱（F2）**：`select_threshold`、`coverage_thresholds` 改成只收 `Scored`，由 `Routed.scored(signal)` 從同一個 routed split 取出名稱、分數與錯誤，不能再「傳 validation 名稱配 test 陣列」。打亂 labels 的測試之外，新增「test logits 換成亂數」的測試，並把操作曲線的 τ、hybrid 的訊號、(b) 敏感度的 τ 都納入比對。
+- **RQ2 OOS 偵測改用專用分數（F3）**：`1 − max in-scope 機率`（擬合的 T 下；argmax 聚合用 151 類、summed 用 8 類），寫在每個聚合的 `oos_detection`。四個信心訊號只留給 RQ3。`summary.json` 新增 `ablation_comparison`：偵測固定用 argmax 聚合，router 行為用 final router，全部由程式產生。
+- **門檻失效的診斷（F4）**：`diagnostics.py`，對每個 encoder 點的 final hybrid 報 val 與 test 的 selective risk、只看 in-scope 的 risk、被收下 OOS 的誤判率、test 依 validation OOS 比例重新加權後的 risk、比例解釋的缺口比例，另報選項 (b) 的敏感度（validation 依 18.2% OOS 加權後選 τ 再套 test，註明這個比例是看過 test 才知道的，只作診斷）。加權的 Wilson 上界用加權後的計數。
+- **決定（協調者依 Drew 的專案原則拍板）**：主結果採 (a) 照實報，validation-only 協定不變；(b) 只當診斷。
+- 其他：F1 OOS AUROC／AUPRC 方向的呼叫端測試（對 sklearn）；F5 `select_signal` 用手算 choices 測；F6 entropy 方向；F7 summed 用溫度校準機率（T 會改變 argmax 的案例）；F8 分數恰好等於 τ 的列由小模型保留（`deferred_below`，有測試）；F9 可行 seed 少於 2 個時 std 記 null 並保留 n（例：bert/k1 目標 2% 只有 1 個 seed 可行）；F10 兩個 index 指向同一個 archive 會紅；F11 正式程式碼的 `assert isinstance` 改成明確 raise。
+
+### 核心發現 / 數據
+（全部取自 `results/analysis/summary.json`，test，百分比，mean ± std）
+- **消融改正後**（偵測固定 argmax 聚合、分數 `1 − max in-scope p`）：OOS 250 筆 AUROC 98.33 ± 0.07、AUPRC 94.34 ± 0.25；OOS 0 筆 97.80 ± 0.04、91.52 ± 0.26。有 OOS 訓練資料的模型較好，與前一則的方向相反。
+- **消融的主比較是 router 行為**（目標 2%，OOS 250 對 0）：hybrid OOS recall 62.43 ± 1.33 對 40.60 ± 1.04；高信心 OOS 誤派 34.53 ± 5.53 對 37.67 ± 2.90；LLM 呼叫率 1.27 ± 1.59 對 12.07 ± 0.73。沒有 OOS 訓練資料時，要多交 LLM 近 10 倍的查詢，OOS 仍少攔約 22pp。
+- **門檻失效的歸因**（ModernBERT k=100，目標 2%）：val 1.50 ± 0.13，test 7.34 ± 0.86，test 依 validation OOS 比例加權後 2.29 ± 0.11，比例解釋缺口的 86.66 ± 1.39%。其餘來自 test 的 OOS 較難：被收下 OOS 的誤判率 val 19.91 ± 2.93 對 test 36.48 ± 3.04；in-scope risk 0.90 ± 0.23 對 1.20 ± 0.07。目標 2% 下其他 encoder 點比例解釋約 78% 到 97%（BERT k=5、k=10 超過 100%，加權後反而低於 val）；目標 5% 的 ModernBERT k=1 只有 27%，那一點 coverage 很低、數字不穩。
+- **(b) 敏感度**（同點）：test risk 2.93 ± 0.63（三個 seed 2.58、3.65、2.55），coverage 88.55 ± 1.76。依部署 OOS 比例加權後仍略高於 2%。
+- **結論**：validation 選的門檻在 test 上守不住目標 risk，主要來自 OOS 比例差異（約 86%），其餘是 test OOS 較難；依部署 OOS 比例加權仍不足，部署時應在接近真實流量的資料上重新校準門檻。
+- 重構後 `curves.json` 與改前逐位元組相同（所有 τ 與曲線不變），`summary.json` 除新增欄位外只有 48 處 std 由 0 改成 null（F9）；`make analysis` 連跑兩次輸出相同。
+
+### Blockers / 遇到的問題
+- 重新下載 Release 時連線中斷，5 個 archive 下載不完整；`make verify-logits` 以 SHA-256 不符擋下，重下後通過。
+
+### Next
+- [ ] 步驟 5：README 與圖、成本表（RQ5），數字由 `make report` 從 `results/analysis/*.json` 產生；README 寫明門檻要在接近真實流量的資料上重新校準
+
+### Files / Budget
+- 新增：`src/tinyrouter/diagnostics.py`、`tests/test_diagnostics.py`
+- 修改：`src/tinyrouter/selective.py`、`analysis.py`、`analysis_run.py`；`tests/test_selective.py`、`test_analysis.py`、`test_analysis_run.py`；`results/analysis/summary.json`；`README.md`；`DEVLOG.md`
+- API 花費：US$0
+
+---
+
 ## 2026-09-29（深夜）：步驟 4 後半，RQ2 到 RQ4 離線分析
 
 ### 本次工作 / 執行摘要
@@ -20,18 +52,18 @@
 （全部取自 `results/analysis/*.json`，test，百分比，mean ± std）
 - **Haiku 4.5 zero-shot**：8 類準確率 82.1，OOS recall 56.8（Wilson 95% 53.7 到 59.8），每 1K 查詢 US$0.369。8,600 筆回覆全是 8 個標籤之一，parse_failed 0 列，新舊解析規則不一致 0 列，順序相依 0 列。
 - **ModernBERT k=100（主模型，validation 選 argmax）**：small-only 91.9 ± 0.1，OOS recall 61.1 ± 0.4；oracle 95.1 ± 0.1、LLM 呼叫 8.1 ± 0.1。
-- **validation 選的門檻在 test 上守不住目標 risk**。目標 2%：ModernBERT k=100 test selective risk 7.3 ± 0.9（coverage 98.7）、k=25 為 5.3 ± 0.5；目標 5% 在 k ≥ 25 時 coverage 幾乎 100%，test selective risk 8.0 到 13.5。原因是 CLINC150 的 validation 只有 100/3,100（3.2%）OOS，test 是 1,000/5,500（18.2%）；小模型的錯誤大多是 OOS，validation 上錯誤率本來就低，Wilson 上界再保守也看不到 test 的 OOS 比例。這不是程式錯，是協定（只用 validation）在這個資料集上的已知代價，需要 Drew 決定要不要處理（見 Blockers）。
+- **validation 選的門檻在 test 上守不住目標 risk**。目標 2%：ModernBERT k=100 test selective risk 7.3 ± 0.9（coverage 98.7）、k=25 為 5.3 ± 0.5；目標 5% 在 k ≥ 25 時 coverage 幾乎 100%，test selective risk 8.0 到 13.5。歸因見下一則（審查修正）的診斷：主要來自 OOS 比例差異，其餘是 test 的 OOS 較難。
 - 小資料量時 hybrid 的價值最清楚：ModernBERT k=10 在目標 2% 下 88.0 ± 0.4，LLM 呼叫 23.9 ± 3.8，高於 Haiku 單獨的 82.1 與 small-only 的 81.5 ± 0.7。
-- **OOS 0 筆消融**：small-only OOS recall 0.0（從不預測 oos），但只靠不確定性當 OOS 分數時 AUROC 反而更高：msp_t 98.0 ± 0.1、AUPRC 92.2 ± 0.4，對照同點 OOS 250 筆的 91.9 ± 0.5、72.0 ± 0.7。注意這個比較對有 OOS 訓練的模型不利：它有信心地預測成 oos 的查詢，在「低信心 = OOS」的分數下反而被當成最不像 OOS。以 router 實際行為比較：消融在目標 2% 下 hybrid OOS recall 40.6 ± 1.0、高信心 OOS 誤派 37.7 ± 2.9；目標 5% 時門檻放到全收，高信心 OOS 誤派 99.3 ± 0.2。
+- **OOS 0 筆消融**：small-only OOS recall 0.0（從不預測 oos）。本則原先寫「只靠不確定性當 OOS 分數時 AUROC 反而更高（msp_t 98.0 對 91.9）」，那是分數選擇造成的假象，已在下一則改用 `1 − max in-scope p` 並固定聚合重算，方向反過來。以 router 實際行為比較：消融在目標 2% 下 hybrid OOS recall 40.6 ± 1.0、高信心 OOS 誤派 37.7 ± 2.9；目標 5% 時門檻放到全收，高信心 OOS 誤派 99.3 ± 0.2。
 - 聚合方式：ModernBERT k ≤ 10 三個 seed 都選 summed，k ≥ 50 都選 argmax；BERT 在 k=10、50、100 三個 seed 選得不一致，兩者差距都在 1pp 內。兩種的 test 數字都在 JSON。
 - 多數類：argmax 聚合永遠猜 oos（k-shot 樣本裡 oos 是單一最大 intent），summed 永遠猜 finance；validation 選 summed，test 8 類 20.7。
 
 ### Blockers / 遇到的問題
-- **待 Drew 決定**：validation 與 test 的 OOS 比例差 5.7 倍，使「只用 validation 選門檻」在 test 上系統性地超出目標 risk。可選：(a) 照實報，當成部署時要重新校準門檻的證據；(b) 另報一個敏感度版本，validation 的 OOS 列依「假設的部署 OOS 比例」加權（比例是事先宣告的參數，不從 test 估），這會動到 PLAN 的協定，所以這次沒做。
-- 「不確定性當 OOS 分數」對有 OOS 訓練的模型不公平（上面的消融段）；若要公平比較，可另加「預測為 oos 或低信心」的組合分數。這次照任務只報四個訊號。
+- 門檻失效要不要處理：已決定（見下一則），主結果照實報，(b) 只當診斷。
+- 「低信心當 OOS 分數」對有 OOS 訓練的模型不公平：已在下一則改用專用的 OOS 偵測分數。
 
 ### Next
-- [ ] Drew 決定上面兩點
+- [x] 上面兩點已在下一則處理
 - [ ] 步驟 5：README 與圖（risk-coverage、操作曲線、reliability），成本表（RQ5），數字由 `make report` 從 `results/analysis/*.json` 產生
 
 ### Files / Budget

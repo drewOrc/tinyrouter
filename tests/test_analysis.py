@@ -1,19 +1,23 @@
 import numpy as np
 import pytest
+from sklearn.metrics import average_precision_score, roc_auc_score
 
 from tinyrouter.analysis import (
     AGGREGATIONS,
     Routed,
     analyze_run,
+    fallback,
     fit_run_temperature,
+    oos_detection,
     route,
     router_metrics,
     select_aggregation,
     select_signal,
+    signal_quality,
 )
 from tinyrouter.calibrate import LeakageError, SplitLogits
 from tinyrouter.labels import AGENTS, load_label_space
-from tinyrouter.selective import select_threshold
+from tinyrouter.selective import ThresholdChoice, select_threshold
 
 F, T, OOS = AGENTS.index("finance_agent"), AGENTS.index("travel_agent"), AGENTS.index("oos")
 SPACE = load_label_space()
@@ -123,9 +127,7 @@ def test_signal_choice_prefers_coverage_then_aurc():
         [F, F, F, F],
         {"msp": np.array([4.0, 3, 2, 1]), "entropy": np.array([1.0, 2, 3, 4])},
     )
-    choices = {
-        s: select_threshold("validation", val.signals[s], val.error, 0.8) for s in val.signals
-    }
+    choices = {s: select_threshold(val.scored(s), 0.8) for s in val.signals}
     # Both keep every row at this target; msp ranks the error last, so its AURC is lower.
     assert select_signal(val, choices) == "msp"
 
@@ -207,23 +209,140 @@ def test_the_temperature_is_fitted_on_validation_only(kind):
         fit_run_temperature(synthetic_splits()["test"], kind)
 
 
-def choices_of(scalars):
+def choices_of(scalars, curves):
+    """Everything chosen on validation: T, aggregation, every tau, curve taus, (b) taus."""
     fallback = {
         a: {
-            t: {s: v["tau"] for s, v in f["by_signal"].items()}
+            t: ({s: v["tau"] for s, v in f["by_signal"].items()}, f["selected_signal"])
             for t, f in scalars[a]["fallback"].items()
         }
         for a in AGGREGATIONS
     }
-    return scalars["calibration"]["temperature"], scalars["selected_aggregation"], fallback
+    operating = {a: {s: c["operating"]["tau"] for s, c in curves[a].items()} for a in AGGREGATIONS}
+    sensitivity = {
+        t: (d["sensitivity_reweighted_validation"]["tau"], d["signal"], d["tau"])
+        for t, d in scalars["diagnostics"].items()
+    }
+    return (
+        scalars["calibration"]["temperature"],
+        scalars["selected_aggregation"],
+        fallback,
+        operating,
+        sensitivity,
+    )
 
 
 def test_test_labels_do_not_move_any_choice():
     splits = synthetic_splits()
     pred, cost = fake_llm(500)
-    before, _ = analyze_run(splits["validation"], splits["test"], "encoder", SPACE, pred, cost)
+    before = analyze_run(splits["validation"], splits["test"], "encoder", SPACE, pred, cost)
     shuffled = np.random.default_rng(9).permutation(splits["test"].labels)
     test = SplitLogits("test", splits["test"].logits, shuffled)
-    after, _ = analyze_run(splits["validation"], test, "encoder", SPACE, pred, cost)
-    assert choices_of(before) == choices_of(after)
-    assert before["final"]["small_only"] != after["final"]["small_only"]
+    after = analyze_run(splits["validation"], test, "encoder", SPACE, pred, cost)
+    assert choices_of(*before) == choices_of(*after)
+    assert before[0]["final"]["small_only"] != after[0]["final"]["small_only"]
+
+
+def test_test_scores_do_not_move_any_choice():
+    """Replacing the test logits with noise must leave every validation choice alone."""
+    splits = synthetic_splits()
+    pred, cost = fake_llm(500)
+    before = analyze_run(splits["validation"], splits["test"], "encoder", SPACE, pred, cost)
+    noise = np.random.default_rng(11).normal(size=splits["test"].logits.shape).astype(np.float32)
+    test = SplitLogits("test", noise, splits["test"].labels)
+    after = analyze_run(splits["validation"], test, "encoder", SPACE, pred, cost)
+    assert choices_of(*before) == choices_of(*after)
+    assert before[1]["argmax"]["msp"]["risk_coverage"] != after[1]["argmax"]["msp"]["risk_coverage"]
+
+
+def oos_rows_unsure(n=200, seed=3):
+    """A test split where every gold-oos row gets low confidence and in-scope rows high."""
+    rng = np.random.default_rng(seed)
+    gold = np.where(rng.random(n) < 0.25, OOS, F)
+    confidence = np.where(gold == OOS, rng.uniform(0.1, 0.6, n), rng.uniform(0.4, 1.0, n))
+    oos_score = np.where(gold == OOS, rng.uniform(0.3, 1.0, n), rng.uniform(0.0, 0.5, n))
+    return routed("test", np.full(n, F), gold, {"msp": confidence}), confidence, oos_score
+
+
+def test_low_confidence_on_oos_rows_gives_high_oos_auroc_matching_sklearn():
+    r, confidence, _ = oos_rows_unsure()
+    quality = signal_quality(r, "msp")
+    gold_oos = r.gold == OOS
+    assert quality["oos_auroc"] > 0.5
+    assert quality["oos_auroc"] == pytest.approx(roc_auc_score(gold_oos, -confidence))
+    assert quality["oos_auprc"] == pytest.approx(average_precision_score(gold_oos, -confidence))
+
+
+def test_oos_detection_ranks_by_the_oos_score_itself():
+    base, _, oos_score = oos_rows_unsure()
+    r = Routed(base.split, base.pred, base.gold, base.signals, oos_score)
+    got = oos_detection(r)
+    gold_oos = r.gold == OOS
+    assert got["auroc"] > 0.5
+    assert got["auroc"] == pytest.approx(roc_auc_score(gold_oos, oos_score))
+    assert got["auprc"] == pytest.approx(average_precision_score(gold_oos, oos_score))
+
+
+def test_oos_score_is_one_minus_the_largest_in_scope_probability_at_t():
+    split = one_row_logits()
+    t = 2.0
+    p = np.exp(split.logits[0] / t) / np.exp(split.logits[0] / t).sum()
+    in_scope = np.delete(p, SPACE.oos_intent_id).max()
+    got = route(split, t, "argmax", SPACE, "encoder").oos_score
+    assert got == pytest.approx([1 - in_scope], rel=1e-5)
+    assert route(split, t, "argmax", SPACE, "majority").oos_score is None
+
+
+def test_signal_choice_by_hand_coverage_first_then_aurc():
+    val = routed(
+        "validation",
+        [F, F, F, T],
+        [F, F, F, F],
+        {"msp": np.array([4.0, 3, 2, 1]), "entropy": np.array([1.0, 2, 3, 4])},
+    )
+
+    def choice(coverage):
+        return ThresholdChoice(0.0, 0.05, coverage, 0.0, 0.0, 4)
+
+    # entropy has the worse AURC (its error ranks first) but more coverage: it wins.
+    assert select_signal(val, {"msp": choice(0.5), "entropy": choice(0.75)}) == "entropy"
+    # Equal coverage: the lower validation AURC (msp) wins, whatever the dict order.
+    assert select_signal(val, {"entropy": choice(0.5), "msp": choice(0.5)}) == "msp"
+
+
+def test_entropy_signal_is_lower_for_a_uniform_row_than_a_one_hot_row():
+    z = np.full((2, SPACE.num_intents), 0.0)
+    z[1, 0] = 50.0
+    split = SplitLogits("validation", z.astype(np.float32), np.array([0, 0]))
+    entropy = route(split, 1.0, "argmax", SPACE, "encoder").signals["entropy"]
+    assert entropy[0] < entropy[1]
+    assert entropy[0] == pytest.approx(-np.log(SPACE.num_intents))
+
+
+def test_summed_aggregation_uses_the_temperature_scaled_probabilities():
+    """At T = 1 oos outweighs two finance intents; at T = 10 the pair wins."""
+    names = SPACE.intent_names
+    finance = [i for i, n in enumerate(names) if SPACE.intent_to_agent[n] == "finance_agent"]
+    z = np.full((1, SPACE.num_intents), -1000.0)
+    z[0, SPACE.oos_intent_id] = 3.0
+    z[0, finance[:2]] = 2.0
+    split = SplitLogits("validation", z.astype(np.float32), np.array([SPACE.oos_intent_id]))
+    assert route(split, 1.0, "summed", SPACE, "encoder").pred.tolist() == [OOS]
+    assert route(split, 10.0, "summed", SPACE, "encoder").pred.tolist() == [F]
+
+
+def test_a_test_row_exactly_at_tau_is_kept_by_the_small_model(monkeypatch):
+    import tinyrouter.analysis as analysis
+
+    monkeypatch.setattr(analysis, "TARGET_RISKS", (0.6,))
+    # Validation: two error-free rows (upper bound 0.575) then an error (3 rows: 0.746),
+    # so at target 0.6 tau is the second score, 0.8.
+    val = routed("validation", [F, F, T], [F, F, F], {"msp": np.array([0.9, 0.8, 0.1])})
+    # Test row 0 sits exactly on tau and must be kept; row 1 is just below it.
+    test = routed("test", [F, T, OOS], [F, F, OOS], {"msp": np.array([0.8, 0.79, 0.95])})
+    llm = np.array([F, F, OOS])
+    got = fallback(val, test, llm, np.zeros(3))["0.60"]["by_signal"]["msp"]
+    assert got["tau"] == 0.8
+    assert got["test"]["coverage"] == pytest.approx(2 / 3)
+    assert got["test"]["llm_call_rate"] == pytest.approx(1 / 3)
+    assert got["test"]["accuracy_8"] == 1.0
