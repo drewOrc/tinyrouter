@@ -494,7 +494,8 @@ def main(argv: list[str] | None = None) -> None:
         print(f"verdict {body['verdict']} ({body['review_required']} review required)")
         return
     verdict = reproduce_full(layout, repo)
-    print(f"AC1b verdict: {verdict}; see {layout.base}/comparison.md")
+    record = "preflight.json" if verdict == "NOT STARTED" else "comparison.md"
+    print(f"AC1b verdict: {verdict}; see {layout.base}/{record}")
     if verdict != comparison.PASS:
         raise SystemExit(1)
 
