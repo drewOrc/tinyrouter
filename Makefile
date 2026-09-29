@@ -1,5 +1,5 @@
 .PHONY: setup lint format test test-network smoke train evaluate ac2 pilot-lr pilot-steps baselines \
-	curve oos-ablation verify-logits llm-smoke llm verify-llm report clean-checkpoints
+	curve oos-ablation verify-logits llm-smoke llm verify-llm analysis report clean-checkpoints
 
 CONFIG ?= configs/bert-base.yaml
 SEED ?= 42
@@ -131,6 +131,15 @@ llm:
 # results/llm-manifest.json and results/llm/haiku-8way.json.
 verify-llm:
 	uv run python -m tinyrouter.llm_run --verify
+
+# RQ2 to RQ4 from the stored logits and Haiku predictions (docs/PLAN.md sections 3
+# and 4, AC3, AC4, AC6): no training, no API calls. Needs the archives in
+# results/logits/ and results/llm/haiku-8way.jsonl (GitHub Releases; check them
+# with verify-logits and verify-llm). Writes results/analysis/{summary,curves,haiku}.json.
+# Done means the whole last line `completed analysis (75/75 archives, 8600/8600 llm
+# rows, 25 groups)`.
+analysis:
+	uv run python -m tinyrouter.analysis_run --quiet
 
 report:
 	uv run python -m tinyrouter.report

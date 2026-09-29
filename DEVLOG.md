@@ -4,6 +4,43 @@
 
 ---
 
+## 2026-09-29（深夜）：步驟 4 後半，RQ2 到 RQ4 離線分析
+
+### 本次工作 / 執行摘要
+- 新增 `make analysis`（`analysis_run.py`、`analysis.py`、`selective.py`、`haiku.py`）：只讀 75 個 logits archive 與 Haiku 8,600 筆逐筆預測，不訓練、不打 API。輸出 `results/analysis/summary.json`、`curves.json`、`haiku.json`，兩次執行逐位元組相同（沒有任何亂數）。
+- 開跑前比照 completeness.py 驗證：四個 curve index 重跑 `verify_index`（BERT、ModernBERT 各 18、消融 3、基準 36；BERT k=100 即 AC2 三個 run），archive 總數 75 與 Haiku 列數 8,600 都是字面值；每個 split 內所有 archive 的 labels 必須相同，Haiku 的 `gold_intent` 必須與之逐列相等。輸出先寫暫存檔、讀回檢查（25 組、每組 3 seeds、兩個 Haiku split）才換上，最後印 `completed analysis (75/75 archives, 8600/8600 llm rows, 25 groups)`。
+- 只用 validation 決定、程式層級守住（傳 test 就 `LeakageError`，有測試）：溫度、8 類聚合（validation 8 類準確率高者，平手取 argmax）、每個訊號在每個目標 risk 的門檻、hybrid 用哪個訊號（validation coverage 大者，再比 validation AURC）、操作曲線上的門檻。另有一條測試把 test labels 打亂，確認所有選擇都不變。
+- 門檻：候選是 validation 上所有不同的分數，取「selective risk 的單側 95% Wilson 上界（z = 1.645）≤ 目標」中 coverage 最大者；同分的列永遠一起收或一起退。沒有門檻可行時，router 全部交給 LLM（coverage 0），並記 `feasible: false`。目標 2% 與 5% 兩檔。
+- 訊號（越大越有信心）：`msp`、`entropy`（負熵）在 T = 1；`msp_t` 在擬合的 T；`margin` 是擬合 T 下前兩名 log 機率的差，argmax 聚合時等於 (z1 − z2)/T，排序與原始分數 margin 相同。argmax 聚合的訊號取自 151 類分布，summed 取自 8 類分布。TF-IDF 只報 `msp_t` 與 `margin`、只報校準後 ECE；多數類不擬合 T、不報訊號（PLAN §4.1）。
+- oracle：只把小模型 8 類判錯的查詢交給 Haiku。錯誤回收率 = 被交出去且 Haiku 救回的小模型錯誤 ÷ 小模型全部錯誤；「抓到的可回收錯誤」= 同一個分子 ÷ Haiku 會救回的小模型錯誤（oracle 的分子）。
+- 並列：LLM-only、small-only、hybrid（每個目標 risk）、oracle。std 是 3 seeds 的樣本標準差（ddof=1）。
+- 舊專案解析規則（子字串、取集合迭代到的第一個）重做成 `legacy_parse`，順序改用 `AGENTS` 固定，並另計「含兩個以上標籤、在舊程式裡答案不固定」的列數。
+
+### 核心發現 / 數據
+（全部取自 `results/analysis/*.json`，test，百分比，mean ± std）
+- **Haiku 4.5 zero-shot**：8 類準確率 82.1，OOS recall 56.8（Wilson 95% 53.7 到 59.8），每 1K 查詢 US$0.369。8,600 筆回覆全是 8 個標籤之一，parse_failed 0 列，新舊解析規則不一致 0 列，順序相依 0 列。
+- **ModernBERT k=100（主模型，validation 選 argmax）**：small-only 91.9 ± 0.1，OOS recall 61.1 ± 0.4；oracle 95.1 ± 0.1、LLM 呼叫 8.1 ± 0.1。
+- **validation 選的門檻在 test 上守不住目標 risk**。目標 2%：ModernBERT k=100 test selective risk 7.3 ± 0.9（coverage 98.7）、k=25 為 5.3 ± 0.5；目標 5% 在 k ≥ 25 時 coverage 幾乎 100%，test selective risk 8.0 到 13.5。原因是 CLINC150 的 validation 只有 100/3,100（3.2%）OOS，test 是 1,000/5,500（18.2%）；小模型的錯誤大多是 OOS，validation 上錯誤率本來就低，Wilson 上界再保守也看不到 test 的 OOS 比例。這不是程式錯，是協定（只用 validation）在這個資料集上的已知代價，需要 Drew 決定要不要處理（見 Blockers）。
+- 小資料量時 hybrid 的價值最清楚：ModernBERT k=10 在目標 2% 下 88.0 ± 0.4，LLM 呼叫 23.9 ± 3.8，高於 Haiku 單獨的 82.1 與 small-only 的 81.5 ± 0.7。
+- **OOS 0 筆消融**：small-only OOS recall 0.0（從不預測 oos），但只靠不確定性當 OOS 分數時 AUROC 反而更高：msp_t 98.0 ± 0.1、AUPRC 92.2 ± 0.4，對照同點 OOS 250 筆的 91.9 ± 0.5、72.0 ± 0.7。注意這個比較對有 OOS 訓練的模型不利：它有信心地預測成 oos 的查詢，在「低信心 = OOS」的分數下反而被當成最不像 OOS。以 router 實際行為比較：消融在目標 2% 下 hybrid OOS recall 40.6 ± 1.0、高信心 OOS 誤派 37.7 ± 2.9；目標 5% 時門檻放到全收，高信心 OOS 誤派 99.3 ± 0.2。
+- 聚合方式：ModernBERT k ≤ 10 三個 seed 都選 summed，k ≥ 50 都選 argmax；BERT 在 k=10、50、100 三個 seed 選得不一致，兩者差距都在 1pp 內。兩種的 test 數字都在 JSON。
+- 多數類：argmax 聚合永遠猜 oos（k-shot 樣本裡 oos 是單一最大 intent），summed 永遠猜 finance；validation 選 summed，test 8 類 20.7。
+
+### Blockers / 遇到的問題
+- **待 Drew 決定**：validation 與 test 的 OOS 比例差 5.7 倍，使「只用 validation 選門檻」在 test 上系統性地超出目標 risk。可選：(a) 照實報，當成部署時要重新校準門檻的證據；(b) 另報一個敏感度版本，validation 的 OOS 列依「假設的部署 OOS 比例」加權（比例是事先宣告的參數，不從 test 估），這會動到 PLAN 的協定，所以這次沒做。
+- 「不確定性當 OOS 分數」對有 OOS 訓練的模型不公平（上面的消融段）；若要公平比較，可另加「預測為 oos 或低信心」的組合分數。這次照任務只報四個訊號。
+
+### Next
+- [ ] Drew 決定上面兩點
+- [ ] 步驟 5：README 與圖（risk-coverage、操作曲線、reliability），成本表（RQ5），數字由 `make report` 從 `results/analysis/*.json` 產生
+
+### Files / Budget
+- 新增：`src/tinyrouter/analysis.py`、`analysis_run.py`、`selective.py`、`haiku.py`；`tests/test_analysis.py`、`test_analysis_run.py`、`test_selective.py`、`test_haiku.py`；`results/analysis/summary.json`、`curves.json`、`haiku.json`
+- 修改：`Makefile`（`make analysis`）、`README.md`（指令表與目錄）、`DEVLOG.md`
+- API 花費：US$0
+
+---
+
 ## 2026-09-29（夜）：llm-smoke 第一次實跑失敗，temperature 改走 extra_body
 
 ### 本次工作 / 執行摘要
