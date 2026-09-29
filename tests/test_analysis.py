@@ -293,6 +293,18 @@ def test_oos_score_is_one_minus_the_largest_in_scope_probability_at_t():
     assert route(split, t, "argmax", SPACE, "majority").oos_score is None
 
 
+def test_summed_oos_score_is_high_when_the_oos_agent_carries_the_mass():
+    z = np.full((1, SPACE.num_intents), 0.0)
+    z[0, SPACE.oos_intent_id] = 12.0
+    split = SplitLogits("validation", z.astype(np.float32), np.array([SPACE.oos_intent_id]))
+    got = route(split, 1.0, "summed", SPACE, "encoder").oos_score
+    p = np.exp(z[0]) / np.exp(z[0]).sum()
+    agents = SPACE.aggregate_probs(p[None, :])[0]
+    assert agents.argmax() == OOS
+    assert got == pytest.approx([1 - np.delete(agents, OOS).max()], rel=1e-6)
+    assert got[0] > 0.9
+
+
 def test_signal_choice_by_hand_coverage_first_then_aurc():
     val = routed(
         "validation",
@@ -308,6 +320,18 @@ def test_signal_choice_by_hand_coverage_first_then_aurc():
     assert select_signal(val, {"msp": choice(0.5), "entropy": choice(0.75)}) == "entropy"
     # Equal coverage: the lower validation AURC (msp) wins, whatever the dict order.
     assert select_signal(val, {"entropy": choice(0.5), "msp": choice(0.5)}) == "msp"
+
+
+def test_equal_coverage_goes_to_the_lower_aurc_even_when_it_is_listed_later():
+    # msp is first in SIGNALS but ranks the error first; msp_t ranks it last.
+    val = routed(
+        "validation",
+        [F, F, F, T],
+        [F, F, F, F],
+        {"msp": np.array([1.0, 2, 3, 4]), "msp_t": np.array([4.0, 3, 2, 1])},
+    )
+    same = ThresholdChoice(0.0, 0.05, 0.5, 0.0, 0.0, 4)
+    assert select_signal(val, {"msp": same, "msp_t": same}) == "msp_t"
 
 
 def test_entropy_signal_is_lower_for_a_uniform_row_than_a_one_hot_row():

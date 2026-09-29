@@ -189,9 +189,34 @@ def test_weighted_threshold_counts_weighted_rows_by_hand():
     )
     loose = select_threshold(scored, 1.0)
     assert loose.coverage == 1.0 and loose.risk == pytest.approx(3 / 4)
-    # Kept weight 1 with no error: upper bound z^2 / (1 + z^2) = 0.73.
-    upper = ONE_SIDED_95_Z**2 / (1 + ONE_SIDED_95_Z**2)
+    # Kish: n_eff = 4^2 / (0.25 + 0.25 + 9) = 16 / 9.5, with 0.75 * n_eff errors.
+    n_eff = 16 / 9.5
+    expected = wilson_upper(np.array([0.75 * n_eff]), np.array([n_eff]), ONE_SIDED_95_Z)[0]
+    assert loose.risk_upper == pytest.approx(expected)
+    # Two kept rows of weight 0.5, no error: n_eff = 2, bound z^2 / (2 + z^2) = 0.575.
+    upper = ONE_SIDED_95_Z**2 / (2 + ONE_SIDED_95_Z**2)
     mid = select_threshold(scored, upper + 1e-9)
     assert mid.tau == 2.0 and mid.coverage == pytest.approx(1 / 4)
-    unweighted = select_threshold(Scored("validation", scored.confidence, scored.error), 0.75)
-    assert unweighted.coverage == 1.0
+
+
+@pytest.mark.parametrize("target", [0.05, 0.1, 0.3])
+def test_unit_weights_give_the_unweighted_choice(target):
+    rng = np.random.default_rng(5)
+    confidence = np.round(rng.random(300), 2)
+    error = rng.random(300) < 0.3 * (1 - confidence)
+    plain = select_threshold(Scored("validation", confidence, error), target)
+    unit = select_threshold(Scored("validation", confidence, error, np.ones(300)), target)
+    assert unit.tau == plain.tau and unit.coverage == pytest.approx(plain.coverage)
+    assert unit.risk_upper == pytest.approx(plain.risk_upper)
+
+
+def test_unequal_weights_widen_the_bound_beyond_the_nominal_count():
+    rng = np.random.default_rng(6)
+    error = rng.random(200) < 0.1
+    weight = np.where(rng.random(200) < 0.1, 5.0, 0.5)
+    weight = weight / weight.mean()
+    got = select_threshold(Scored("validation", np.ones(200), error, weight), 1.0)
+    nominal = wilson_upper(
+        np.array([(weight * error).sum()]), np.array([weight.sum()]), ONE_SIDED_95_Z
+    )
+    assert got.risk_upper > nominal[0]

@@ -302,3 +302,29 @@ def test_ablation_detection_uses_one_fixed_aggregation_for_both_models():
     assert out["oos_250"]["oos_detection_test"]["auroc"]["mean"] == 0.98
     assert out["oos_0"]["oos_detection_test"]["auroc"]["mean"] == 0.97
     assert out["oos_0"]["hybrid_test"]["0.02"]["llm_call_rate"]["mean"] == 0.1
+
+
+def test_taus_of_different_signals_are_not_averaged():
+    seeds = [
+        {"selected_signal": s, "hybrid": {"tau": t, "coverage": c}}
+        for s, t, c in (("msp_t", 0.3, 0.9), ("entropy", -3.3, 0.8), ("margin", 0.1, 0.7))
+    ]
+    out = combine(seeds)
+    assert out["hybrid"]["tau"] == {
+        "values": [0.3, -3.3, 0.1],
+        "signals": ["msp_t", "entropy", "margin"],
+        "note": "signals differ across seeds; no mean",
+    }
+    assert out["hybrid"]["coverage"]["mean"] == pytest.approx(0.8)
+    same = combine([{"signal": "msp", "tau": t} for t in (0.2, 0.4, 0.6)])
+    assert same["tau"]["mean"] == pytest.approx(0.4)
+
+
+def test_by_signal_taus_are_averaged_per_signal_even_when_the_hybrid_signals_differ():
+    seeds = [
+        {"selected_signal": s, "hybrid": {"tau": t}, "by_signal": {"msp": {"tau": t}}}
+        for s, t in (("msp", 0.2), ("entropy", 0.4), ("msp", 0.6))
+    ]
+    out = combine(seeds)
+    assert out["by_signal"]["msp"]["tau"]["mean"] == pytest.approx(0.4)
+    assert "mean" not in out["hybrid"]["tau"]

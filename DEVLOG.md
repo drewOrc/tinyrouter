@@ -4,13 +4,38 @@
 
 ---
 
+## 2026-09-29（深夜，三）：PR #17 複查小修（R1 到 R4）
+
+### 本次工作 / 執行摘要
+- 複查確認主結果（(a)、消融、歸因）與洩漏實驗無誤，獨立重算到第 6 位一致；剩下三個 MEDIUM 與一個 LOW。
+- **R1**：新增測試，coverage 平手時 AURC 較好的訊號（`msp_t`）在 `SIGNALS` 裡排在較差的（`msp`）後面，仍要選到它。原本的測試裡較好的剛好排第一，拿掉 AURC 判定也會過。
+- **R2**：新增 summed 聚合的 `oos_score` 測試：oos agent 拿走大部分機率時，分數要接近 1，且等於 1 減最大 in-scope agent 機率。
+- **R3**：`select_threshold` 的加權分支（只有 (b) 用到）改用 Kish 有效樣本數：每個切點 p = 加權誤判率、n_eff = (Σw)²/Σw²（只算被收下的列）、k = p·n_eff 代入 Wilson。原本用名目加權計數，100 筆 OOS 權重約 5.64 時偏樂觀。權重全為 1 時與未加權結果相同（有測試）；權重不均時上界比名目計數寬（有測試）。
+- **R4**：三個 seed 選到的訊號不同時，τ 不再算 mean 與 std，只保留逐 seed 的值與訊號名（final hybrid、各聚合的 hybrid、diagnostics 與 (b) 的 τ）。`by_signal` 底下同一個訊號的 τ 照常平均。
+
+### 核心發現 / 數據
+- (b) 敏感度（ModernBERT k=100，目標 2%）：test risk 2.60 ± 0.48（2.17、3.12、2.50），coverage 87.33 ± 1.85；原本 2.93 ± 0.63、88.55 ± 1.76。結論不變：依部署 OOS 比例加權後仍略高於 2%。
+- `summary.json` 逐欄比對：變動只在 (b) 的欄位（`diagnostics.*.sensitivity_reweighted_validation`）與 R4 的 τ 表示方式；其他數字全部不變，`curves.json` 逐位元組相同。
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] 同上一則
+
+### Files / Budget
+- `src/tinyrouter/selective.py`、`analysis_run.py`；`tests/test_selective.py`、`test_analysis.py`、`test_analysis_run.py`；`results/analysis/summary.json`；`DEVLOG.md`
+- API 花費：US$0
+
+---
+
 ## 2026-09-29（深夜，二）：PR #17 審查修正（守門缺口與兩個會誤導的結論）
 
 ### 本次工作 / 執行摘要
 - 審查結論：計算正確（無洩漏、可逐位元重現、獨立重算吻合），退回原因是 9 條突變存活與兩個報告結論。這次一次修完 F1 到 F11。
 - **守門不再只看 split 名稱（F2）**：`select_threshold`、`coverage_thresholds` 改成只收 `Scored`，由 `Routed.scored(signal)` 從同一個 routed split 取出名稱、分數與錯誤，不能再「傳 validation 名稱配 test 陣列」。打亂 labels 的測試之外，新增「test logits 換成亂數」的測試，並把操作曲線的 τ、hybrid 的訊號、(b) 敏感度的 τ 都納入比對。
 - **RQ2 OOS 偵測改用專用分數（F3）**：`1 − max in-scope 機率`（擬合的 T 下；argmax 聚合用 151 類、summed 用 8 類），寫在每個聚合的 `oos_detection`。四個信心訊號只留給 RQ3。`summary.json` 新增 `ablation_comparison`：偵測固定用 argmax 聚合，router 行為用 final router，全部由程式產生。
-- **門檻失效的診斷（F4）**：`diagnostics.py`，對每個 encoder 點的 final hybrid 報 val 與 test 的 selective risk、只看 in-scope 的 risk、被收下 OOS 的誤判率、test 依 validation OOS 比例重新加權後的 risk、比例解釋的缺口比例，另報選項 (b) 的敏感度（validation 依 18.2% OOS 加權後選 τ 再套 test，註明這個比例是看過 test 才知道的，只作診斷）。加權的 Wilson 上界用加權後的計數。
+- **門檻失效的診斷（F4）**：`diagnostics.py`，對每個 encoder 點的 final hybrid 報 val 與 test 的 selective risk、只看 in-scope 的 risk、被收下 OOS 的誤判率、test 依 validation OOS 比例重新加權後的 risk、比例解釋的缺口比例，另報選項 (b) 的敏感度（validation 依 18.2% OOS 加權後選 τ 再套 test，註明這個比例是看過 test 才知道的，只作診斷）。加權的 Wilson 上界在複查時改用 Kish 有效樣本數（見「深夜，三」那一則）。
 - **決定（協調者依 Drew 的專案原則拍板）**：主結果採 (a) 照實報，validation-only 協定不變；(b) 只當診斷。
 - 其他：F1 OOS AUROC／AUPRC 方向的呼叫端測試（對 sklearn）；F5 `select_signal` 用手算 choices 測；F6 entropy 方向；F7 summed 用溫度校準機率（T 會改變 argmax 的案例）；F8 分數恰好等於 τ 的列由小模型保留（`deferred_below`，有測試）；F9 可行 seed 少於 2 個時 std 記 null 並保留 n（例：bert/k1 目標 2% 只有 1 個 seed 可行）；F10 兩個 index 指向同一個 archive 會紅；F11 正式程式碼的 `assert isinstance` 改成明確 raise。
 
@@ -19,7 +44,7 @@
 - **消融改正後**（偵測固定 argmax 聚合、分數 `1 − max in-scope p`）：OOS 250 筆 AUROC 98.33 ± 0.07、AUPRC 94.34 ± 0.25；OOS 0 筆 97.80 ± 0.04、91.52 ± 0.26。有 OOS 訓練資料的模型較好，與前一則的方向相反。
 - **消融的主比較是 router 行為**（目標 2%，OOS 250 對 0）：hybrid OOS recall 62.43 ± 1.33 對 40.60 ± 1.04；高信心 OOS 誤派 34.53 ± 5.53 對 37.67 ± 2.90；LLM 呼叫率 1.27 ± 1.59 對 12.07 ± 0.73。沒有 OOS 訓練資料時，要多交 LLM 近 10 倍的查詢，OOS 仍少攔約 22pp。
 - **門檻失效的歸因**（ModernBERT k=100，目標 2%）：val 1.50 ± 0.13，test 7.34 ± 0.86，test 依 validation OOS 比例加權後 2.29 ± 0.11，比例解釋缺口的 86.66 ± 1.39%。其餘來自 test 的 OOS 較難：被收下 OOS 的誤判率 val 19.91 ± 2.93 對 test 36.48 ± 3.04；in-scope risk 0.90 ± 0.23 對 1.20 ± 0.07。目標 2% 下其他 encoder 點比例解釋約 78% 到 97%（BERT k=5、k=10 超過 100%，加權後反而低於 val）；目標 5% 的 ModernBERT k=1 只有 27%，那一點 coverage 很低、數字不穩。
-- **(b) 敏感度**（同點）：test risk 2.93 ± 0.63（三個 seed 2.58、3.65、2.55），coverage 88.55 ± 1.76。依部署 OOS 比例加權後仍略高於 2%。
+- **(b) 敏感度**（同點，已依複查改用 Kish 有效樣本數重算）：test risk 2.60 ± 0.48（三個 seed 2.17、3.12、2.50），coverage 87.33 ± 1.85（85.45、89.15、87.38）。依部署 OOS 比例加權後仍略高於 2%。
 - **結論**：validation 選的門檻在 test 上守不住目標 risk，主要來自 OOS 比例差異（約 86%），其餘是 test OOS 較難；依部署 OOS 比例加權仍不足，部署時應在接近真實流量的資料上重新校準門檻。
 - 重構後 `curves.json` 與改前逐位元組相同（所有 τ 與曲線不變），`summary.json` 除新增欄位外只有 48 處 std 由 0 改成 null（F9）；`make analysis` 連跑兩次輸出相同。
 

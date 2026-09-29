@@ -144,12 +144,22 @@ def load_haiku(results_root: Path) -> dict[str, HaikuSplit]:
     return {s: split_arrays(records, s, n) for s, n in EXPECTED_ROWS.items()}
 
 
-def combine(values: list, keep_values: bool = True) -> object:
+SIGNAL_KEYS = ("selected_signal", "signal")
+TAU_KEY = "tau"
+BY_SIGNAL_KEY = "by_signal"
+
+
+def combine(values: list, keep_values: bool = True, signals: list | None = None) -> object:
     """Seeds merged leaf by leaf: numbers -> mean, sample std (ddof=1) and the values.
 
     Seeds whose value is None (e.g. no feasible threshold) are left out of
     the mean and counted in ``n``; with fewer than two numbers the std is
     None, not 0.
+
+    A ``tau`` is a score on the scale of its signal. Below a dict that
+    names the signal (``selected_signal`` or ``signal``), ``signals`` holds
+    each seed's signal; when they differ, a mean of the taus means
+    nothing, so ``tau`` keeps only the per-seed values and signal names.
     """
     if all(v is None for v in values):
         return None
@@ -157,7 +167,10 @@ def combine(values: list, keep_values: bool = True) -> object:
         keys = set(values[0])
         if any(set(v) != keys for v in values):
             raise ValueError("seed results have different keys")
-        return {k: combine([v[k] for v in values], keep_values) for k in values[0]}
+        for key in SIGNAL_KEYS:
+            if key in keys:
+                signals = [v[key] for v in values]
+        return {k: combine_key(k, [v[k] for v in values], keep_values, signals) for k in values[0]}
     numbers = [v for v in values if isinstance(v, int | float) and not isinstance(v, bool)]
     if numbers and len(numbers) + values.count(None) == len(values):
         arr = np.array(numbers, dtype=np.float64)
@@ -173,6 +186,23 @@ def combine(values: list, keep_values: bool = True) -> object:
     if all(isinstance(v, list) for v in values) and len({len(v) for v in values}) == 1:
         return [combine([v[i] for v in values], keep_values) for i in range(len(values[0]))]
     return values[0] if all(v == values[0] for v in values) else values
+
+
+def combine_key(key: str, values: list, keep_values: bool, signals: list | None) -> object:
+    if key == BY_SIGNAL_KEY and all(isinstance(v, dict) for v in values):
+        # Each entry of by_signal is one signal for every seed; its tau averages fine.
+        n = len(values)
+        return {
+            name: combine([v[name] for v in values], keep_values, [name] * n) for name in values[0]
+        }
+    mixed = signals is not None and len(set(signals)) > 1
+    if key == TAU_KEY and mixed:
+        return {
+            "values": values,
+            "signals": signals,
+            "note": "signals differ across seeds; no mean",
+        }
+    return combine(values, keep_values, signals)
 
 
 def rounded(value: object) -> object:

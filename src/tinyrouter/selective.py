@@ -209,9 +209,13 @@ def select_threshold(
     """Largest-coverage threshold whose selective-risk Wilson upper bound is <= ``target_risk``.
 
     Candidates are the distinct validation scores; threshold t accepts
-    every row with confidence >= t. With weights, the kept count and the
-    errors are weighted sums and coverage is the kept share of the total
-    weight.
+    every row with confidence >= t. With weights, the risk is the weighted
+    error rate p of the kept rows, coverage is their share of the total
+    weight, and the bound uses Kish's effective sample size of the kept
+    rows, n_eff = (sum w)^2 / sum w^2, with p * n_eff errors. Unequal
+    weights carry less information than as many equal ones, so the bound
+    is wider than with the nominal weighted count. Unit weights give
+    n_eff = n and the unweighted result.
     """
     require_validation(scored.split, "a deferral threshold")
     confidence = np.asarray(scored.confidence, dtype=np.float64)
@@ -219,8 +223,11 @@ def select_threshold(
     weight = np.ones(confidence.size) if scored.weight is None else np.asarray(scored.weight, float)
     order, starts, sizes = _tie_groups(confidence)
     accepted = np.cumsum(np.add.reduceat(weight[order], starts))
+    squares = np.cumsum(np.add.reduceat((weight**2)[order], starts))
     errors = np.cumsum(np.add.reduceat((weight * error)[order], starts))
-    upper = wilson_upper(np.minimum(errors, accepted), accepted, z)
+    rate = np.minimum(errors / accepted, 1.0)
+    n_eff = accepted**2 / squares
+    upper = wilson_upper(rate * n_eff, n_eff, z)
     ok = np.flatnonzero(upper <= target_risk)
     if ok.size == 0:
         return ThresholdChoice(None, target_risk, 0.0, None, None, int(starts.size))

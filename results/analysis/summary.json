@@ -503,7 +503,19 @@
         "msp_t"
        ],
        "hybrid":{
-        "tau":null,
+        "tau":{
+         "values":[
+          null,
+          null,
+          null
+         ],
+         "signals":[
+          "margin",
+          "msp_t",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
+        },
         "feasible":false,
         "validation_coverage":{
          "mean":0.0,
@@ -908,9 +920,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.954367,
-         "std":2.481873,
-         "n":2
+         "values":[
+          null,
+          0.199418,
+          3.709316
+         ],
+         "signals":[
+          "margin",
+          "msp",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":[
          false,
@@ -1708,9 +1728,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.401006,
-         "std":null,
-         "n":1
+         "values":[
+          null,
+          0.401006,
+          null
+         ],
+         "signals":[
+          "msp_t",
+          "msp",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":[
          false,
@@ -2172,8 +2200,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-0.340128,
-         "std":1.222357
+         "values":[
+          -1.751573,
+          0.370436,
+          0.360752
+         ],
+         "signals":[
+          "entropy",
+          "msp",
+          "msp"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -3262,14 +3299,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.401006,
-         "std":null,
-         "n":1,
          "values":[
           null,
           0.401006,
           null
-         ]
+         ],
+         "signals":[
+          "msp_t",
+          "msp",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":[
          false,
@@ -3473,13 +3513,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-0.340128,
-         "std":1.222357,
          "values":[
           -1.751573,
           0.370436,
           0.360752
-         ]
+         ],
+         "signals":[
+          "entropy",
+          "msp",
+          "msp"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -3678,14 +3722,17 @@
        "margin"
       ],
       "tau":{
-       "mean":0.401006,
-       "std":null,
-       "n":1,
        "values":[
         null,
         0.401006,
         null
-       ]
+       ],
+       "signals":[
+        "msp_t",
+        "msp",
+        "margin"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -3889,14 +3936,17 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":0.401006,
-        "std":null,
-        "n":1,
         "values":[
          null,
          0.401006,
          null
-        ]
+        ],
+        "signals":[
+         "msp_t",
+         "msp",
+         "margin"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":[
         false,
@@ -3991,13 +4041,17 @@
        "msp"
       ],
       "tau":{
-       "mean":-0.340128,
-       "std":1.222357,
        "values":[
         -1.751573,
         0.370436,
         0.360752
-       ]
+       ],
+       "signals":[
+        "entropy",
+        "msp",
+        "msp"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -4197,14 +4251,17 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":0.399272,
-        "std":0.001517,
-        "n":2,
         "values":[
          null,
          0.3982,
-         0.400345
-        ]
+         0.398901
+        ],
+        "signals":[
+         "entropy",
+         "msp",
+         "msp"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":[
         false,
@@ -4212,52 +4269,52 @@
         true
        ],
        "validation_weighted_coverage":{
-        "mean":0.029721,
-        "std":0.028937,
+        "mean":0.030175,
+        "std":0.028987,
         "values":[
          0.0,
          0.057805,
-         0.031357
+         0.03272
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.006706,
-        "std":0.002813,
+        "mean":0.010692,
+        "std":0.00845,
         "n":2,
         "values":[
          null,
          0.004717,
-         0.008696
+         0.016667
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.028121,
-         "std":0.025809,
+         "mean":0.028667,
+         "std":0.026001,
          "values":[
           0.0,
           0.050727,
-          0.033636
+          0.035273
          ]
         },
         "selective_risk":{
-         "mean":0.042275,
-         "std":0.024303,
+         "mean":0.043473,
+         "std":0.025998,
          "n":2,
          "values":[
           null,
           0.02509,
-          0.059459
+          0.061856
          ]
         },
         "in_scope_risk":{
-         "mean":0.018525,
-         "std":0.020942,
+         "mean":0.017816,
+         "std":0.019939,
          "n":2,
          "values":[
           null,
           0.003717,
-          0.033333
+          0.031915
          ]
         },
         "kept_oos_error_rate":{
@@ -4271,22 +4328,22 @@
          ]
         },
         "kept_oos_share":{
-         "mean":0.031435,
-         "std":0.006233,
+         "mean":0.033385,
+         "std":0.003475,
          "n":2,
          "values":[
           null,
           0.035842,
-          0.027027
+          0.030928
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.003667,
-         "std":0.003215,
+         "mean":0.004,
+         "std":0.003464,
          "values":[
           0.0,
           0.006,
-          0.005
+          0.006
          ]
         }
        }
@@ -4703,8 +4760,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.539077,
-         "std":0.411834
+         "values":[
+          0.065162,
+          0.741964,
+          0.810105
+         ],
+         "signals":[
+          "msp",
+          "msp_t",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -5923,8 +5989,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.621489,
-         "std":1.281221
+         "values":[
+          0.893141,
+          0.870469,
+          3.100858
+         ],
+         "signals":[
+          "msp_t",
+          "msp_t",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -7664,13 +7739,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.20164,
-         "std":0.286486,
          "values":[
           0.532444,
           0.03688,
           0.035594
-         ]
+         ],
+         "signals":[
+          "msp_t",
+          "msp",
+          "msp"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -8071,86 +8150,86 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":0.952936,
-        "std":0.038084,
+        "mean":0.968823,
+        "std":0.025388,
         "values":[
          0.994706,
          0.943961,
-         0.920141
+         0.967803
         ]
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.307911,
-        "std":0.084763,
+        "mean":0.270035,
+        "std":0.053582,
         "values":[
          0.216409,
          0.323573,
-         0.383751
+         0.270124
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.011627,
-        "std":0.001428,
+        "mean":0.009895,
+        "std":0.001581,
         "values":[
          0.01093,
          0.010681,
-         0.013269
+         0.008075
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.299758,
-         "std":0.08497,
+         "mean":0.265818,
+         "std":0.056484,
          "values":[
           0.206727,
           0.319273,
-          0.373273
+          0.271455
          ]
         },
         "selective_risk":{
-         "mean":0.017365,
-         "std":0.006698,
+         "mean":0.017203,
+         "std":0.006536,
          "values":[
           0.009675,
           0.020501,
-          0.021919
+          0.021433
          ]
         },
         "in_scope_risk":{
-         "mean":0.002425,
-         "std":0.002809,
+         "mean":0.002636,
+         "std":0.003157,
          "values":[
           0.0,
           0.001773,
-          0.005503
+          0.006135
          ]
         },
         "kept_oos_error_rate":{
-         "mean":0.715085,
-         "std":0.253242,
+         "mean":0.80008,
+         "std":0.253011,
          "values":[
           1.0,
           0.515625,
-          0.62963
+          0.884615
          ]
         },
         "kept_oos_share":{
-         "mean":0.024141,
-         "std":0.013516,
+         "mean":0.021179,
+         "std":0.013777,
          "values":[
           0.009675,
           0.036446,
-          0.026303
+          0.017415
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.026,
-         "std":0.013,
+         "mean":0.022333,
+         "std":0.011015,
          "values":[
           0.011,
           0.033,
-          0.034
+          0.023
          ]
         }
        }
@@ -8163,13 +8242,17 @@
        "msp"
       ],
       "tau":{
-       "mean":0.20164,
-       "std":0.286486,
        "values":[
         0.532444,
         0.03688,
         0.035594
-       ]
+       ],
+       "signals":[
+        "msp_t",
+        "msp",
+        "msp"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -8369,13 +8452,17 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":0.3558,
-        "std":0.51156,
         "values":[
          0.946481,
          0.064359,
          0.05656
-        ]
+        ],
+        "signals":[
+         "msp_t",
+         "msp",
+         "msp"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
@@ -9325,8 +9412,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-2.778161,
-         "std":2.424787
+         "values":[
+          -4.129125,
+          0.021177,
+          -4.226536
+         ],
+         "signals":[
+          "entropy",
+          "margin",
+          "entropy"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -10085,8 +10181,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-0.502294,
-         "std":1.03685
+         "values":[
+          -1.076362,
+          0.694625,
+          -1.125146
+         ],
+         "signals":[
+          "entropy",
+          "msp",
+          "entropy"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -11611,13 +11716,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-1.339347,
-         "std":1.764824,
          "values":[
           -2.465052,
           0.694625,
           -2.247615
-         ]
+         ],
+         "signals":[
+          "entropy",
+          "msp",
+          "entropy"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -12015,13 +12124,17 @@
        "entropy"
       ],
       "tau":{
-       "mean":-1.339347,
-       "std":1.764824,
        "values":[
         -2.465052,
         0.694625,
         -2.247615
-       ]
+       ],
+       "signals":[
+        "entropy",
+        "msp",
+        "entropy"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -12221,13 +12334,17 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":-0.097541,
-        "std":0.939643,
         "values":[
          -0.56666,
          0.984293,
          -0.710255
-        ]
+        ],
+        "signals":[
+         "entropy",
+         "msp",
+         "entropy"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
@@ -12515,86 +12632,86 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":-1.602045,
-        "std":0.64528,
+        "mean":-1.450988,
+        "std":0.561202,
         "values":[
-         -1.857494,
-         -0.868148,
-         -2.080493
+         -1.649582,
+         -0.817493,
+         -1.88589
         ]
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.962093,
-        "std":0.008978,
+        "mean":0.955938,
+        "std":0.00944,
         "values":[
-         0.953784,
-         0.96088,
-         0.971616
+         0.946143,
+         0.956695,
+         0.964977
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.043121,
-        "std":0.000325,
+        "mean":0.041017,
+        "std":0.000598,
         "values":[
-         0.043117,
-         0.042798,
-         0.043448
+         0.040389,
+         0.041083,
+         0.041578
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.937818,
-         "std":0.008092,
+         "mean":0.931152,
+         "std":0.006172,
          "values":[
-          0.938,
-          0.929636,
-          0.945818
+          0.93,
+          0.925636,
+          0.937818
          ]
         },
         "selective_risk":{
-         "mean":0.051499,
-         "std":0.003701,
+         "mean":0.048031,
+         "std":0.00401,
          "values":[
-          0.04749,
-          0.05222,
-          0.054787
+          0.043402,
+          0.050285,
+          0.050407
          ]
         },
         "in_scope_risk":{
-         "mean":0.00809,
-         "std":0.001247,
+         "mean":0.007732,
+         "std":0.00123,
          "values":[
-          0.006746,
-          0.008315,
-          0.009209
+          0.00654,
+          0.007658,
+          0.008997
          ]
         },
         "kept_oos_error_rate":{
-         "mean":0.324736,
-         "std":0.022477,
+         "mean":0.311136,
+         "std":0.028864,
          "values":[
-          0.301966,
-          0.346908,
-          0.325333
+          0.283407,
+          0.341014,
+          0.308989
          ]
         },
         "kept_oos_share":{
-         "mean":0.137285,
-         "std":0.00728,
+         "mean":0.133016,
+         "std":0.005084,
          "values":[
-          0.138011,
-          0.129669,
-          0.144175
+          0.133138,
+          0.127873,
+          0.138038
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.229667,
-         "std":0.014503,
+         "mean":0.211667,
+         "std":0.016197,
          "values":[
-          0.215,
-          0.23,
-          0.244
+          0.193,
+          0.222,
+          0.22
          ]
         }
        }
@@ -16641,86 +16758,86 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":0.10549,
-        "std":0.016969,
+        "mean":0.106163,
+        "std":0.016518,
         "values":[
-         0.108044,
-         0.121037,
-         0.08739
+         0.1083,
+         0.121508,
+         0.088679
         ]
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.866041,
-        "std":0.022301,
+        "mean":0.863676,
+        "std":0.022526,
         "values":[
-         0.877207,
-         0.840363,
-         0.880554
+         0.875114,
+         0.837725,
+         0.878189
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.042651,
-        "std":0.000563,
+        "mean":0.040552,
+        "std":0.000503,
         "values":[
-         0.042001,
-         0.042974,
-         0.042979
+         0.040021,
+         0.040612,
+         0.041022
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.848242,
-         "std":0.032727,
+         "mean":0.846667,
+         "std":0.031476,
          "values":[
-          0.848364,
-          0.815455,
-          0.880909
+          0.848,
+          0.814545,
+          0.877455
          ]
         },
         "selective_risk":{
-         "mean":0.052173,
-         "std":0.00864,
+         "mean":0.051723,
+         "std":0.007978,
          "values":[
-          0.047793,
-          0.0466,
-          0.062126
+          0.047599,
+          0.046652,
+          0.06092
          ]
         },
         "in_scope_risk":{
-         "mean":0.013357,
-         "std":0.002508,
+         "mean":0.013293,
+         "std":0.002633,
          "values":[
           0.014028,
-          0.015463,
-          0.010582
+          0.015481,
+          0.010371
          ]
         },
         "kept_oos_error_rate":{
-         "mean":0.429215,
-         "std":0.078257,
+         "mean":0.428755,
+         "std":0.07815,
          "values":[
-          0.356522,
+          0.355895,
           0.419075,
-          0.512048
+          0.511294
          ]
         },
         "kept_oos_share":{
-         "mean":0.092839,
-         "std":0.013752,
+         "mean":0.092114,
+         "std":0.012959,
          "values":[
-          0.098586,
-          0.077146,
-          0.102786
+          0.098199,
+          0.077232,
+          0.100912
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.188,
-         "std":0.058796,
+         "mean":0.185667,
+         "std":0.055582,
          "values":[
-          0.164,
+          0.163,
           0.145,
-          0.255
+          0.249
          ]
         }
        }
@@ -17133,8 +17250,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.340009,
-         "std":0.451489
+         "values":[
+          0.077821,
+          0.080865,
+          0.86134
+         ],
+         "signals":[
+          "msp",
+          "msp",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -18353,8 +18479,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.460889,
-         "std":0.979203
+         "values":[
+          0.879145,
+          0.912108,
+          2.591415
+         ],
+         "signals":[
+          "msp_t",
+          "msp_t",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -19895,13 +20030,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.460889,
-         "std":0.979203,
          "values":[
           0.879145,
           0.912108,
           2.591415
-         ]
+         ],
+         "signals":[
+          "msp_t",
+          "msp_t",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -20299,13 +20438,17 @@
        "margin"
       ],
       "tau":{
-       "mean":1.460889,
-       "std":0.979203,
        "values":[
         0.879145,
         0.912108,
         2.591415
-       ]
+       ],
+       "signals":[
+        "msp_t",
+        "msp_t",
+        "margin"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -20505,59 +20648,63 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":2.216768,
-        "std":2.140198,
         "values":[
          0.965718,
          0.996595,
-         4.687991
-        ]
+         4.667069
+        ],
+        "signals":[
+         "msp_t",
+         "msp_t",
+         "margin"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.2352,
-        "std":0.119814,
+        "mean":0.236472,
+        "std":0.119865,
         "values":[
          0.354037,
          0.114431,
-         0.237131
+         0.240949
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.007906,
-        "std":0.006886,
+        "mean":0.008224,
+        "std":0.007127,
         "values":[
          0.012592,
          0.0,
-         0.011125
+         0.01208
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.233515,
-         "std":0.114225,
+         "mean":0.234788,
+         "std":0.114452,
          "values":[
           0.341091,
           0.113636,
-          0.245818
+          0.249636
          ]
         },
         "selective_risk":{
-         "mean":0.01204,
-         "std":0.002611,
+         "mean":0.012207,
+         "std":0.002878,
          "values":[
           0.011727,
           0.0096,
-          0.014793
+          0.015295
          ]
         },
         "in_scope_risk":{
-         "mean":0.003034,
-         "std":0.001426,
+         "mean":0.003019,
+         "std":0.001427,
          "values":[
           0.004479,
           0.001629,
-          0.002994
+          0.00295
          ]
         },
         "kept_oos_error_rate":{
@@ -20570,21 +20717,21 @@
          ]
         },
         "kept_oos_share":{
-         "mean":0.025803,
-         "std":0.019416,
+         "mean":0.025985,
+         "std":0.019221,
          "values":[
           0.047974,
           0.0176,
-          0.011834
+          0.012382
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.011667,
-         "std":0.005859,
+         "mean":0.012,
+         "std":0.006245,
          "values":[
           0.014,
           0.005,
-          0.016
+          0.017
          ]
         }
        }
@@ -21755,8 +21902,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-1.420356,
-         "std":2.635913
+         "values":[
+          -4.464043,
+          0.097783,
+          0.105192
+         ],
+         "signals":[
+          "entropy",
+          "msp_t",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -22515,8 +22671,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.042789,
-         "std":1.179061
+         "values":[
+          -1.318183,
+          0.691634,
+          0.754916
+         ],
+         "signals":[
+          "entropy",
+          "msp_t",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -22979,8 +23144,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-0.478771,
-         "std":1.269717
+         "values":[
+          -1.944545,
+          0.225611,
+          0.282621
+         ],
+         "signals":[
+          "entropy",
+          "msp_t",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -24045,13 +24219,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-1.18306,
-         "std":1.810917,
          "values":[
           -1.318183,
           0.691634,
           -2.922631
-         ]
+         ],
+         "signals":[
+          "entropy",
+          "msp_t",
+          "entropy"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -24248,13 +24426,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-0.537914,
-         "std":1.219665,
          "values":[
           -1.944545,
           0.225611,
           0.105192
-         ]
+         ],
+         "signals":[
+          "entropy",
+          "msp_t",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -24453,13 +24635,17 @@
        "entropy"
       ],
       "tau":{
-       "mean":-1.18306,
-       "std":1.810917,
        "values":[
         -1.318183,
         0.691634,
         -2.922631
-       ]
+       ],
+       "signals":[
+        "entropy",
+        "msp_t",
+        "entropy"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -24659,84 +24845,88 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":-0.444952,
-        "std":1.42457,
         "values":[
-         -0.469773,
+         -0.466672,
          0.991866,
          -1.856949
-        ]
+        ],
+        "signals":[
+         "entropy",
+         "msp_t",
+         "entropy"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.712088,
-        "std":0.147527,
+        "mean":0.710511,
+        "std":0.147208,
         "values":[
-         0.733533,
+         0.728803,
          0.555012,
          0.847719
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.014132,
-        "std":0.000953,
+        "mean":0.013333,
+        "std":0.000853,
         "values":[
-         0.015008,
+         0.012608,
          0.013117,
          0.014273
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.690242,
-         "std":0.153996,
+         "mean":0.689212,
+         "std":0.153769,
          "values":[
-          0.713818,
+          0.710727,
           0.525818,
           0.831091
          ]
         },
         "selective_risk":{
-         "mean":0.015332,
-         "std":0.010066,
+         "mean":0.015177,
+         "std":0.010182,
          "values":[
-          0.010443,
+          0.009977,
           0.008645,
           0.026909
          ]
         },
         "in_scope_risk":{
-         "mean":0.001993,
-         "std":0.00136,
+         "mean":0.001995,
+         "std":0.001359,
          "values":[
-          0.001343,
+          0.001348,
           0.001081,
           0.003556
          ]
         },
         "kept_oos_error_rate":{
-         "mean":0.224607,
-         "std":0.070676,
+         "mean":0.221868,
+         "std":0.073476,
          "values":[
-          0.178218,
+          0.17,
           0.189655,
           0.305949
          ]
         },
         "kept_oos_share":{
-         "mean":0.056263,
-         "std":0.01902,
+         "mean":0.056167,
+         "std":0.019057,
          "values":[
-          0.051452,
+          0.051164,
           0.040111,
           0.077226
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.055333,
-         "std":0.046145,
+         "mean":0.054667,
+         "std":0.046576,
          "values":[
-          0.036,
+          0.034,
           0.022,
           0.108
          ]
@@ -24751,13 +24941,17 @@
        "msp_t"
       ],
       "tau":{
-       "mean":-0.537914,
-       "std":1.219665,
        "values":[
         -1.944545,
         0.225611,
         0.105192
-       ]
+       ],
+       "signals":[
+        "entropy",
+        "msp_t",
+        "msp_t"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -24957,86 +25151,90 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":0.100221,
-        "std":1.05829,
         "values":[
-         -1.108145,
-         0.862094,
-         0.546715
-        ]
+         -1.053598,
+         0.876201,
+         0.590232
+        ],
+        "signals":[
+         "entropy",
+         "msp_t",
+         "msp_t"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.911481,
-        "std":0.009812,
+        "mean":0.907934,
+        "std":0.010828,
         "values":[
-         0.903655,
-         0.908297,
-         0.922489
+         0.900199,
+         0.903294,
+         0.920308
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.042493,
-        "std":0.000527,
+        "mean":0.040814,
+        "std":0.000702,
         "values":[
-         0.043095,
-         0.042274,
-         0.042111
+         0.04033,
+         0.040493,
+         0.041619
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.897273,
-         "std":0.016461,
+         "mean":0.889212,
+         "std":0.013895,
          "values":[
-          0.885091,
-          0.890727,
-          0.916
+          0.877455,
+          0.885636,
+          0.904545
          ]
         },
         "selective_risk":{
-         "mean":0.050902,
-         "std":0.00775,
+         "mean":0.047431,
+         "std":0.007183,
          "values":[
-          0.044577,
-          0.048581,
-          0.059547
+          0.040821,
+          0.046397,
+          0.055075
          ]
         },
         "in_scope_risk":{
-         "mean":0.006758,
-         "std":0.001448,
+         "mean":0.006406,
+         "std":0.001406,
          "values":[
-          0.005912,
-          0.005933,
-          0.00843
+          0.005705,
+          0.005488,
+          0.008024
          ]
         },
         "kept_oos_error_rate":{
-         "mean":0.407227,
-         "std":0.002518,
+         "mean":0.394299,
+         "std":0.009886,
          "values":[
-          0.406383,
-          0.410058,
-          0.405239
+          0.387387,
+          0.405622,
+          0.389886
          ]
         },
         "kept_oos_share":{
-         "mean":0.110301,
-         "std":0.016656,
+         "mean":0.105818,
+         "std":0.015912,
          "values":[
-          0.096549,
-          0.105532,
-          0.128821
+          0.092002,
+          0.102238,
+          0.123216
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.222,
-         "std":0.037027,
+         "mean":0.204333,
+         "std":0.033561,
          "values":[
-          0.191,
-          0.212,
-          0.263
+          0.172,
+          0.202,
+          0.239
          ]
         }
        }
@@ -29743,8 +29941,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-1.067557,
-         "std":1.191662
+         "values":[
+          -1.807531,
+          0.307113,
+          -1.702253
+         ],
+         "signals":[
+          "entropy",
+          "msp_t",
+          "entropy"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -30207,8 +30414,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-1.288443,
-         "std":2.321544
+         "values":[
+          -3.969124,
+          0.046444,
+          0.05735
+         ],
+         "signals":[
+          "entropy",
+          "msp_t",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -31427,8 +31643,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-0.498523,
-         "std":1.180254
+         "values":[
+          -1.861188,
+          0.201693,
+          0.163928
+         ],
+         "signals":[
+          "entropy",
+          "msp_t",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -32692,13 +32917,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-0.534049,
-         "std":1.151601,
          "values":[
           -1.861188,
           0.201693,
           0.05735
-         ]
+         ],
+         "signals":[
+          "entropy",
+          "msp_t",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -33099,59 +33328,59 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":-0.136809,
-        "std":0.011912,
+        "mean":-0.138166,
+        "std":0.010366,
         "values":[
          -0.150062,
          -0.13337,
-         -0.126994
+         -0.131066
         ]
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.785596,
-        "std":0.020965,
+        "mean":0.786475,
+        "std":0.019442,
         "values":[
          0.797836,
          0.797563,
-         0.761387
+         0.764025
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.014038,
-        "std":0.000892,
+        "mean":0.014817,
+        "std":0.000502,
         "values":[
          0.014712,
          0.014375,
-         0.013026
+         0.015363
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.789455,
-         "std":0.024618,
+         "mean":0.789758,
+         "std":0.024094,
          "values":[
           0.805273,
           0.802,
-          0.761091
+          0.762
          ]
         },
         "selective_risk":{
-         "mean":0.021834,
-         "std":0.005878,
+         "mean":0.021908,
+         "std":0.00575,
          "values":[
           0.025062,
           0.025391,
-          0.01505
+          0.015271
          ]
         },
         "in_scope_risk":{
          "mean":0.001793,
-         "std":0.000552,
+         "std":0.000553,
          "values":[
           0.002311,
           0.001857,
-          0.001211
+          0.00121
          ]
         },
         "kept_oos_error_rate":{
@@ -33164,21 +33393,21 @@
          ]
         },
         "kept_oos_share":{
-         "mean":0.020079,
-         "std":0.005403,
+         "mean":0.020153,
+         "std":0.005276,
          "values":[
           0.022804,
           0.023577,
-          0.013856
+          0.014078
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.087667,
-         "std":0.025736,
+         "mean":0.088,
+         "std":0.025159,
          "values":[
           0.101,
           0.104,
-          0.058
+          0.059
          ]
         }
        }
@@ -33191,13 +33420,17 @@
        "msp_t"
       ],
       "tau":{
-       "mean":-0.534049,
-       "std":1.151601,
        "values":[
         -1.861188,
         0.201693,
         0.05735
-       ]
+       ],
+       "signals":[
+        "entropy",
+        "msp_t",
+        "msp_t"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -33397,13 +33630,17 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":0.16363,
-        "std":0.630569,
         "values":[
          -0.557901,
          0.609019,
          0.439773
-        ]
+        ],
+        "signals":[
+         "entropy",
+         "msp_t",
+         "msp_t"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
@@ -35469,8 +35706,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.080174,
-         "std":0.555253
+         "values":[
+          0.962084,
+          0.593466,
+          1.684973
+         ],
+         "signals":[
+          "msp",
+          "msp_t",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -36726,13 +36972,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.080174,
-         "std":0.555253,
          "values":[
           0.962084,
           0.593466,
           1.684973
-         ]
+         ],
+         "signals":[
+          "msp",
+          "msp_t",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -37065,13 +37315,17 @@
        "margin"
       ],
       "tau":{
-       "mean":1.080174,
-       "std":0.555253,
        "values":[
         0.962084,
         0.593466,
         1.684973
-       ]
+       ],
+       "signals":[
+        "msp",
+        "msp_t",
+        "margin"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -37265,67 +37519,63 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":1.162692,
-        "std":0.805007,
-        "n":2,
         "values":[
-         null,
+         0.962084,
          0.593466,
-         1.731918
-        ]
+         1.684973
+        ],
+        "signals":[
+         "msp",
+         "msp_t",
+         "margin"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
-       "feasible":[
-        false,
-        true,
-        true
-       ],
+       "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.024358,
-        "std":0.022254,
+        "mean":0.030448,
+        "std":0.014122,
         "values":[
-         0.0,
+         0.015542,
          0.043627,
-         0.029448
+         0.032175
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.014005,
-        "std":0.006711,
-        "n":2,
+        "mean":0.0119,
+        "std":0.010345,
         "values":[
-         null,
+         0.0,
          0.01875,
-         0.009259
+         0.016949
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.023818,
-         "std":0.022578,
+         "mean":0.028485,
+         "std":0.016547,
          "values":[
-          0.0,
+          0.011818,
           0.044909,
-          0.026545
+          0.028727
          ]
         },
         "selective_risk":{
-         "mean":0.094504,
-         "std":0.001961,
-         "n":2,
+         "mean":0.077161,
+         "std":0.040823,
          "values":[
-          null,
+          0.030769,
           0.093117,
-          0.09589
+          0.107595
          ]
         },
         "in_scope_risk":{
-         "mean":0.052606,
-         "std":0.003177,
-         "n":2,
+         "mean":0.050616,
+         "std":0.018104,
          "values":[
-          null,
+          0.030769,
           0.054852,
-          0.05036
+          0.066225
          ]
         },
         "kept_oos_error_rate":{
@@ -37339,13 +37589,12 @@
          ]
         },
         "kept_oos_share":{
-         "mean":0.044216,
-         "std":0.005275,
-         "n":2,
+         "mean":0.028263,
+         "std":0.024551,
          "values":[
-          null,
+          0.0,
           0.040486,
-          0.047945
+          0.044304
          ]
         },
         "high_conf_oos_misroute_rate":{
@@ -38227,8 +38476,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-1.903141,
-         "std":1.891129
+         "values":[
+          0.275794,
+          -3.117299,
+          -2.867919
+         ],
+         "signals":[
+          "msp",
+          "entropy",
+          "entropy"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -38987,8 +39245,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.961059,
-         "std":0.490732
+         "values":[
+          0.680271,
+          1.5277,
+          0.675207
+         ],
+         "signals":[
+          "msp_t",
+          "margin",
+          "msp"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -39451,8 +39718,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.461076,
-         "std":0.067367
+         "values":[
+          0.530907,
+          0.396479,
+          0.455842
+         ],
+         "signals":[
+          "margin",
+          "msp",
+          "msp"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -40517,13 +40793,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.961059,
-         "std":0.490732,
          "values":[
           0.680271,
           1.5277,
           0.675207
-         ]
+         ],
+         "signals":[
+          "msp_t",
+          "margin",
+          "msp"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -40720,13 +41000,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.461076,
-         "std":0.067367,
          "values":[
           0.530907,
           0.396479,
           0.455842
-         ]
+         ],
+         "signals":[
+          "margin",
+          "msp",
+          "msp"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -40925,13 +41209,17 @@
        "msp"
       ],
       "tau":{
-       "mean":0.961059,
-       "std":0.490732,
        "values":[
         0.680271,
         1.5277,
         0.675207
-       ]
+       ],
+       "signals":[
+        "msp_t",
+        "margin",
+        "msp"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -41131,13 +41419,17 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":1.836352,
-        "std":1.65303,
         "values":[
          0.932785,
          3.74422,
          0.83205
-        ]
+        ],
+        "signals":[
+         "msp_t",
+         "margin",
+         "msp"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
@@ -41223,13 +41515,17 @@
        "msp"
       ],
       "tau":{
-       "mean":0.461076,
-       "std":0.067367,
        "values":[
         0.530907,
         0.396479,
         0.455842
-       ]
+       ],
+       "signals":[
+        "margin",
+        "msp",
+        "msp"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -41429,85 +41725,89 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":0.948894,
-        "std":0.561235,
         "values":[
-         1.594872,
-         0.580977,
+         1.623891,
+         0.584037,
          0.670832
-        ]
+        ],
+        "signals":[
+         "margin",
+         "msp",
+         "msp"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.771798,
-        "std":0.029052,
+        "mean":0.770555,
+        "std":0.027958,
         "values":[
-         0.785442,
-         0.791516,
+         0.783806,
+         0.789423,
          0.738435
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.041769,
-        "std":0.001308,
+        "mean":0.040952,
+        "std":0.00093,
         "values":[
-         0.042273,
-         0.04275,
+         0.042014,
+         0.040558,
          0.040284
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.764848,
-         "std":0.039766,
+         "mean":0.763515,
+         "std":0.039061,
          "values":[
-          0.775273,
-          0.798364,
+          0.772,
+          0.797636,
           0.720909
          ]
         },
         "selective_risk":{
-         "mean":0.052865,
-         "std":0.011082,
+         "mean":0.052182,
+         "std":0.010723,
          "values":[
-          0.055816,
-          0.062173,
+          0.054169,
+          0.061773,
           0.040605
          ]
         },
         "in_scope_risk":{
-         "mean":0.016668,
-         "std":0.004022,
+         "mean":0.016355,
+         "std":0.003833,
          "values":[
-          0.017884,
-          0.019942,
+          0.017172,
+          0.019713,
           0.012179
          ]
         },
         "kept_oos_error_rate":{
-         "mean":0.621439,
-         "std":0.058887,
+         "mean":0.62053,
+         "std":0.059007,
          "values":[
-          0.568027,
-          0.684588,
+          0.566434,
+          0.683453,
           0.611702
          ]
         },
         "kept_oos_share":{
-         "mean":0.059968,
-         "std":0.011203,
+         "mean":0.05938,
+         "std":0.010553,
          "values":[
-          0.068949,
-          0.063539,
+          0.067358,
+          0.063369,
           0.047415
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.157667,
-         "std":0.03885,
+         "mean":0.155667,
+         "std":0.037899,
          "values":[
-          0.167,
-          0.191,
+          0.162,
+          0.19,
           0.115
          ]
         }
@@ -41921,8 +42221,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-0.969815,
-         "std":2.014441
+         "values":[
+          0.296954,
+          -3.292709,
+          0.08631
+         ],
+         "signals":[
+          "msp_t",
+          "entropy",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -42385,8 +42694,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-2.199503,
-         "std":1.914925
+         "values":[
+          -3.317417,
+          -3.292709,
+          0.011616
+         ],
+         "signals":[
+          "entropy",
+          "entropy",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -43145,8 +43463,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.313659,
-         "std":0.257516
+         "values":[
+          0.537617,
+          0.032278,
+          0.37108
+         ],
+         "signals":[
+          "margin",
+          "margin",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -43609,8 +43936,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.137719,
-         "std":0.195342
+         "values":[
+          0.017753,
+          0.032278,
+          0.363124
+         ],
+         "signals":[
+          "margin",
+          "margin",
+          "msp"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -44675,13 +45011,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-0.969815,
-         "std":2.014441,
          "values":[
           0.296954,
           -3.292709,
           0.08631
-         ]
+         ],
+         "signals":[
+          "msp_t",
+          "entropy",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -44878,13 +45218,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-2.199503,
-         "std":1.914925,
          "values":[
           -3.317417,
           -3.292709,
           0.011616
-         ]
+         ],
+         "signals":[
+          "entropy",
+          "entropy",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -45083,13 +45427,17 @@
        "margin"
       ],
       "tau":{
-       "mean":-0.969815,
-       "std":2.014441,
        "values":[
         0.296954,
         -3.292709,
         0.08631
-       ]
+       ],
+       "signals":[
+        "msp_t",
+        "entropy",
+        "margin"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -45289,86 +45637,90 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":0.634354,
-        "std":1.549989,
         "values":[
-         0.742111,
-         -0.966702,
-         2.127651
-        ]
+         0.810608,
+         -0.766965,
+         2.206076
+        ],
+        "signals":[
+         "msp_t",
+         "entropy",
+         "margin"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.912401,
-        "std":0.022449,
+        "mean":0.903428,
+        "std":0.021754,
         "values":[
-         0.892749,
-         0.936865,
-         0.907588
+         0.881201,
+         0.924677,
+         0.904405
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.015589,
-        "std":4.8e-05,
+        "mean":0.013906,
+        "std":0.000565,
         "values":[
-         0.015592,
-         0.015636,
-         0.015539
+         0.014558,
+         0.013579,
+         0.013582
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.885455,
-         "std":0.017603,
+         "mean":0.873273,
+         "std":0.018461,
          "values":[
-          0.873273,
-          0.905636,
-          0.877455
+          0.854545,
+          0.891455,
+          0.873818
          ]
         },
         "selective_risk":{
-         "mean":0.029281,
-         "std":0.006288,
+         "mean":0.025959,
+         "std":0.004828,
          "values":[
-          0.025817,
-          0.036539,
-          0.025487
+          0.021702,
+          0.031205,
+          0.024969
          ]
         },
         "in_scope_risk":{
-         "mean":0.00583,
-         "std":0.001422,
+         "mean":0.005331,
+         "std":0.000999,
          "values":[
-          0.005776,
-          0.007278,
-          0.004436
+          0.005137,
+          0.006413,
+          0.004444
          ]
         },
         "kept_oos_error_rate":{
-         "mean":0.218933,
-         "std":0.033905,
+         "mean":0.204943,
+         "std":0.024117,
          "values":[
-          0.208421,
-          0.256849,
-          0.191529
+          0.191847,
+          0.232775,
+          0.190207
          ]
         },
         "kept_oos_share":{
-         "mean":0.109553,
-         "std":0.009527,
+         "mean":0.102912,
+         "std":0.012297,
          "values":[
-          0.098897,
-          0.117246,
-          0.112516
+          0.088723,
+          0.109525,
+          0.110487
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.117667,
-         "std":0.028113,
+         "mean":0.102,
+         "std":0.022517,
          "values":[
-          0.099,
-          0.15,
-          0.104
+          0.08,
+          0.125,
+          0.101
          ]
         }
        }
@@ -45381,13 +45733,17 @@
        "margin"
       ],
       "tau":{
-       "mean":-2.199503,
-       "std":1.914925,
        "values":[
         -3.317417,
         -3.292709,
         0.011616
-       ]
+       ],
+       "signals":[
+        "entropy",
+        "entropy",
+        "margin"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -45587,86 +45943,90 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":-1.643991,
-        "std":1.495057,
         "values":[
-         -2.048214,
-         -2.895375,
-         0.011616
-        ]
+         -2.030432,
+         -2.89495,
+         0.030141
+        ],
+        "signals":[
+         "entropy",
+         "entropy",
+         "margin"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.991175,
-        "std":0.012057,
+        "mean":0.989871,
+        "std":0.011176,
         "values":[
-         0.977437,
-         0.996087,
-         1.0
+         0.977165,
+         0.994267,
+         0.99818
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.042495,
-        "std":0.000725,
+        "mean":0.04124,
+        "std":0.000593,
         "values":[
-         0.041885,
-         0.043297,
-         0.042303
+         0.041618,
+         0.041546,
+         0.040557
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.985091,
-         "std":0.018589,
+         "mean":0.984485,
+         "std":0.01843,
          "values":[
-          0.964,
+          0.963455,
           0.992182,
-          0.999091
+          0.997818
          ]
         },
         "selective_risk":{
-         "mean":0.072545,
-         "std":0.009102,
+         "mean":0.072222,
+         "std":0.009038,
          "values":[
-          0.062429,
+          0.062087,
           0.075133,
-          0.080073
+          0.079446
          ]
         },
         "in_scope_risk":{
-         "mean":0.012249,
-         "std":0.000827,
+         "mean":0.012251,
+         "std":0.000828,
          "values":[
           0.012955,
           0.011338,
-          0.012453
+          0.012458
          ]
         },
         "kept_oos_error_rate":{
-         "mean":0.363342,
-         "std":0.028567,
+         "mean":0.362237,
+         "std":0.028498,
          "values":[
-          0.330909,
+          0.329684,
           0.374348,
-          0.38477
+          0.382679
          ]
         },
         "kept_oos_share":{
-         "mean":0.170986,
-         "std":0.013644,
+         "mean":0.1706,
+         "std":0.013653,
          "values":[
-          0.155602,
+          0.155124,
           0.175738,
-          0.18162
+          0.18094
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.338667,
-         "std":0.058227,
+         "mean":0.336667,
+         "std":0.05783,
          "values":[
-          0.273,
+          0.271,
           0.359,
-          0.384
+          0.38
          ]
         }
        }
@@ -46083,8 +46443,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-0.305304,
-         "std":1.466578
+         "values":[
+          0.570888,
+          -1.998417,
+          0.511616
+         ],
+         "signals":[
+          "msp",
+          "entropy",
+          "msp"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -46547,8 +46916,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-1.223336,
-         "std":2.323956
+         "values":[
+          0.118481,
+          0.11832,
+          -3.906809
+         ],
+         "signals":[
+          "msp",
+          "msp",
+          "entropy"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -47767,8 +48145,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.084543,
-         "std":0.113018
+         "values":[
+          0.213919,
+          0.034672,
+          0.005039
+         ],
+         "signals":[
+          "msp_t",
+          "margin",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -48833,13 +49220,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-0.205695,
-         "std":1.552599,
          "values":[
           0.703851,
           -1.998417,
           0.677481
-         ]
+         ],
+         "signals":[
+          "msp_t",
+          "entropy",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -49036,13 +49427,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.112426,
-         "std":0.104565,
          "values":[
           0.213919,
           0.11832,
           0.005039
-         ]
+         ],
+         "signals":[
+          "msp_t",
+          "msp",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -49241,13 +49636,17 @@
        "msp_t"
       ],
       "tau":{
-       "mean":-0.205695,
-       "std":1.552599,
        "values":[
         0.703851,
         -1.998417,
         0.677481
-       ]
+       ],
+       "signals":[
+        "msp_t",
+        "entropy",
+        "msp_t"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -49447,86 +49846,90 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":0.291703,
-        "std":1.114023,
         "values":[
-         0.93586,
-         -0.994659,
-         0.933909
-        ]
+         0.938235,
+         -0.981731,
+         0.939351
+        ],
+        "signals":[
+         "msp_t",
+         "entropy",
+         "msp_t"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.754238,
-        "std":0.013729,
+        "mean":0.750571,
+        "std":0.012643,
         "values":[
-         0.761141,
-         0.738428,
-         0.763145
+         0.757685,
+         0.735974,
+         0.758053
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.015116,
-        "std":7.9e-05,
+        "mean":0.014146,
+        "std":0.001128,
         "values":[
-         0.01518,
-         0.015028,
-         0.01514
+         0.012847,
+         0.014708,
+         0.014882
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.744606,
-         "std":0.013828,
+         "mean":0.741212,
+         "std":0.012552,
          "values":[
-          0.751091,
-          0.728727,
-          0.754
+          0.748909,
+          0.726727,
+          0.748
          ]
         },
         "selective_risk":{
-         "mean":0.019235,
-         "std":0.002146,
+         "mean":0.018911,
+         "std":0.002094,
          "values":[
-          0.018155,
-          0.021707,
-          0.017844
+          0.018208,
+          0.021266,
+          0.017258
          ]
         },
         "in_scope_risk":{
-         "mean":0.003913,
-         "std":0.002015,
+         "mean":0.00384,
+         "std":0.002076,
          "values":[
-          0.002513,
-          0.006222,
-          0.003002
+          0.00252,
+          0.006234,
+          0.002768
          ]
         },
         "kept_oos_error_rate":{
-         "mean":0.419394,
-         "std":0.007393,
+         "mean":0.425624,
+         "std":0.009532,
          "values":[
-          0.427632,
-          0.417219,
-          0.413333
+          0.433333,
+          0.414966,
+          0.428571
          ]
         },
         "kept_oos_share":{
-         "mean":0.03688,
-         "std":0.000756,
+         "mean":0.035741,
+         "std":0.001493,
          "values":[
-          0.036795,
-          0.037675,
-          0.036171
+          0.036417,
+          0.036778,
+          0.03403
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.063333,
-         "std":0.001528,
+         "mean":0.062,
+         "std":0.002646,
          "values":[
           0.065,
-          0.063,
-          0.062
+          0.061,
+          0.06
          ]
         }
        }
@@ -49539,13 +49942,17 @@
        "margin"
       ],
       "tau":{
-       "mean":0.112426,
-       "std":0.104565,
        "values":[
         0.213919,
         0.11832,
         0.005039
-       ]
+       ],
+       "signals":[
+        "msp_t",
+        "msp",
+        "margin"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -49745,84 +50152,88 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":1.001867,
-        "std":0.745569,
         "values":[
-         0.682157,
-         0.469472,
-         1.853974
-        ]
+         0.686319,
+         0.4701,
+         1.873395
+        ],
+        "signals":[
+         "msp_t",
+         "msp",
+         "margin"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.861729,
-        "std":0.014265,
+        "mean":0.859454,
+        "std":0.014212,
         "values":[
-         0.878182,
-         0.854187,
-         0.852817
+         0.875817,
+         0.852367,
+         0.850179
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.042969,
-        "std":7.5e-05,
+        "mean":0.040861,
+        "std":0.000216,
         "values":[
-         0.042886,
-         0.043029,
-         0.042994
+         0.040612,
+         0.040985,
+         0.040987
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.854848,
-         "std":0.009999,
+         "mean":0.854061,
+         "std":0.009886,
          "values":[
-          0.866182,
+          0.865091,
           0.851091,
-          0.847273
+          0.846
          ]
         },
         "selective_risk":{
-         "mean":0.05233,
-         "std":0.005423,
+         "mean":0.051954,
+         "std":0.005708,
          "values":[
-          0.049958,
+          0.04897,
           0.058535,
-          0.048498
+          0.048356
          ]
         },
         "in_scope_risk":{
-         "mean":0.010271,
-         "std":0.004741,
+         "mean":0.010044,
+         "std":0.0049,
          "values":[
-          0.008984,
+          0.008529,
           0.015522,
-          0.006305
+          0.00608
          ]
         },
         "kept_oos_error_rate":{
-         "mean":0.493918,
-         "std":0.029084,
+         "mean":0.493122,
+         "std":0.03142,
          "values":[
-          0.470449,
+          0.466667,
           0.484848,
-          0.526455
+          0.527851
          ]
         },
         "kept_oos_share":{
-         "mean":0.087185,
-         "std":0.005446,
+         "mean":0.086981,
+         "std":0.005429,
          "values":[
-          0.088791,
+          0.088272,
           0.091647,
-          0.081116
+          0.081023
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.202,
-         "std":0.005196,
+         "mean":0.201,
+         "std":0.006245,
          "values":[
-          0.199,
+          0.196,
           0.208,
           0.199
          ]
@@ -50237,8 +50648,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.256583,
-         "std":0.91838
+         "values":[
+          0.824672,
+          -0.802947,
+          0.748024
+         ],
+         "signals":[
+          "msp_t",
+          "entropy",
+          "msp"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -50701,8 +51121,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-1.153793,
-         "std":1.377153
+         "values":[
+          0.435952,
+          -1.915747,
+          -1.981585
+         ],
+         "signals":[
+          "msp",
+          "entropy",
+          "entropy"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -51461,8 +51890,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.99402,
-         "std":0.962075
+         "values":[
+          2.537916,
+          2.560953,
+          0.88319
+         ],
+         "signals":[
+          "margin",
+          "margin",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -51925,8 +52363,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.234831,
-         "std":0.600639
+         "values":[
+          0.54394,
+          1.6329,
+          1.527653
+         ],
+         "signals":[
+          "msp",
+          "margin",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -52991,13 +53438,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.99402,
-         "std":0.962075,
          "values":[
           2.537916,
           2.560953,
           0.88319
-         ]
+         ],
+         "signals":[
+          "margin",
+          "margin",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -53194,13 +53645,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.234831,
-         "std":0.600639,
          "values":[
           0.54394,
           1.6329,
           1.527653
-         ]
+         ],
+         "signals":[
+          "msp",
+          "margin",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -53399,13 +53854,17 @@
        "msp_t"
       ],
       "tau":{
-       "mean":1.99402,
-       "std":0.962075,
        "values":[
         2.537916,
         2.560953,
         0.88319
-       ]
+       ],
+       "signals":[
+        "margin",
+        "margin",
+        "msp_t"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -53605,13 +54064,17 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":2.099428,
-        "std":1.044613,
         "values":[
          2.833788,
          2.560953,
          0.903542
-        ]
+        ],
+        "signals":[
+         "margin",
+         "margin",
+         "msp_t"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
@@ -53697,13 +54160,17 @@
        "margin"
       ],
       "tau":{
-       "mean":1.234831,
-       "std":0.600639,
        "values":[
         0.54394,
         1.6329,
         1.527653
-       ]
+       ],
+       "signals":[
+        "msp",
+        "margin",
+        "margin"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -53903,29 +54370,33 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":1.567414,
-        "std":0.814044,
         "values":[
-         0.634666,
+         0.634982,
          1.933021,
          2.134554
-        ]
+        ],
+        "signals":[
+         "msp",
+         "margin",
+         "margin"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.519945,
-        "std":0.086301,
+        "mean":0.519854,
+        "std":0.086159,
         "values":[
-         0.6099,
+         0.609627,
          0.437834,
          0.512101
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.040406,
-        "std":0.001167,
+        "mean":0.040263,
+        "std":0.000922,
         "values":[
-         0.041745,
+         0.041316,
          0.039872,
          0.0396
         ]
@@ -54855,8 +55326,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-2.411483,
-         "std":2.10235
+         "values":[
+          -3.457853,
+          -3.785324,
+          0.008728
+         ],
+         "signals":[
+          "entropy",
+          "entropy",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -56075,8 +56555,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.242781,
-         "std":0.034221
+         "values":[
+          0.28005,
+          0.235519,
+          0.212773
+         ],
+         "signals":[
+          "msp",
+          "msp_t",
+          "msp"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -57340,13 +57829,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":-2.411483,
-         "std":2.10235,
          "values":[
           -3.457853,
           -3.785324,
           0.008728
-         ]
+         ],
+         "signals":[
+          "entropy",
+          "entropy",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -57747,86 +58240,86 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":0.783936,
-        "std":0.105887,
+        "mean":0.793789,
+        "std":0.110399,
         "values":[
-         0.856062,
+         0.878939,
          0.833374,
-         0.662372
+         0.669055
         ]
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.87678,
-        "std":0.029431,
+        "mean":0.871624,
+        "std":0.033376,
         "values":[
-         0.856832,
+         0.843458,
          0.862926,
-         0.910581
+         0.908488
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.01486,
-        "std":0.001011,
+        "mean":0.013466,
+        "std":0.000209,
         "values":[
-         0.01529,
+         0.013375,
          0.013705,
-         0.015586
+         0.013318
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.851758,
-         "std":0.030085,
+         "mean":0.847515,
+         "std":0.033774,
          "values":[
-          0.831818,
+          0.820182,
           0.837091,
-          0.886364
+          0.885273
          ]
         },
         "selective_risk":{
-         "mean":0.031132,
-         "std":0.010948,
+         "mean":0.03059,
+         "std":0.011547,
          "values":[
-          0.021202,
+          0.01973,
           0.029322,
-          0.042872
+          0.042719
          ]
         },
         "in_scope_risk":{
-         "mean":0.005557,
-         "std":0.001588,
+         "mean":0.005493,
+         "std":0.001642,
          "values":[
-          0.004763,
+          0.004566,
           0.004523,
-          0.007385
+          0.007389
          ]
         },
         "kept_oos_error_rate":{
-         "mean":0.273066,
-         "std":0.062221,
+         "mean":0.27166,
+         "std":0.065095,
          "values":[
-          0.204787,
+          0.2,
           0.287841,
-          0.326568
+          0.327138
          ]
         },
         "kept_oos_share":{
-         "mean":0.093633,
-         "std":0.015429,
+         "mean":0.091872,
+         "std":0.016877,
          "values":[
-          0.082186,
+          0.077588,
           0.087533,
-          0.111179
+          0.110495
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.123333,
-         "std":0.050402,
+         "mean":0.120667,
+         "std":0.053154,
          "values":[
-          0.077,
+          0.07,
           0.116,
-          0.177
+          0.176
          ]
         }
        }
@@ -57839,13 +58332,17 @@
        "margin"
       ],
       "tau":{
-       "mean":-2.411483,
-       "std":2.10235,
        "values":[
         -3.457853,
         -3.785324,
         0.008728
-       ]
+       ],
+       "signals":[
+        "entropy",
+        "entropy",
+        "margin"
+       ],
+       "note":"signals differ across seeds; no mean"
       },
       "validation_oos_share":{
        "mean":0.032258,
@@ -58045,86 +58542,90 @@
       "sensitivity_reweighted_validation":{
        "note":"validation rows reweighted to a 18.2% OOS share (the test split's, known only after looking at test) before choosing tau; diagnostic only, not the reported method",
        "tau":{
-        "mean":-1.382348,
-        "std":1.398516,
         "values":[
-         -2.053999,
-         -2.318337,
-         0.225291
-        ]
+         -2.006056,
+         -2.306693,
+         0.275901
+        ],
+        "signals":[
+         "entropy",
+         "entropy",
+         "margin"
+        ],
+        "note":"signals differ across seeds; no mean"
        },
        "feasible":true,
        "validation_weighted_coverage":{
-        "mean":0.961548,
-        "std":0.018973,
+        "mean":0.959274,
+        "std":0.018699,
         "values":[
-         0.942775,
-         0.961153,
-         0.980716
+         0.940683,
+         0.95906,
+         0.978078
         ]
        },
        "validation_weighted_risk":{
-        "mean":0.043017,
-        "std":0.000467,
+        "mean":0.041128,
+        "std":0.000376,
         "values":[
-         0.043136,
-         0.042502,
-         0.043413
+         0.041297,
+         0.040697,
+         0.041391
         ]
        },
        "test":{
         "coverage":{
-         "mean":0.95503,
-         "std":0.021507,
+         "mean":0.952424,
+         "std":0.020759,
          "values":[
-          0.936,
-          0.950727,
-          0.978364
+          0.933091,
+          0.949818,
+          0.974364
          ]
         },
         "selective_risk":{
-         "mean":0.069762,
-         "std":0.015615,
+         "mean":0.068434,
+         "std":0.015597,
          "values":[
-          0.055167,
-          0.067891,
-          0.086229
+          0.05339,
+          0.067381,
+          0.084531
          ]
         },
         "in_scope_risk":{
-         "mean":0.011735,
-         "std":0.001123,
+         "mean":0.011669,
+         "std":0.00101,
          "values":[
-          0.010801,
+          0.010806,
           0.011422,
-          0.012981
+          0.01278
          ]
         },
         "kept_oos_error_rate":{
-         "mean":0.392607,
-         "std":0.054922,
+         "mean":0.3882,
+         "std":0.05694,
          "values":[
-          0.335227,
-          0.397906,
-          0.444688
+          0.327536,
+          0.396574,
+          0.440489
          ]
         },
         "kept_oos_share":{
-         "mean":0.150844,
-         "std":0.016963,
+         "mean":0.149166,
+         "std":0.016987,
          "values":[
-          0.136752,
-          0.146108,
-          0.169671
+          0.134451,
+          0.145291,
+          0.167755
          ]
         },
         "high_conf_oos_misroute_rate":{
-         "mean":0.315333,
-         "std":0.085565,
+         "mean":0.307667,
+         "std":0.085196,
          "values":[
-          0.236,
-          0.304,
-          0.406
+          0.226,
+          0.301,
+          0.396
          ]
         }
        }
@@ -58455,7 +58956,19 @@
         "msp_t"
        ],
        "hybrid":{
-        "tau":null,
+        "tau":{
+         "values":[
+          null,
+          null,
+          null
+         ],
+         "signals":[
+          "msp_t",
+          "margin",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
+        },
         "feasible":false,
         "validation_coverage":{
          "mean":0.0,
@@ -58702,8 +59215,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":2.189096,
-         "std":2.13581
+         "values":[
+          0.933808,
+          4.655183,
+          0.978296
+         ],
+         "signals":[
+          "msp_t",
+          "margin",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -59462,8 +59984,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":2.004105,
-         "std":1.803545
+         "values":[
+          0.945491,
+          4.086562,
+          0.980262
+         ],
+         "signals":[
+          "msp_t",
+          "margin",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -60393,13 +60924,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":2.004105,
-         "std":1.803545,
          "values":[
           0.945491,
           4.086562,
           0.980262
-         ]
+         ],
+         "signals":[
+          "msp_t",
+          "margin",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -62948,13 +63483,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.08125,
-         "std":0.695219,
          "values":[
           1.882091,
           0.632676,
           0.728981
-         ]
+         ],
+         "signals":[
+          "margin",
+          "msp_t",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -66021,8 +66560,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.887236,
-         "std":1.619518
+         "values":[
+          0.948701,
+          3.75729,
+          0.955717
+         ],
+         "signals":[
+          "msp_t",
+          "margin",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -67855,13 +68403,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":2.820058,
-         "std":1.614574,
          "values":[
           3.747166,
           3.75729,
           0.955717
-         ]
+         ],
+         "signals":[
+          "margin",
+          "margin",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -68058,13 +68610,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":0.962006,
-         "std":0.603048,
          "values":[
           1.655836,
           0.563929,
           0.666255
-         ]
+         ],
+         "signals":[
+          "margin",
+          "msp_t",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -70613,13 +71169,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.83595,
-         "std":0.849718,
          "values":[
           0.857446,
           2.387806,
           2.262597
-         ]
+         ],
+         "signals":[
+          "msp_t",
+          "margin",
+          "margin"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -71135,8 +71695,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.916379,
-         "std":1.633921
+         "values":[
+          3.803064,
+          0.96944,
+          0.976632
+         ],
+         "signals":[
+          "margin",
+          "msp_t",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
@@ -72969,13 +73538,17 @@
        ],
        "hybrid":{
         "tau":{
-         "mean":1.916379,
-         "std":1.633921,
          "values":[
           3.803064,
           0.96944,
           0.976632
-         ]
+         ],
+         "signals":[
+          "margin",
+          "msp_t",
+          "msp_t"
+         ],
+         "note":"signals differ across seeds; no mean"
         },
         "feasible":true,
         "validation_coverage":{
