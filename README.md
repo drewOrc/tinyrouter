@@ -38,6 +38,7 @@ Other targets:
 | `make llm` | Claude Haiku on validation 3,100 + test 5,500 in the 8-way space, one stored record per query; resumes; stops before passing `MAX_USD` (default 5); writes `results/llm/haiku-8way.{jsonl,json}` and `results/llm-manifest.json` |
 | `make verify-llm` | check `results/llm/haiku-8way.jsonl`: every row once, SHA-256 equal in the file, the summary and the manifest |
 | `make verify-logits` | check every archive in `results/logits/` against `results/logits-manifest.json` |
+| `make analysis` | RQ2 to RQ4 from the stored logits and Haiku predictions, no training and no API calls; every temperature, aggregation, threshold and signal is chosen on validation; writes `results/analysis/{summary,curves,haiku}.json` and ends with `completed analysis (75/75 archives, 8600/8600 llm rows, 25 groups)` |
 | `make report` | build `results/summary.md` from `results/runs/*.json` |
 | `make clean-checkpoints` | delete all trained weights |
 
@@ -88,6 +89,11 @@ src/tinyrouter/
   ac2.py            AC2 run over three seeds and PASS/FAIL verdict
   llm.py            Claude Haiku zero-shot router: prompt, retries, pricing (baseline and fallback)
   llm_run.py        Haiku over validation + test: journal, resume, cost cap, completion check
+  selective.py      AURC, risk-coverage, AUROC, AUPRC, Wilson-bound threshold choice (validation only)
+  haiku.py          stored Haiku predictions as arrays; old and new reply parsers
+  analysis.py       one archive: 8-way aggregation, OOS, signals, ECE, fallback, oracle
+  diagnostics.py    why validation thresholds miss the target on test (OOS share, reweighting)
+  analysis_run.py   `make analysis`: completion checks, label cross-checks, mean and std over seeds
   report.py         results/*.json -> results/summary.md
   smoke.py          end-to-end wiring check
 tests/              pytest; `network` marker for Hub downloads
