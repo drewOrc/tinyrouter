@@ -31,3 +31,12 @@ def test_threshold_transfer_skips_points_without_a_feasible_threshold_on_every_s
     assert 1 not in ks
     assert ks == sorted(ks)
     assert series["test"][-1][0] == 100
+
+
+def test_threshold_transfer_drops_a_point_where_only_some_seeds_were_feasible():
+    """BERT k=1 has a feasible 2% threshold on one seed of three; a mean of one is not plotted."""
+    summary = figures.load(Path("results"), "analysis/summary.json")
+    stat = summary["groups"]["bert/k1"]["result"]["diagnostics"]["0.02"]["test"]["selective_risk"]
+    assert stat["n"] == 1
+    for name, points in figures.transfer_series(summary, "bert").items():
+        assert 1 not in [k for k, _, _ in points], name
