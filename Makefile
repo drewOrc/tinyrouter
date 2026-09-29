@@ -1,5 +1,6 @@
 .PHONY: setup lint format test test-network smoke train evaluate ac2 pilot-lr pilot-steps baselines \
-	curve oos-ablation verify-logits llm-smoke llm verify-llm analysis report clean-checkpoints
+	curve oos-ablation verify-logits llm-smoke llm verify-llm analysis bench-cpu llm-latency cost figures report \
+	clean-checkpoints
 
 CONFIG ?= configs/bert-base.yaml
 SEED ?= 42
@@ -141,6 +142,30 @@ verify-llm:
 analysis:
 	uv run python -m tinyrouter.analysis_run --quiet
 
+# AC5 latency. bench-cpu: both encoders on CPU, batch 1, validation rows
+# 0-499, 4 threads, the pretrained backbone with a 151-way head (latency
+# depends on shapes, not weight values; see src/tinyrouter/latency.py);
+# downloads the two base models; writes results/efficiency/cpu_latency.json.
+# llm-latency: Haiku's per-call latency from results/llm/haiku-8way.jsonl
+# (Release; check it with verify-llm); writes results/efficiency/haiku_latency.json.
+bench-cpu:
+	uv run $(UV_ENV) python -m tinyrouter.latency cpu
+
+llm-latency:
+	uv run python -m tinyrouter.latency haiku
+
+# RQ5 from committed JSON only: measured numbers and assumed prices kept
+# apart, break-even per scenario; writes results/cost/cost.json.
+cost:
+	uv run python -m tinyrouter.cost
+
+# README figures from results/analysis/*.json; writes results/figures/*.png.
+figures:
+	uv run --group figures python -m tinyrouter.figures
+
+# results/report.md and the README block between the BEGIN/END GENERATED
+# markers, from committed JSON. tests/test_report.py fails when either is stale.
+# Order after new results: analysis, bench-cpu, llm-latency, cost, figures, report.
 report:
 	uv run python -m tinyrouter.report
 

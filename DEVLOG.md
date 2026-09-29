@@ -4,6 +4,67 @@
 
 ---
 
+## 2026-09-29（深夜，五）：PR #18 審查修正（R1 到 R6）
+
+### 本次工作 / 執行摘要
+- 狀態：RQ1 到 RQ5 完成；**Tier 1 驗收未完成**。Drew 2026-09-29 決定：AC1 維持原定義（改稱 AC1b：乾淨 clone 後 `make setup && make reproduce` 完整實跑一次，含訓練與 Haiku），必須實跑成功才算達成；另新增 AC1a（從 Release artifacts 驗證 SHA-256 並離線重建分析與 README），作為快速日常驗證層，**不取代 AC1b**。AC1b 成功前 Tier 1 驗收狀態維持未完成。本 PR 不實作 AC1。
+- **R1**：原本「README 與重算一致」只守一致性，欄位接錯後重生 README，CI 仍綠（審查突變 X3、X4 存活）。新增表格驅動測試：首屏 12 個數字各自對應 `summary.json` 的明確路徑，測試自己格式化，不經 report.py，斷言渲染字串等於該欄位的值。
+- **R2**：k=10 hybrid 補上三個 seed 的絕對呼叫次數：1,235、1,157、1,548（test 共 5,500 筆），並納入 R1 的測試。
+- **R3**：routers 圖 (a) 原本是長條圖且 y 軸截斷在 70，會放大 91.9 對 92.1 的差距。改成點圖加誤差棒，y 軸從 75% 起，圖說寫明「看點的距離，不看長條長度」；(b) 仍是從 0 開始的長條圖。
+- R4：「約 87%」改寫為「把 test 加權到 validation 的 OOS 比例後，validation 與 test 的 risk 差距縮小約 87%」，屬描述性寫法。R5：效率表註腳改為「準確率與 OOS recall 用 validation 選的 8 類聚合，ECE 是 151 類」。R6：Haiku 延遲註明不是同條件比較（不同機器，中間有網路）。
+- 延遲的同架構比對：計時模型改用訓練時同一個 loader（`train.load_model_and_tokenizer`）建立；model revision、max_length、torch 與 transformers 版本必須等於訓練 run 的記錄，否則停止。另記錄 `attention_implementation`（兩個模型都是 sdpa；訓練 run 沒有記錄這個欄位，因為 loader 與 transformers 版本相同，選法一致）。
+- 因為延遲改了程式，重跑 `make bench-cpu`，接著重生 cost、report、figures。
+
+### 核心發現 / 數據
+- 重量後 CPU p50 / p95：BERT 15.5 / 18.4 ms，ModernBERT 20.9 / 28.5 ms（上一則是 15.6 / 17.0 與 20.2 / 23.2）。p50 差不到 1 ms，p95 對同機其他負載較敏感，重量時差了約 5 ms；這是同一台機器兩次量測的差異，不是程式造成的。
+- 本機推論成本隨延遲重量小幅改變（每筆 1.121e-06 → 1.159e-06 US$），連帶影響損益兩平：只算訓練的表只有 ModernBERT k=100 hybrid US$2/h 一格變動（1,830 → 1,831）；標註敏感度表 6 格都小幅變動（均小於 0.02%，例如 k=100、每筆 US$0.2：8,387,456 → 8,388,334）。`summary.json`、`curves.json`、`haiku.json` 與上一版逐欄相同。
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] PLAN §5 記錄決策：AC1 改稱 AC1b（定義不變、不弱化），新增 AC1a，並寫入凍結的 AC1b 通過標準
+- [ ] AC1a：`make reproduce-artifacts`（或同等名稱）從 Release 驗證並重建，接 CI
+- [ ] AC1b：`make reproduce` 在乾淨 clone（固定已合併 commit、lockfile、資料與模型 revision）完整實跑一次；Haiku 另設 US$5 的 reproduction-validation 上限，與原始實驗的 US$3.19 分開記錄
+- [ ] Tier 2（步驟 6）
+
+### Files / Budget
+- `src/tinyrouter/report.py`、`figures.py`、`latency.py`；`tests/test_report.py`、`test_latency.py`；`results/efficiency/cpu_latency.json`、`results/cost/cost.json`、`results/figures/*.png`、`results/report.md`；`README.md`；`DEVLOG.md`
+- API 花費：US$0
+
+---
+
+## 2026-09-29（深夜，四）：步驟 5，效率表、成本、圖與 README 首屏自動產生
+
+### 本次工作 / 執行摘要
+- **CPU 延遲（AC5，`make bench-cpu`）**：曲線權重已刪，改用同架構量：鎖定 revision 的預訓練骨架 + 151 類分類頭（seed 42 隨機初始化）+ 同 tokenizer 與 max_length。延遲只取決於架構與輸入形狀，不取決於權重數值；程式比對參數量必須等於 k=100 訓練 run 記錄的值（BERT 109,598,359、ModernBERT 149,720,983），不等就停。量法：CPU、batch 1、`torch.inference_mode()`、4 個 intra-op 執行緒、interop 1、暖機 50 筆，再依序量 validation 前 500 筆；報 tokenization + forward + argmax 與 forward-only 兩種。
+- **Haiku 延遲（`make llm-latency`）**：journal 每筆的 `latency_ms` 是用戶端量的最後一次嘗試時間，含網路往返與 API 排隊，執行時最多 6 個呼叫同時進行；8,600 筆沒有任何重試。
+- **成本（RQ5，`make cost`）**：`results/cost/cost.json` 把實測（M4 訓練 wall-clock、CPU 延遲、Haiku token 與花費、各 router 在 test 的實際 Haiku 花費）與假設（accelerator 每小時 US$0.5、1、2；標註每筆 US$0.05、0.2、1；本機推論每 vCPU-hour US$0.05、滿載）分開存。不把 Mac 購買價算進 run 的成本。損益兩平 = 一次性成本 ÷（LLM-only 每筆 − router 每筆），對 ModernBERT k=10、k=100 的 small-only 與 hybrid、每個價格情境都算，標為情境敏感度。
+- **`make report`**：從 commit 的 JSON 產生 `results/report.md` 與 README 標記之間的區塊（首屏雙欄、router 表、效率表、成本表、聚合方式、圖、Limitations）。`tests/test_report.py` 在 CI 重算並比對，不一致就紅。
+- **`make figures`**：四張 PNG（學習曲線、risk-coverage、router 比較、threshold transfer），Okabe-Ito 配色加線型與標記，300 dpi，拿掉 PNG 的 Software 欄位，兩次輸出逐位元組相同（有測試）。matplotlib 3.11.2 放在新的 `figures` group，CI 的 test job 一併安裝。
+- README 另加隱私說明：Release 存的是公開 CLINC 查詢的 hash 與 LLM 回覆，這個 journal 設計不應原封不動套到含私人查詢的產品。
+
+### 核心發現 / 數據
+（取自 `results/efficiency/*.json`、`results/cost/cost.json`、`results/analysis/summary.json`）
+- CPU p50 / p95（Apple M4，4 執行緒，端到端）：BERT 15.6 / 17.0 ms，ModernBERT 20.2 / 23.2 ms；Haiku test 669 / 916 ms（含網路）。
+- 訓練（k=100，M4 MPS）：BERT 852 ± 33 s、峰值 4.31 GiB；ModernBERT 1,198 ± 1 s、峰值 6.24 GiB（MPS driver 記憶體取樣）。ECE（151 類，test）溫度校準前後：BERT 3.90 → 3.80，ModernBERT 3.95 → 2.45。
+- Haiku 每 1K test 查詢 US$0.369（約 340K 輸入、5.9K 輸出 token）。
+- 損益兩平（只算訓練，US$1/h）：ModernBERT k=10 hybrid 198 筆、k=100 hybrid 915 筆。訓練算力只值幾分錢；一旦要付標註費，標註主導（k=100、每筆 US$0.2 時約 839 萬筆）。
+- k=100 的 hybrid 在三個 seed 各呼叫 Haiku 170、9、31 次（共 5,500 筆 test），8 類準確率 91.9 → 92.1，是安全與診斷槓桿，不是準確率主要來源；k=10 時 81.5 → 88.0（Haiku 呼叫 23.9%）才是 fallback 價值的主要證據。
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] Tier 2（步驟 6）：ONNX int8 + FastAPI + Docker + 壓測，完成後把 RQ5 的本機延遲換成 ONNX 實測
+
+### Files / Budget
+- 新增：`src/tinyrouter/latency.py`、`cost.py`、`figures.py`；`tests/test_latency.py`、`test_cost.py`、`test_report.py`、`test_figures.py`；`results/efficiency/*.json`、`results/cost/cost.json`、`results/figures/*.png`、`results/report.md`
+- 修改：`src/tinyrouter/report.py`（改寫）、`Makefile`、`README.md`、`pyproject.toml`、`uv.lock`、`.github/workflows/ci.yml`、`.gitignore`、`docs/OPERATIONS.md`、`DEVLOG.md`
+- API 花費：US$0
+
+---
+
 ## 2026-09-29（深夜，三）：PR #17 複查小修（R1 到 R4）
 
 ### 本次工作 / 執行摘要

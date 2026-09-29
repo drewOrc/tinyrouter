@@ -1,0 +1,32 @@
+{
+  "format_version": 1,
+  "source": "haiku-8way.jsonl",
+  "measures": "client-side wall time of the last attempt of each messages.create call; includes the network round trip and API queueing; up to 6 calls were in flight",
+  "calls_retried": 0,
+  "all": {
+    "n": 8600,
+    "mean_ms": 715.513,
+    "p50_ms": 671.0,
+    "p95_ms": 921.0,
+    "min_ms": 534.0,
+    "max_ms": 7453.0
+  },
+  "splits": {
+    "test": {
+      "n": 5500,
+      "mean_ms": 710.406,
+      "p50_ms": 669.0,
+      "p95_ms": 916.0,
+      "min_ms": 534.0,
+      "max_ms": 5601.0
+    },
+    "validation": {
+      "n": 3100,
+      "mean_ms": 724.574,
+      "p50_ms": 676.0,
+      "p95_ms": 939.05,
+      "min_ms": 546.0,
+      "max_ms": 7453.0
+    }
+  }
+}
