@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 from dataclasses import asdict, dataclass, fields, replace
 from pathlib import Path
 from typing import Literal
@@ -109,7 +110,18 @@ class RunConfig:
         return replace(self, seed=seed)
 
 
-def load_config(path: str | Path) -> RunConfig:
+def load_config(
+    path: str | Path,
+    *,
+    results_root: str | Path | None = None,
+    checkpoint_root: str | Path | None = None,
+) -> RunConfig:
+    """Read a config file; ``results_root`` and ``checkpoint_root`` override where output goes.
+
+    The overrides are location fields (``LOCATION_FIELDS``), so the run's
+    identity does not change: ``make reproduce`` uses them to write a
+    rerun next to, never over, the committed ``results/``.
+    """
     raw = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
     if not isinstance(raw, dict):
         raise ValueError(f"{path}: top level must be a mapping")
@@ -117,4 +129,26 @@ def load_config(path: str | Path) -> RunConfig:
     unknown = sorted(set(raw) - allowed)
     if unknown:
         raise ValueError(f"{path}: unknown config keys {unknown}; allowed: {sorted(allowed)}")
-    return RunConfig(**raw)
+    return with_locations(RunConfig(**raw), results_root, checkpoint_root)
+
+
+def with_locations(
+    config: RunConfig,
+    results_root: str | Path | None = None,
+    checkpoint_root: str | Path | None = None,
+) -> RunConfig:
+    """The same run with its output moved; None keeps the config's own location."""
+    moved: dict[str, str] = {}
+    if results_root is not None:
+        moved["results_root"] = str(results_root)
+    if checkpoint_root is not None:
+        moved["checkpoint_root"] = str(checkpoint_root)
+    return replace(config, **moved)
+
+
+def add_location_arguments(parser: argparse.ArgumentParser) -> None:
+    """``--results-root`` and ``--checkpoint-root``; unset keeps each config's own paths."""
+    parser.add_argument("--results-root", default=None, help="default: the config's results_root")
+    parser.add_argument(
+        "--checkpoint-root", default=None, help="default: the config's checkpoint_root"
+    )

@@ -288,7 +288,7 @@ def test_fail_verdict_makes_the_command_exit_nonzero(base, monkeypatch, capsys):
     fake = FakePipeline(accuracy=0.9)
     monkeypatch.setattr(ac2, "default_train", fake.train)
     monkeypatch.setattr(ac2, "default_evaluate", fake.evaluate)
-    monkeypatch.setattr(ac2, "load_config", lambda _: base)
+    monkeypatch.setattr(ac2, "load_config", lambda _, **__: base)
     with pytest.raises(SystemExit) as exc:
         ac2.main(["--config", "unused.yaml"])
     assert exc.value.code == 1

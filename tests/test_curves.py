@@ -165,7 +165,7 @@ def cli_fakes(monkeypatch, protocol) -> list[str]:
 
     calls: list[str] = []
     fake = FakeRuns()
-    monkeypatch.setattr(curves, "load_protocol", lambda _: protocol)
+    monkeypatch.setattr(curves, "load_protocol", lambda _, **__: protocol)
     monkeypatch.setattr(curves, "run_baselines", lambda root: calls.append(f"baselines {root}"))
 
     def curve(name, configs, proto):

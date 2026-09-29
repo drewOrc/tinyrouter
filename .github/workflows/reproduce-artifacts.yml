@@ -1,0 +1,70 @@
+name: reproduce-artifacts
+
+# AC1a (docs/PLAN.md section 5): download the three Releases, check every
+# file against the SHA-256 in the committed manifests, rebuild analysis,
+# Haiku latency, cost, figures and report offline, and require results/ and
+# README.md to be byte-identical to the commit. No training, no API call,
+# no secret. Not a required check: it downloads from GitHub Releases, so an
+# outage there must not block merges. It runs weekly, on demand, and on pull
+# requests that touch the files it exercises.
+on:
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/reproduce-artifacts.yml"
+      - "Makefile"
+      - "src/tinyrouter/reproduce.py"
+      - "src/tinyrouter/release.py"
+      - "src/tinyrouter/analysis*.py"
+      - "src/tinyrouter/selective.py"
+      - "src/tinyrouter/diagnostics.py"
+      - "src/tinyrouter/haiku.py"
+      - "src/tinyrouter/cost.py"
+      - "src/tinyrouter/figures.py"
+      - "src/tinyrouter/report.py"
+      - "src/tinyrouter/latency.py"
+      - "results/**"
+      - "README.md"
+      - "uv.lock"
+
+concurrency:
+  group: reproduce-artifacts-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.10.2"
+
+jobs:
+  reproduce-artifacts:
+    name: reproduce-artifacts
+    # macOS arm64, the platform the committed figures were drawn on. On
+    # ubuntu-latest every JSON file, report.md and the README come out
+    # byte-identical, but the four PNGs do not (same matplotlib, different
+    # rasterized bytes; first seen on PR #19), and this check promises bytes.
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: make reproduce-artifacts
+        # Judged by the whole last line, not by the exit code alone.
+        run: |
+          make reproduce-artifacts 2>&1 | tee reproduce-artifacts.log
+          tail -n 1 reproduce-artifacts.log \
+            | grep -Fx "completed reproduce-artifacts: results/ and README.md byte-identical to HEAD"
+
+      - name: Show what differs (on failure)
+        if: failure()
+        run: git status --porcelain --untracked-files=all -- results README.md && git diff --stat -- results README.md

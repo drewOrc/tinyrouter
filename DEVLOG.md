@@ -4,6 +4,61 @@
 
 ---
 
+## 2026-09-29（深夜，七）：PR #19 審查修正（R1 到 R6），AC1b 實跑前固定比較範圍
+
+### 本次工作 / 執行摘要
+- 狀態不變：RQ1 到 RQ5 完成；Tier 1 驗收未完成；AC1b 尚未實跑。
+- **R1**：續跑原本只比輸出的 SHA-256。審查實測同一個 `REPRO_ID` 多一個空 commit 後重跑，18 步有 17 步被跳過，verdict 仍 PASS。現在每一步記錄身分（HEAD、`uv.lock` 與 `configs/` 的 SHA-256、Python、torch、transformers 版本），目錄若由不同身分開始，preflight 判 `NOT STARTED`，訊息要求換新 id；`run_steps` 本身也會拒絕（`StaleStateError`）。comparison 的流程表附上每一步實際執行時的 commit，另列 `flow.commits`。
+- **R2**：比較範圍在實跑前補齊並寫進 PLAN §5.1（「實跑前補充」）：README router 表（LLM-only 3 列，ModernBERT k=10、k=100 的 small-only、hybrid 2% 與 5%、oracle 各 4 個指標，共 35 列）與 `ablation_comparison` 全部統計（22 列）要判定；延遲、k=100 訓練時間與峰值記憶體、成本模型只列不判（`LISTED, NOT JUDGED`）。
+- R3：AC1a workflow 的 PR paths 補上分析、成本、圖、報告、延遲模組、`results/**`、README、`uv.lock`。R4：`check-originals --snapshot` 比對執行前的快照（`results/` 所有檔案含 gitignored，加上 README）；AC1b 在第一步前拍快照，AC1a 在 verify-llm 後拍。R5：preflight 的 `git status` 或 `git rev-parse` 失敗時列為問題，不再當成乾淨。R6：README 註明 HF 快取是共用的，可用 `HF_HOME` 指到空目錄。
+
+### 核心發現 / 數據
+- 已提交的結果與自己比較：router 35 列、消融 22 列都是 OK，仍是 0 個 `REVIEW REQUIRED`。
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] 合併後由協調者在乾淨 clone 實跑 AC1b
+
+### Files / Budget
+- `src/tinyrouter/reproduce.py`、`comparison.py`；`tests/test_reproduce.py`、`test_comparison.py`；`.github/workflows/reproduce-artifacts.yml`；`README.md`、`docs/PLAN.md`、`DEVLOG.md`
+- API 花費：US$0
+
+---
+
+## 2026-09-29（深夜，六）：AC1 拆成 AC1a／AC1b，`make reproduce-artifacts` 與 `make reproduce`
+
+### 本次工作 / 執行摘要
+- 狀態不變：RQ1 到 RQ5 完成；**Tier 1 驗收未完成**。這個 PR 只做程式與文件，AC1b 尚未實跑。
+- **PLAN §5**：AC1 原文保留，改稱 AC1b 並標「定義不變」；新增 AC1a（Release artifacts 驗證 SHA-256 後離線重建，不取代 AC1b）。新增 §5.1 決策紀錄：Drew 2026-09-29 的決定、凍結的六條 AC1b 通過標準、預算規則（原始 AC6 花費固定 US$3.19；AC1b 的 Haiku 是 reproduction-validation，獨立 US$5 上限，不相加）。其他 AC 與協定沒動。
+- **輸出位置可移動**：`load_config`、`load_protocol` 接受 `results_root`、`checkpoint_root`（兩者本來就是 `LOCATION_FIELDS`，不算進 run 的 identity）；`ac2`、`curves`、`pilots` 新增 `--results-root`、`--checkpoint-root`；Makefile 新增 `RESULTS_ROOT`、`CHECKPOINT_ROOT`、`README_OUT`，每個 target 都轉傳。預設為空，行為與先前相同。`report` 新增 `--readme-out`，而且 `--results-dir` 不是 `<repo>/results` 又沒給 `--readme-out` 時直接拒絕，避免用別的結果改寫 commit 裡的 README。
+- **`make reproduce-artifacts`（AC1a）**：`release.py` 從 commit 裡的 manifest 列出 76 個 Release 檔（3 個 AC2、72 個曲線、1 個 Haiku），下載到暫存名、比對 SHA-256 才換上；接著 verify-logits、verify-llm、analysis、llm-latency、cost、figures、report，最後 `check-originals` 要求 `results/` 與 `README.md` 與 HEAD 逐位元組相同。CPU 延遲不重量（隨機器變），沿用 commit 的檔案。新增 `reproduce-artifacts.yml`：每週、手動、以及改到相關檔案的 PR 會跑，不是必過檢查（依賴 GitHub Releases），actions 釘完整 SHA，`permissions: contents: read`。
+- **`make reproduce`（AC1b）**：順序照原本正式執行：AC2、pilot-lr、pilot-steps、baselines、兩條曲線、OOS 消融、verify-logits、Haiku（`MAX_USD=5`）、verify-llm、analysis、bench-cpu、llm-latency、cost、figures、report，最後檢查原始檔未被動過。全部寫進 `reproduction/<HEAD 前 12 碼>/`（results、checkpoints、原始 Haiku 預測、README、logs、steps.json、comparison）；`reproduction` 和 `checkpoints` 一樣是指向 `*.nosync` 的 symlink。Haiku 在新的 results root 開新 journal，所以 US$5 上限只涵蓋這次 reproduction-validation，也碰不到原始 journal 與花費紀錄。pilot 選出的值若不同，不改 `configs/curve.yaml`，照原 config 繼續，comparison 標 `REVIEW REQUIRED`。
+- 開跑前檢查（任一不過就不開始，寫 `preflight.json`，判定 `NOT STARTED`）：工作目錄乾淨、HEAD 已合併進 origin/main（記錄 SHA）、`uv sync --locked`、`ANTHROPIC_API_KEY` 存在（只記 true/false）、磁碟至少 8.8 GiB（估計峰值約 4.4 GB 的兩倍）。
+- 每一步以整行 completion 行加上離開碼 0 判定；缺一行就停，並寫出 comparison（FAIL）。可續跑：已通過且輸出 SHA-256 未變的步驟跳過，一旦有一步重跑，其後全部重跑（各 target 自己會跳過已完成的點）。
+- **comparison**（`comparison.py`）：流程每步狀態與 completion 行；AC2 三個 seed 對 95.7%；Haiku 8,600/8,600、identity、花費上限、逐列（split、index）不一致數、parse_failed；兩筆預算分開列；pilot 選值；README 首屏 14 個數字、兩個 encoder 每個 k 的 8 類準確率與 OOS recall（24 列）、所有門檻診斷統計（逐列）。規則：原始 std > 0 時看是否落在 mean ± std；std 為 0、null（只有一個 seed 可行）或單次執行（Haiku）時，任何差異或 seed 數不同都標 `REVIEW REQUIRED`；只在一邊出現也標。總判定只有流程或 AC2 失敗才 FAIL。
+
+### 核心發現 / 數據
+- AC1a 在乾淨副本實跑：76/76 個 Release 檔 SHA-256 通過，重建後 `results/` 與 `README.md` 與 HEAD 逐位元組相同（約 2 分鐘，含下載）。
+- CI 第一次在 ubuntu-latest 跑 AC1a：所有 JSON、`report.md`、README 逐位元組相同，但四張 PNG 不同（同一版 matplotlib，點陣化結果的位元組不同）。workflow 改在 macOS arm64（產生 commit 裡圖檔的平台）執行後通過；README 註明這一點。
+- 已提交的結果和自己比較：0 個 `REVIEW REQUIRED`、PASS（測試）。
+- AC1b 時間估計（M4，依既有 run 記錄）：AC2 約 45 分、pilot-lr 約 90 分、pilot-steps 約 15 分、BERT 曲線約 55 分、ModernBERT 曲線約 130 分、消融約 60 分、Haiku 約 15 分，合計約 6 到 7 小時。
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] 合併後由協調者在乾淨 clone 實跑 `make setup && make reproduce`（AC1b），依 comparison 更新狀態
+- [ ] Tier 2（步驟 6）
+
+### Files / Budget
+- 新增：`src/tinyrouter/release.py`、`reproduce.py`、`comparison.py`；`tests/test_release.py`、`test_reproduce.py`、`test_comparison.py`、`test_locations.py`；`.github/workflows/reproduce-artifacts.yml`
+- 修改：`src/tinyrouter/config.py`、`protocol.py`、`ac2.py`、`curves.py`、`pilots.py`、`report.py`；`tests/test_ac2.py`、`test_curves.py`；`Makefile`、`.gitignore`、`README.md`、`docs/PLAN.md`、`docs/OPERATIONS.md`、`DEVLOG.md`
+- API 花費：US$0
+
+---
+
 ## 2026-09-29（深夜，五）：PR #18 審查修正（R1 到 R6）
 
 ### 本次工作 / 執行摘要

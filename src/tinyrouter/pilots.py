@@ -37,7 +37,7 @@ from pathlib import Path
 
 from tinyrouter.archive import load_validation_logits
 from tinyrouter.calibrate import LeakageError, SplitLogits
-from tinyrouter.config import RunConfig
+from tinyrouter.config import RunConfig, add_location_arguments
 from tinyrouter.data import Split
 from tinyrouter.evaluate import RunPaths, read_training_summary
 from tinyrouter.labels import load_label_space
@@ -317,14 +317,24 @@ def print_summary(body: dict) -> None:
     print(f"selected {body['pilot']}: {body['selected']} (validation only)")
 
 
+def pilot_output(protocol: CurveProtocol, kind: str) -> Path:
+    """``<results_root>/pilots/<kind>.json``, next to the AC2 run the lr pilot may reuse."""
+    roots = {config.results_root for config in protocol.base_configs.values()}
+    if len(roots) != 1:
+        raise ValueError(f"the base configs write to different results roots: {sorted(roots)}")
+    return Path(roots.pop()) / "pilots" / f"{kind}.json"
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("kind", choices=("lr", "steps"))
     parser.add_argument("--protocol", default="configs/curve.yaml")
-    parser.add_argument("--results-root", default="results")
+    add_location_arguments(parser)
     args = parser.parse_args(argv)
-    protocol = load_protocol(args.protocol)
-    out = Path(args.results_root) / "pilots" / f"{args.kind}.json"
+    protocol = load_protocol(
+        args.protocol, results_root=args.results_root, checkpoint_root=args.checkpoint_root
+    )
+    out = pilot_output(protocol, args.kind)
     body = run_pilot(args.kind, protocol, out)
     print_summary(body)
     print(f"wrote {out}")

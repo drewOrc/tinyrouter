@@ -502,12 +502,17 @@ def replace_block(readme: str, block: str) -> str:
     return readme[:start] + block + readme[end + len(END) :]
 
 
-def outputs(root: Path, repo: Path) -> dict[Path, str]:
+def outputs(root: Path, repo: Path, readme_out: Path | None = None) -> dict[Path, str]:
+    """report.md and the README with its block rebuilt; ``readme_out`` keeps repo/README.md as is.
+
+    ``make reproduce`` passes ``readme_out`` so a rerun writes its README next
+    to its own results instead of over the committed one.
+    """
     r = Results.load(root)
     readme = repo / "README.md"
     return {
         root / "report.md": report_md(r),
-        readme: replace_block(readme.read_text(encoding="utf-8"), readme_block(r)),
+        readme_out or readme: replace_block(readme.read_text(encoding="utf-8"), readme_block(r)),
     }
 
 
@@ -516,14 +521,23 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--results-dir", default="results")
     parser.add_argument("--repo", default=".")
     parser.add_argument("--check", action="store_true", help="compare only; exit 1 if stale")
+    parser.add_argument("--readme-out", default=None, help="write the README here, not in --repo")
     args = parser.parse_args(argv)
     stale = []
-    for path, text in outputs(Path(args.results_dir), Path(args.repo)).items():
+    readme_out = Path(args.readme_out) if args.readme_out else None
+    moved = Path(args.results_dir).resolve() != (Path(args.repo) / "results").resolve()
+    if moved and readme_out is None and not args.check:
+        parser.error(
+            "--results-dir is not <repo>/results; pass --readme-out too, or the committed "
+            "README would be rewritten from other results"
+        )
+    for path, text in outputs(Path(args.results_dir), Path(args.repo), readme_out).items():
         current = path.read_text(encoding="utf-8") if path.is_file() else None
         if args.check:
             if current != text:
                 stale.append(str(path))
         else:
+            path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
             print(f"wrote {path}")
     if stale:

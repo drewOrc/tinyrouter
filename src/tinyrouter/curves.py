@@ -57,7 +57,7 @@ from tinyrouter.completeness import (
     check_points,
     publish_index,
 )
-from tinyrouter.config import RunConfig
+from tinyrouter.config import RunConfig, add_location_arguments
 from tinyrouter.evaluate import RunPaths
 from tinyrouter.protocol import (
     ABLATION_MODEL,
@@ -240,8 +240,11 @@ def main(argv: list[str] | None = None) -> None:
     which.add_argument("--model", choices=MODELS)
     which.add_argument("--ablation", action="store_true", help="ModernBERT, k=100, 0 OOS rows")
     parser.add_argument("--protocol", default="configs/curve.yaml")
+    add_location_arguments(parser)
     args = parser.parse_args(argv)
-    protocol = load_protocol(args.protocol)
+    protocol = load_protocol(
+        args.protocol, results_root=args.results_root, checkpoint_root=args.checkpoint_root
+    )
     # Build every config first: a protocol still missing a pilot value stops here,
     # before anything is computed or written.
     if args.ablation:

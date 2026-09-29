@@ -1,9 +1,19 @@
 .PHONY: setup lint format test test-network smoke train evaluate ac2 pilot-lr pilot-steps baselines \
 	curve oos-ablation verify-logits llm-smoke llm verify-llm analysis bench-cpu llm-latency cost figures report \
-	clean-checkpoints
+	reproduce reproduce-artifacts clean-checkpoints
 
 CONFIG ?= configs/bert-base.yaml
 SEED ?= 42
+
+# Where output goes. Empty (the default) keeps each config's own paths,
+# results/ and checkpoints/. `make reproduce` sets both to
+# reproduction/<id>/... (and README_OUT for `make report`) so a rerun is
+# written next to the committed results, never over them.
+RESULTS_ROOT ?=
+CHECKPOINT_ROOT ?=
+README_OUT ?=
+ROOT_ARGS := $(if $(RESULTS_ROOT),--results-root $(RESULTS_ROOT),)
+LOCATION_ARGS := $(ROOT_ARGS) $(if $(CHECKPOINT_ROOT),--checkpoint-root $(CHECKPOINT_ROOT),)
 
 # Load HF_TOKEN / ANTHROPIC_API_KEY from a gitignored .env if one exists.
 ENV_FILE := $(wildcard .env)
@@ -14,7 +24,7 @@ UV_ENV := $(if $(ENV_FILE),--env-file $(ENV_FILE),)
 # directories and the conventional names are symlinks to them. Without
 # this, iCloud tries to upload a multi-GB torch install and every
 # checkpoint, and can evict files mid-training. See README "iCloud".
-NOSYNC_LINKS := .venv checkpoints
+NOSYNC_LINKS := .venv checkpoints reproduction
 
 # No default target. On 2026-09-23 a zsh loop ran `make $t` with
 # t="curve MODEL=bert"; make got one argument, read it as a variable
@@ -74,7 +84,7 @@ evaluate:
 # `make ac2` (its results already exist); getting them back takes FORCE=1,
 # which retrains all three seeds.
 ac2:
-	uv run $(UV_ENV) python -m tinyrouter.ac2 --config configs/bert-base.yaml $(if $(filter 1,$(FORCE)),--force,)
+	uv run $(UV_ENV) python -m tinyrouter.ac2 --config configs/bert-base.yaml $(LOCATION_ARGS) $(if $(filter 1,$(FORCE)),--force,)
 
 # Step 3 (docs/PLAN.md section 4, hyperparameter protocol). Order:
 #   make pilot-lr     then copy each model's selected lr into configs/curve.yaml
@@ -92,26 +102,26 @@ ac2:
 # `completed 18/18 encoder points (<model>)` (the ablation:
 # `completed 3/3 ablation points`), never just `completed`.
 pilot-lr:
-	uv run $(UV_ENV) python -m tinyrouter.pilots lr
+	uv run $(UV_ENV) python -m tinyrouter.pilots lr $(LOCATION_ARGS)
 
 pilot-steps:
-	uv run $(UV_ENV) python -m tinyrouter.pilots steps
+	uv run $(UV_ENV) python -m tinyrouter.pilots steps $(LOCATION_ARGS)
 
 # Majority-class and TF-IDF centroid baselines on every (k, seed) sample; seconds.
 baselines:
-	uv run python -m tinyrouter.baselines
+	uv run python -m tinyrouter.baselines $(ROOT_ARGS)
 
 # Checks configs/curve.yaml is filled in, then runs the baselines, then the curve.
 curve:
 	@case "$(MODEL)" in bert|modernbert) ;; *) echo "usage: make curve MODEL=bert|modernbert"; exit 2;; esac
-	uv run $(UV_ENV) python -m tinyrouter.curves --model $(MODEL)
+	uv run $(UV_ENV) python -m tinyrouter.curves --model $(MODEL) $(LOCATION_ARGS)
 
 oos-ablation:
-	uv run $(UV_ENV) python -m tinyrouter.curves --ablation
+	uv run $(UV_ENV) python -m tinyrouter.curves --ablation $(LOCATION_ARGS)
 
 # Every archive listed in results/logits-manifest.json is present and matches its SHA-256.
 verify-logits:
-	uv run python -m tinyrouter.archive
+	uv run python -m tinyrouter.archive $(ROOT_ARGS)
 
 # Claude Haiku over CLINC150 in the 8-way routing space (docs/PLAN.md section 4,
 # AC6). Needs ANTHROPIC_API_KEY (in .env or exported); without it they exit 2.
@@ -126,12 +136,12 @@ llm-smoke:
 	uv run --group llm $(UV_ENV) python -m tinyrouter.llm_run --smoke $(if $(MAX_USD),--max-usd $(MAX_USD),)
 
 llm:
-	uv run --group llm $(UV_ENV) python -m tinyrouter.llm_run $(if $(MAX_USD),--max-usd $(MAX_USD),)
+	uv run --group llm $(UV_ENV) python -m tinyrouter.llm_run $(if $(MAX_USD),--max-usd $(MAX_USD),) $(ROOT_ARGS)
 
 # results/llm/haiku-8way.jsonl has every row once and matches its SHA-256 in
 # results/llm-manifest.json and results/llm/haiku-8way.json.
 verify-llm:
-	uv run python -m tinyrouter.llm_run --verify
+	uv run python -m tinyrouter.llm_run --verify $(ROOT_ARGS)
 
 # RQ2 to RQ4 from the stored logits and Haiku predictions (docs/PLAN.md sections 3
 # and 4, AC3, AC4, AC6): no training, no API calls. Needs the archives in
@@ -140,7 +150,7 @@ verify-llm:
 # Done means the whole last line `completed analysis (75/75 archives, 8600/8600 llm
 # rows, 25 groups)`.
 analysis:
-	uv run python -m tinyrouter.analysis_run --quiet
+	uv run python -m tinyrouter.analysis_run --quiet $(ROOT_ARGS)
 
 # AC5 latency. bench-cpu: both encoders on CPU, batch 1, validation rows
 # 0-499, 4 threads, the pretrained backbone with a 151-way head (latency
@@ -149,25 +159,46 @@ analysis:
 # llm-latency: Haiku's per-call latency from results/llm/haiku-8way.jsonl
 # (Release; check it with verify-llm); writes results/efficiency/haiku_latency.json.
 bench-cpu:
-	uv run $(UV_ENV) python -m tinyrouter.latency cpu
+	uv run $(UV_ENV) python -m tinyrouter.latency cpu $(ROOT_ARGS)
 
 llm-latency:
-	uv run python -m tinyrouter.latency haiku
+	uv run python -m tinyrouter.latency haiku $(ROOT_ARGS)
 
 # RQ5 from committed JSON only: measured numbers and assumed prices kept
 # apart, break-even per scenario; writes results/cost/cost.json.
 cost:
-	uv run python -m tinyrouter.cost
+	uv run python -m tinyrouter.cost $(ROOT_ARGS)
 
 # README figures from results/analysis/*.json; writes results/figures/*.png.
 figures:
-	uv run --group figures python -m tinyrouter.figures
+	uv run --group figures python -m tinyrouter.figures $(ROOT_ARGS)
 
 # results/report.md and the README block between the BEGIN/END GENERATED
 # markers, from committed JSON. tests/test_report.py fails when either is stale.
 # Order after new results: analysis, bench-cpu, llm-latency, cost, figures, report.
 report:
-	uv run python -m tinyrouter.report
+	uv run python -m tinyrouter.report $(if $(RESULTS_ROOT),--results-dir $(RESULTS_ROOT),) $(if $(README_OUT),--readme-out $(README_OUT),)
+
+# AC1a (docs/PLAN.md section 5): download the three Releases into results/,
+# check every file against the committed manifests, rebuild analysis, Haiku
+# latency, cost, figures and report offline, and require results/ and
+# README.md to be byte-identical to HEAD. No training, no API call, minutes.
+# CPU latency is not rerun (machine-dependent); the committed file is used.
+# Done means the last line `completed reproduce-artifacts: results/ and
+# README.md byte-identical to HEAD`.
+reproduce-artifacts: setup
+	uv run python -m tinyrouter.reproduce artifacts
+
+# AC1b (docs/PLAN.md section 5.1): the whole study again, about 6 to 7 hours
+# on an Apple M4, Haiku about US$3 under its own US$5 reproduction-validation
+# cap. Run it on a clean clone at a merged commit after `make setup`; it
+# stops before anything else unless the tree is clean, HEAD is on
+# origin/main, uv.lock is in sync, ANTHROPIC_API_KEY is set and 8.8 GiB are
+# free. Everything goes under reproduction/<id>/ (id = HEAD[:12] unless
+# REPRO_ID is set); results/ and README.md are never written. Resumes.
+# Verdict and differences: reproduction/<id>/comparison.{json,md}.
+reproduce:
+	uv run $(UV_ENV) python -m tinyrouter.reproduce full $(if $(REPRO_ID),--id $(REPRO_ID),)
 
 # Removes every trained model. Disk is tight (see docs/PLAN.md section 6).
 clean-checkpoints:

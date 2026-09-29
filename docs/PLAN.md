@@ -92,7 +92,8 @@ TinyRouter 問三件事：**小模型要多少標註資料才夠？它知不知�
 
 | # | 條件 | 怎麼驗 |
 |---|---|---|
-| AC1 | 乾淨 clone 後 `make setup && make reproduce` 跑完整流程（下載資料含 checksum → 訓練 → 評估 → 產表） | 在新目錄實跑一次 |
+| AC1a | 從 Release artifacts（`ac2-bert-logits`、`curves-logits`、`haiku-predictions`）下載並驗證 SHA-256，離線重建分析、成本、圖、報告與 README。快速、零成本的日常驗證層，**不取代 AC1b** | `make reproduce-artifacts`：重建後 `results/` 與 `README.md` 與 commit 逐位元組相同；CI 每週與手動觸發 |
+| AC1b | （原 AC1，**定義不變**）乾淨 clone 後 `make setup && make reproduce` 跑完整流程（下載資料含 checksum → 訓練 → 評估 → 產表） | 在新目錄實跑一次；通過標準見 §5.1 |
 | AC2 | **BERT 流程正確性檢查**：`bert-base-uncased` 在全量資料（k=100、OOS 250）訓練 151 類，150 類 in-scope 準確率在 3 seeds 下都 ≥ 95.7%。**這是從原論文 96.7% 推出的工程驗收門檻，不宣稱精確重現原論文**（實作、超參數、tokenizer、評估程式都可能與原論文不同）。第一次沒過先用 validation 調參，不下結論。BERT 是基準，不是主要結果 | `results/` JSON + report-check |
 | AC3 | 每一次訓練都把 val 與 test 的**逐筆 logits** 存檔（含 split、seed、k、模型 revision），之後所有 RQ2–RQ5 分析只讀存檔，不重跑模型 | 測試：分析函式只接受存檔格式 |
 | AC4 | **test 不參與任何調整**：T、門檻、聚合方式只由 validation 決定；有測試守住 | pytest（已有 `LeakageError`） |
@@ -105,6 +106,30 @@ TinyRouter 問三件事：**小模型要多少標註資料才夠？它知不知�
 | AC11 | QLoRA：至少 1 次全量，與 LoRA 同超參數，報峰值記憶體與準確率差；執行環境（MPS 或 Kaggle CUDA）與相依版本寫進結果檔 | results JSON；Kaggle 路徑附可重跑的腳本 |
 | AC12 | ONNX int8（主模型 ModernBERT；匯出不支援時改 BERT 並寫明）：8 類準確率相對 PyTorch 下降 ≤ 0.5pp；報 CPU batch 1 的 p50/p95 延遲、模型大小，並記錄硬體型號 | `make bench`，結果含硬體資訊 |
 | AC13 | 服務：`make serve` 起 FastAPI；Docker image 在 CI 建置並用極小模型打 `/healthz` 與一筆 `/route`；報本機壓測的 QPS 與 p95；Haiku fallback 預設關閉，沒有 API key 也能跑 | CI job + 壓測結果檔 |
+
+
+### 5.1 決策紀錄：AC1 拆成 AC1a 與 AC1b（Drew，2026-09-29）
+
+- **AC1 維持原定義，改稱 AC1b**，不弱化：乾淨 clone 後 `make setup && make reproduce` 跑完整流程（下載資料含 checksum、訓練、評估、產表），必須在乾淨 clone 實跑一次才算達成。
+- **新增 AC1a**：從 Release artifacts 驗證 SHA-256 並離線重建分析、成本、圖、報告與 README，作為快速、零成本的日常驗證層；**不取代 AC1b**。
+- AC1b 成功前，狀態只能寫成「RQ1 到 RQ5 完成；Tier 1 驗收未完成」。
+
+**AC1b 通過標準（凍結，實跑前寫定，之後不改）：**
+
+1. 乾淨 clone 固定在已合併進 `main` 的 commit，使用 lockfile（`uv sync --locked`）、configs 裡的資料與模型 revision，以及 commit 裡的 Release artifact manifest（`results/logits-manifest.json`、`results/llm-manifest.json`）。
+2. 全流程成功完成：每一步的 completion 行（整行比對）、所有 SHA-256 檢查、analysis 與 report 的生成檢查都通過。
+3. AC2 重跑仍要求每個 seed 的 150 類 in-scope test 準確率 ≥ 95.7%。
+4. Haiku 完成 8,600/8,600 筆，journal、identity 與 cost 驗證通過；與原 run 的預測不一致筆數（逐列比對 split 與 index）、花費、parser fail 數都要報出，但不要求完全相同。
+5. 主要數字與原始結果的差異自動列成 comparison artifact（`reproduction/<id>/comparison.json` 與 `.md`）；偏離原始 mean ± std 的標記 `REVIEW REQUIRED`，需要解釋，但**不得調參重跑**。
+6. **只有完整流程或 AC2 失敗時，AC1b 才直接 FAIL。** 其餘偏離只標 `REVIEW REQUIRED`。
+
+**實跑前補充（2026-09-29，PR #19 審查後、AC1b 第一次實跑前寫定）**：以下是比較範圍與續跑條件的釐清，不是放寬標準，第 1 到 6 條不變。
+
+- 判定範圍（偏離原始 mean ± std 標 `REVIEW REQUIRED`）固定為：README 首屏數字；README router 表（LLM-only，以及 ModernBERT k=10 與 k=100 的 small-only、hybrid 目標 2% 與 5%、oracle，各報 8 類準確率、OOS recall、高信心 OOS 誤派、LLM 呼叫率）；學習曲線（兩個 encoder、每個 k 的 8 類準確率與 OOS recall）；`ablation_comparison`（OOS 250 對 0 的 AUROC、AUPRC 與 router 行為）；所有門檻診斷統計。
+- **只列不判**：延遲（`results/efficiency/*`）、k=100 的訓練時間與峰值記憶體、成本模型（`results/cost/cost.json`）隨機器變動。comparison 列出原始值、重跑值與差異，狀態固定為 `LISTED, NOT JUDGED`，不計入 `REVIEW REQUIRED`，也不影響判定。
+- 續跑只限同一身分：每一步記錄 HEAD、`uv.lock` 與 `configs/` 的 SHA-256、Python、torch 與 transformers 版本；同一個 reproduction 目錄若由不同身分開始，拒絕續跑，必須換新 id，所以一份 comparison 不會混到兩個 commit 的輸出（第 1 條的落實方式）。
+
+**預算規則**：原始 AC6 實驗的 Haiku 花費固定是 US$3.19（完整 run US$3.18 加 smoke），這個數字不再變動。AC1b 的 Haiku 是另一次、明確標記為 reproduction-validation 的執行，有獨立的 US$5 上限，花費寫在 reproduction 目錄自己的紀錄裡；兩者不得混稱為原始實驗成本，也不相加。
 
 ## 6. 風險
 

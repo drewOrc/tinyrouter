@@ -28,7 +28,7 @@ import argparse
 import json
 from pathlib import Path
 
-from tinyrouter.config import RunConfig, load_config
+from tinyrouter.config import RunConfig, add_location_arguments, load_config
 from tinyrouter.evaluate import RunPaths
 from tinyrouter.runs import (
     EvaluateFn,
@@ -167,8 +167,12 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="configs/bert-base.yaml")
     parser.add_argument("--force", action="store_true", help="clear and rerun every seed")
+    add_location_arguments(parser)
     args = parser.parse_args(argv)
-    result = run_ac2(load_config(args.config), default_train, default_evaluate, args.force)
+    config = load_config(
+        args.config, results_root=args.results_root, checkpoint_root=args.checkpoint_root
+    )
+    result = run_ac2(config, default_train, default_evaluate, args.force)
     print("seed  val in-scope  val OOS recall  test in-scope  verdict (test only)")
     for seed, entry in result["seeds"].items():
         val, test = entry["validation"], entry["test"]
