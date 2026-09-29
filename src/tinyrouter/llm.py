@@ -1,15 +1,28 @@
 """Claude Haiku zero-shot router: the LLM baseline and cascade fallback.
 
 Prompt and model carried over from cost-aware-hybrid-router
-(src/routers/llm_router.py) so the two projects score the same LLM. Nothing
-in this skeleton calls the API; ``classify`` needs the ``llm`` dependency
-group and ANTHROPIC_API_KEY, and the unit tests exercise it with a fake
-client only.
+(src/routers/llm_router.py) so the two projects score the same LLM: the
+system prompt is byte-identical (tests/test_llm.py pins its SHA-256), the
+query is sent verbatim as the only user message, temperature 0,
+max_tokens 20. The ``anthropic`` package (``llm`` dependency group) is
+imported only when a client is built or an API error is classified.
+
+Retries are done here, not by the SDK (the client is built with
+``max_retries=0``), so the attempt count and the delays are recorded and
+testable. 429, 5xx (529 overloaded included), 408, 409 and connection
+errors or timeouts are retried with exponential backoff, honouring
+``retry-after``; anything else (400, 401, 403, 404, ...) fails at once.
 """
 
 from __future__ import annotations
 
+import hashlib
+import inspect
+import json
+import os
+import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -17,7 +30,28 @@ from tinyrouter.labels import AGENTS, OOS
 
 MODEL = "claude-haiku-4-5-20251001"
 MAX_TOKENS = 20
+TEMPERATURE = 0
 MAX_ATTEMPTS = 5
+MAX_BACKOFF_S = 60.0
+RETRYABLE_STATUS = frozenset({408, 409, 429})
+KEY_ENV = "ANTHROPIC_API_KEY"
+OOS_WORD = re.compile(r"\boos\b")
+
+# USD per million tokens for Claude Haiku 4.5, from the claude-api skill's
+# "Current Models" table (cached 2026-06-24; first-party API rates), which
+# points to https://platform.claude.com/docs/en/about-claude/pricing.md.
+# Cache multipliers (write 1.25x, read 0.1x of input) are from the same
+# skill; this prompt is not cached, so those two should stay at zero.
+PRICE_USD_PER_MTOK: dict[str, float] = {
+    "input": 1.00,
+    "output": 5.00,
+    "cache_write": 1.25,
+    "cache_read": 0.10,
+}
+PRICING_SOURCE = (
+    "claude-api skill, Current Models table (cached 2026-06-24): Claude Haiku 4.5 "
+    "$1.00 input / $5.00 output per MTok; https://platform.claude.com/docs/en/about-claude/pricing.md"
+)
 
 AGENT_DESCRIPTIONS: dict[str, str] = {
     "finance_agent": "Banking, credit cards, accounts, bills, taxes, insurance, rewards, "
@@ -49,6 +83,20 @@ SYSTEM_PROMPT = (
 )
 
 
+class MissingKeyError(RuntimeError):
+    """ANTHROPIC_API_KEY is not set."""
+
+
+class LLMCallError(RuntimeError):
+    """A call failed for good: a non-retryable error, or retries used up."""
+
+    def __init__(self, detail: str, *, attempts: int, retryable: bool) -> None:
+        super().__init__(detail)
+        self.detail = detail
+        self.attempts = attempts
+        self.retryable = retryable
+
+
 @dataclass(frozen=True)
 class LLMPrediction:
     agent: str
@@ -57,51 +105,217 @@ class LLMPrediction:
     input_tokens: int
     output_tokens: int
     latency_ms: int
+    cache_creation_input_tokens: int = 0
+    cache_read_input_tokens: int = 0
+    request_id: str | None = None
+    stop_reason: str | None = None
+    attempts: int = 1
+
+    @property
+    def cost_usd(self) -> float:
+        return cost_usd(
+            self.input_tokens,
+            self.output_tokens,
+            self.cache_creation_input_tokens,
+            self.cache_read_input_tokens,
+        )
+
+
+def cost_usd(
+    input_tokens: int, output_tokens: int, cache_write: int = 0, cache_read: int = 0
+) -> float:
+    """Dollar cost of one call's usage at ``PRICE_USD_PER_MTOK``."""
+    p = PRICE_USD_PER_MTOK
+    total = (
+        input_tokens * p["input"]
+        + output_tokens * p["output"]
+        + cache_write * p["cache_write"]
+        + cache_read * p["cache_read"]
+    )
+    return total / 1_000_000
+
+
+def request_params(query: str) -> dict[str, Any]:
+    """The exact Messages API arguments for one query; the single place they are built."""
+    return {
+        "model": MODEL,
+        "max_tokens": MAX_TOKENS,
+        "temperature": TEMPERATURE,
+        "system": SYSTEM_PROMPT,
+        "messages": [{"role": "user", "content": query}],
+    }
+
+
+def identity() -> dict[str, object]:
+    """Everything that decides what the model is asked; a change invalidates stored replies."""
+    return {
+        "model": MODEL,
+        "max_tokens": MAX_TOKENS,
+        "temperature": TEMPERATURE,
+        "system_prompt_sha256": hashlib.sha256(SYSTEM_PROMPT.encode("utf-8")).hexdigest(),
+        "user_content": "query text verbatim, one user message",
+    }
+
+
+def identity_sha256() -> str:
+    canonical = json.dumps(identity(), sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def parse_agent(raw_text: str) -> tuple[str, bool]:
-    """Map the model's reply to an agent; unparseable replies become oos and are flagged."""
+    """Map the model's reply to an agent; unparseable replies become oos and are flagged.
+
+    A reply that names exactly one label (an agent name anywhere, or ``oos``
+    as a word) gets that label. A reply naming two or more, such as
+    ``"oos (not travel_agent)"``, is ambiguous and becomes oos with the
+    flag: taking the agent there would route a query the model called out
+    of scope, the silent misroute RQ2 counts as the worst error.
+    """
     text = raw_text.strip().strip("\"'`.").lower()
     if text in AGENTS:
         return text, True
     hits = [agent for agent in AGENTS if agent != OOS and agent in text]
+    if OOS_WORD.search(text):
+        hits.append(OOS)
     if len(hits) == 1:
         return hits[0], True
     return OOS, False
 
 
-def classify(query: str, client: Any, sleep: Any = time.sleep) -> LLMPrediction:
-    """One zero-shot call with exponential backoff on API errors."""
-    for attempt in range(MAX_ATTEMPTS):
+def parser_sha256() -> str:
+    """SHA-256 of ``parse_agent``'s source; stored replies are re-parsed with the current one."""
+    source = inspect.getsource(parse_agent) + OOS_WORD.pattern
+    return hashlib.sha256(source.encode("utf-8")).hexdigest()
+
+
+def redact(text: str) -> str:
+    """``text`` with the API key's value, if set and present, replaced."""
+    key = os.environ.get(KEY_ENV, "").strip()
+    if len(key) >= 8:
+        text = text.replace(key, "[redacted]")
+    return text
+
+
+def describe_error(exc: BaseException) -> str:
+    """Class, status, request id and message of an API error, with the key redacted."""
+    parts = [type(exc).__name__]
+    for attr in ("status_code", "request_id"):
+        value = getattr(exc, attr, None)
+        if value is not None:
+            parts.append(f"{attr}={value}")
+    return redact(f"{' '.join(parts)}: {exc}")[:500]
+
+
+def is_retryable(exc: BaseException) -> bool:
+    """Rate limits, server errors, 408/409 and network failures; see the module docstring."""
+    import anthropic
+
+    if isinstance(exc, anthropic.APIConnectionError):
+        return True
+    if isinstance(exc, anthropic.APIStatusError):
+        return exc.status_code in RETRYABLE_STATUS or exc.status_code >= 500
+    return False
+
+
+def retry_delay(exc: BaseException, attempt: int) -> float:
+    """Seconds to wait after failed attempt ``attempt`` (1-based): 1, 2, 4, ... or retry-after."""
+    delay = float(2 ** (attempt - 1))
+    response = getattr(exc, "response", None)
+    header = getattr(response, "headers", {}).get("retry-after") if response is not None else None
+    try:
+        delay = max(delay, float(header)) if header is not None else delay
+    except ValueError:
+        pass
+    return min(delay, MAX_BACKOFF_S)
+
+
+def reply_text(response: Any) -> str:
+    """Concatenated text blocks; an empty reply (no text block) is the empty string."""
+    return "".join(
+        block.text for block in response.content if getattr(block, "type", "text") == "text"
+    )
+
+
+def with_retries(
+    call: Callable[[], Any],
+    sleep: Callable[[float], None] = time.sleep,
+    retryable: Callable[[BaseException], bool] = is_retryable,
+) -> tuple[Any, int, int]:
+    """``call()`` retried per the module docstring: (result, attempts, latency of the last, ms).
+
+    Gives up with LLMCallError, whose message is ``describe_error`` (key
+    redacted) and which is not chained to the SDK exception.
+    """
+    for attempt in range(1, MAX_ATTEMPTS + 1):
         started = time.monotonic()
         try:
-            response = client.messages.create(
-                model=MODEL,
-                max_tokens=MAX_TOKENS,
-                temperature=0,
-                system=SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": query}],
-            )
-        except Exception as exc:  # the SDK raises several error types; all are retryable here
-            if attempt == MAX_ATTEMPTS - 1:
-                raise RuntimeError(f"LLM call failed after {MAX_ATTEMPTS} attempts") from exc
-            sleep(2**attempt)
+            result = call()
+        except Exception as exc:  # classified below; anything unknown is not retried
+            can_retry = retryable(exc)
+            if not can_retry or attempt == MAX_ATTEMPTS:
+                raise LLMCallError(
+                    describe_error(exc), attempts=attempt, retryable=can_retry
+                ) from None
+            sleep(retry_delay(exc, attempt))
             continue
-        raw_text = response.content[0].text
-        agent, parsed = parse_agent(raw_text)
-        return LLMPrediction(
-            agent=agent,
-            raw_text=raw_text,
-            parsed=parsed,
-            input_tokens=response.usage.input_tokens,
-            output_tokens=response.usage.output_tokens,
-            latency_ms=round((time.monotonic() - started) * 1000),
-        )
+        return result, attempt, round((time.monotonic() - started) * 1000)
     raise AssertionError("unreachable")
 
 
+def classify(
+    query: str,
+    client: Any,
+    sleep: Callable[[float], None] = time.sleep,
+    retryable: Callable[[BaseException], bool] = is_retryable,
+) -> LLMPrediction:
+    """One zero-shot call, retried per the module docstring; LLMCallError when it gives up."""
+    params = request_params(query)
+    response, attempts, latency_ms = with_retries(
+        lambda: client.messages.create(**params), sleep, retryable
+    )
+    return prediction_from(response, latency_ms, attempts)
+
+
+def prediction_from(response: Any, latency_ms: int, attempts: int) -> LLMPrediction:
+    raw_text = reply_text(response)
+    agent, parsed = parse_agent(raw_text)
+    usage = response.usage
+    return LLMPrediction(
+        agent=agent,
+        raw_text=raw_text,
+        parsed=parsed,
+        input_tokens=int(usage.input_tokens),
+        output_tokens=int(usage.output_tokens),
+        latency_ms=latency_ms,
+        cache_creation_input_tokens=int(getattr(usage, "cache_creation_input_tokens", 0) or 0),
+        cache_read_input_tokens=int(getattr(usage, "cache_read_input_tokens", 0) or 0),
+        request_id=getattr(response, "_request_id", None),
+        stop_reason=getattr(response, "stop_reason", None),
+        attempts=attempts,
+    )
+
+
+def prompt_base_tokens(client: Any, sleep: Callable[[float], None] = time.sleep) -> int:
+    """Input tokens of the system prompt plus a one-character query (token counting endpoint).
+
+    Retried and redacted like ``classify``; LLMCallError when it gives up.
+    """
+    counted, _, _ = with_retries(
+        lambda: client.messages.count_tokens(
+            model=MODEL, system=SYSTEM_PROMPT, messages=[{"role": "user", "content": "x"}]
+        ),
+        sleep,
+    )
+    return int(counted.input_tokens)
+
+
 def make_client() -> Any:
-    """Anthropic client from ANTHROPIC_API_KEY; requires `uv sync --group llm`."""
+    """Anthropic client from ANTHROPIC_API_KEY with SDK retries off; needs the ``llm`` group."""
+    if not os.environ.get(KEY_ENV, "").strip():
+        raise MissingKeyError(
+            f"{KEY_ENV} is not set. Put it in a .env file at the repository root "
+            "(gitignored; the Makefile passes it to uv) or export it, then rerun."
+        )
     import anthropic
 
-    return anthropic.Anthropic()
+    return anthropic.Anthropic(max_retries=0)

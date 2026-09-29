@@ -34,6 +34,9 @@ Other targets:
 | `make baselines` | majority-class and TF-IDF centroid baselines on every (k, seed) sample, archived like an encoder run |
 | `make curve MODEL=bert\|modernbert` | baselines, then 6 values of k x 3 seeds with the lr and S_min from `configs/curve.yaml`; writes `results/curves/<model>.json`; keeps no weights |
 | `make oos-ablation` | ModernBERT, k=100, no OOS training rows, 3 seeds; writes `results/curves/oos-ablation.json` |
+| `make llm-smoke` | Claude Haiku on validation rows 0-19 (needs `ANTHROPIC_API_KEY`); writes `results/llm-smoke/`, prints tokens, cost and the extrapolated cost of all 8,600 rows |
+| `make llm` | Claude Haiku on validation 3,100 + test 5,500 in the 8-way space, one stored record per query; resumes; stops before passing `MAX_USD` (default 5); writes `results/llm/haiku-8way.{jsonl,json}` and `results/llm-manifest.json` |
+| `make verify-llm` | check `results/llm/haiku-8way.jsonl`: every row once, SHA-256 equal in the file, the summary and the manifest |
 | `make verify-logits` | check every archive in `results/logits/` against `results/logits-manifest.json` |
 | `make report` | build `results/summary.md` from `results/runs/*.json` |
 | `make clean-checkpoints` | delete all trained weights |
@@ -83,7 +86,8 @@ src/tinyrouter/
   curves.py         learning curves and the OOS ablation (reuses AC2 at k=100 when equivalent)
   baselines.py      majority-class and TF-IDF centroid baselines per curve point
   ac2.py            AC2 run over three seeds and PASS/FAIL verdict
-  llm.py            Claude Haiku zero-shot router (baseline and fallback; not run yet)
+  llm.py            Claude Haiku zero-shot router: prompt, retries, pricing (baseline and fallback)
+  llm_run.py        Haiku over validation + test: journal, resume, cost cap, completion check
   report.py         results/*.json -> results/summary.md
   smoke.py          end-to-end wiring check
 tests/              pytest; `network` marker for Hub downloads

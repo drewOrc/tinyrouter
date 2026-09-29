@@ -32,6 +32,12 @@ checkpoints/
 # they are attached to a GitHub Release and checked with `make verify-logits`.
 results/summary.md
 results/logits/
+# Haiku replies: the journal and the predictions file (about 3 MB) go to the
+# GitHub Release like the logits; results/llm-manifest.json and
+# results/llm/haiku-8way.json are committed. The smoke run is scratch.
+results/llm/*.jsonl
+results/llm/*.lock
+results/llm-smoke/
 *.npz
 *.tmp
 
