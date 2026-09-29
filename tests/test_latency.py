@@ -94,3 +94,26 @@ def test_committed_cpu_latency_records_method_hardware_and_matching_parameters()
         assert model["parameters_match_trained_run"] is True
         assert model["parameters_total"] == trained_parameter_count(latency.Path("results"), name)
         assert model["end_to_end"]["n"] == 500
+
+
+def test_timed_setup_must_match_the_trained_run_versions_and_revision():
+    run = latency.trained_run(latency.Path("results"), "modernbert")
+    installed = {
+        "torch": run["environment"]["torch"],
+        "transformers": run["environment"]["transformers"],
+    }
+    same = latency.check_same_setup("modernbert", run, installed)
+    assert same["model_revision"] == run["config"]["model_revision"]
+    with pytest.raises(ArchitectureMismatchError, match="transformers"):
+        latency.check_same_setup("modernbert", run, {**installed, "transformers": "0.0.1"})
+    other = {**run, "config": {**run["config"], "model_revision": "0" * 40}}
+    with pytest.raises(ArchitectureMismatchError, match="model_revision"):
+        latency.check_same_setup("modernbert", other, installed)
+
+
+def test_committed_benchmark_records_the_attention_implementation_and_the_loader():
+    body = json.loads(latency.Path("results/efficiency/cpu_latency.json").read_text())
+    for model in body["models"].values():
+        assert model["attention_implementation"]
+        assert "train.load_model_and_tokenizer" in model["loader"]
+        assert model["matches_trained_run"]["transformers"] == body["versions"]["transformers"]

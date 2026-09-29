@@ -43,9 +43,12 @@ FIGURES = (
     (
         "routers.png",
         "Router comparison",
-        "Test 8-way accuracy and share of queries sent to Haiku for LLM-only, small-only, the "
-        "hybrid (threshold chosen on validation for 2% selective risk) and the oracle, which "
-        "defers exactly the small model's errors. Error bars are std over three seeds.",
+        "Test 8-way accuracy (a) and share of queries sent to Haiku (b) for LLM-only, "
+        "small-only, the hybrid (threshold chosen on validation for 2% selective risk) and the "
+        "oracle, which defers exactly the small model's errors. Panel (a) uses points, not "
+        "bars, and its axis starts at 75%, so vertical distance is the difference in accuracy "
+        "points and nothing is read from bar length; panel (b) starts at 0. Error bars are std "
+        "over three seeds.",
     ),
     (
         "threshold_transfer.png",
@@ -131,17 +134,19 @@ def headline(r: Results) -> list[str]:
         f"With 10 examples per intent, deferring low-confidence queries to Haiku lifts 8-way "
         f"accuracy from {pm(small10['accuracy_8'])}% (small model alone) to "
         f"{pm(hybrid10['accuracy_8'])}%, with Haiku called on "
-        f"{pm(hybrid10['llm_call_rate'])}% of queries.",
+        f"{pm(hybrid10['llm_call_rate'])}% of queries "
+        f"({call_counts(hybrid10['llm_call_rate'], r.test_n)} for seeds 42, 43, 44).",
     )
     missed = (
         f"The deferral threshold chosen on validation for {target}% selective risk gives "
         f"{pm(diag['test']['selective_risk'], 2)}% selective risk on test (ModernBERT k=100; "
         f"validation: {pm(diag['validation']['selective_risk'], 2)}%).",
         f"Validation is {pct(diag['validation_oos_share']['mean'])}% OOS and test "
-        f"{pct(diag['test_oos_share']['mean'])}%. Under this reweighting diagnostic, the OOS "
-        f"prior shift contributes about "
-        f"{round(100 * diag['share_of_gap_explained_by_oos_share']['mean'])}% of the observed "
-        f"risk gap; the remaining difference is consistent with a higher conditional error rate "
+        f"{pct(diag['test_oos_share']['mean'])}%. In a reweighting diagnostic, weighting test to "
+        f"the validation OOS share closes about "
+        f"{round(100 * diag['share_of_gap_explained_by_oos_share']['mean'])}% of the gap between "
+        f"validation and test risk; the remaining difference is consistent with a higher "
+        f"conditional error rate "
         f"on test OOS queries that the model keeps ({pm(diag['test']['kept_oos_error_rate'])}% "
         f"vs {pm(diag['validation']['kept_oos_error_rate'])}% on validation).",
     )
@@ -158,15 +163,20 @@ def headline(r: Results) -> list[str]:
     ]
 
 
+def call_counts(rate: dict, n: int) -> str:
+    """Per-seed Haiku calls as absolute numbers, e.g. ``170, 9, 31 of 5,500``."""
+    return ", ".join(f"{round(v * n):,}" for v in rate["values"]) + f" of {n:,}"
+
+
 def hybrid_reading(r: Results) -> list[str]:
     main = r.group("modernbert/k100")["final"]
     hybrid = r.hybrid("modernbert/k100")["test"]
-    calls = ", ".join(str(round(v * r.test_n)) for v in hybrid["llm_call_rate"]["values"])
+    calls = call_counts(hybrid["llm_call_rate"], r.test_n)
     return [
         "**How to read the hybrid.** With few labels the fallback is worth the most: at k=10 it "
         "is the best evidence for the cascade (numbers above). With enough labels the local model "
         f"covers almost all traffic: at k=100 the hybrid sends {pm(hybrid['llm_call_rate'])}% of "
-        f"test queries to Haiku ({calls} of {r.test_n:,} for seeds 42, 43, 44) and moves 8-way "
+        f"test queries to Haiku ({calls} for seeds 42, 43, 44) and moves 8-way "
         f"accuracy from {pm(main['small_only']['accuracy_8'])}% to {pm(hybrid['accuracy_8'])}%. "
         "There the fallback is a small safety and diagnostic lever, not the main source of "
         "accuracy.",
@@ -269,12 +279,17 @@ def efficiency_table(r: Results) -> list[str]:
         f"{cpu['method']['queries']}; tokenization + forward + argmax. It is timed with the "
         "same architecture, not the fine-tuned weights (deleted to save disk): the pinned "
         "pretrained backbone, a 151-way head, the same tokenizer and max_length. Latency "
-        "depends on shapes, not weight values, and the parameter count equals the trained "
-        f"run's. Haiku: client-side time per call on the {lat['n']:,} test queries, including "
-        "the network round trip, with up to 6 calls in flight. Peak memory samples "
+        "depends on shapes, not weight values. The timed model is built by the training loader "
+        "with the model revision, max_length and torch and transformers versions of the trained "
+        "run, and its parameter count equals the trained run's."
+        f" Haiku: client-side time per call on the {lat['n']:,} test queries, including "
+        "the network round trip, with up to 6 calls in flight; it is not a like-for-like "
+        "comparison with the encoders (different machine, a network in between). Peak memory "
+        "samples "
         "`torch.mps.driver_allocated_memory()` after each backward pass and optimizer step "
-        "(includes the allocator cache). Accuracy, OOS recall and ECE use the 8-way aggregation "
-        "chosen on validation. Values are mean ± std over seeds 42, 43, 44.",
+        "(includes the allocator cache). Accuracy and OOS recall use the 8-way aggregation "
+        "chosen on validation; ECE is over the 151 intents. Values are mean ± std over seeds "
+        "42, 43, 44.",
     ]
 
 

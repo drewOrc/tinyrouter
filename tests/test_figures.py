@@ -40,3 +40,16 @@ def test_threshold_transfer_drops_a_point_where_only_some_seeds_were_feasible():
     assert stat["n"] == 1
     for name, points in figures.transfer_series(summary, "bert").items():
         assert 1 not in [k for k, _, _ in points], name
+
+
+def test_router_accuracy_panel_uses_points_not_truncated_bars():
+    """A bar starting at 75% would turn 91.9 vs 92.1 into a visible length gap (review R3)."""
+    plt = figures.pyplot()
+    summary = figures.load(Path("results"), "analysis/summary.json")
+    fig = figures.routers(summary, plt)
+    accuracy, calls = fig.axes[:2]
+    assert len(accuracy.patches) == 0
+    assert "points" in accuracy.get_title()
+    assert len(calls.patches) > 0
+    assert calls.get_ylim()[0] == 0
+    plt.close(fig)

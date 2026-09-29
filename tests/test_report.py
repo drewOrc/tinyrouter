@@ -1,4 +1,5 @@
 import copy
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -72,8 +73,8 @@ def test_headline_numbers_and_wording(results):
     diag = results.group("modernbert/k100")["diagnostics"]["0.02"]
     assert f"{100 * diag['test']['selective_risk']['mean']:.2f}" in block
     share = round(100 * diag["share_of_gap_explained_by_oos_share"]["mean"])
-    assert f"contributes about {share}% of the observed risk gap" in block
-    assert "Under this reweighting diagnostic" in block
+    assert f"closes about {share}% of the gap between validation and test risk" in block
+    assert "In a reweighting diagnostic" in block
     for causal in ("caused", "causes", "because of the OOS"):
         assert causal not in block
     assert "not a risk guarantee for production" in block
@@ -131,3 +132,92 @@ def test_every_file_report_reads_is_tracked_in_git():
         "report.md",
     ):
         assert f"results/{name}" in tracked, name
+
+
+SUMMARY = json.loads((RESULTS / "analysis" / "summary.json").read_text(encoding="utf-8"))
+K100 = ("groups", "modernbert/k100", "result")
+K10 = ("groups", "modernbert/k10", "result")
+DIAG = (*K100, "diagnostics", "0.02")
+K10_HYBRID = (*K10, "final", "fallback", "0.02", "hybrid", "test")
+K100_HYBRID = (*K100, "final", "fallback", "0.02", "hybrid", "test")
+
+
+def at(path: tuple[str, ...]):
+    node = SUMMARY
+    for key in path:
+        node = node[key]
+    return node
+
+
+def one(path: tuple[str, ...], digits: int = 1) -> str:
+    """A fraction at ``path`` as a percentage, formatted independently of report.py."""
+    value = at(path)
+    return f"{100 * (value['mean'] if isinstance(value, dict) else value):.{digits}f}"
+
+
+def both(path: tuple[str, ...], digits: int = 1) -> str:
+    stat = at(path)
+    return f"{100 * stat['mean']:.{digits}f} ± {100 * stat['std']:.{digits}f}"
+
+
+def counts(path: tuple[str, ...]) -> str:
+    n = at(("llm_only_test", "n"))
+    return ", ".join(f"{round(v * n):,}" for v in at(path)["values"]) + f" of {n:,}"
+
+
+# Each first-screen number, the exact JSON field it must come from, and the text around it.
+# A number rendered from the wrong field (another router, another split) fails here even
+# after `make report` regenerates the README.
+FIRST_SCREEN = {
+    "k=100 small-only accuracy": lambda: (
+        f"routes {both((*K100, 'final', 'small_only', 'accuracy_8'))}% of test queries"
+    ),
+    "Haiku accuracy": lambda: (
+        f"(Claude Haiku 4.5 zero-shot: {one(('llm_only_test', 'accuracy_8'))}%)"
+    ),
+    "k=10 small-only accuracy": lambda: (
+        f"accuracy from {both((*K10, 'final', 'small_only', 'accuracy_8'))}% (small model alone)"
+    ),
+    "k=10 hybrid accuracy": lambda: f"to {both((*K10_HYBRID, 'accuracy_8'))}%, with Haiku called",
+    "k=10 hybrid call rate and counts": lambda: (
+        f"called on {both((*K10_HYBRID, 'llm_call_rate'))}% of queries "
+        f"({counts((*K10_HYBRID, 'llm_call_rate'))} for seeds 42, 43, 44)"
+    ),
+    "k=100 test selective risk": lambda: (
+        f"gives {both((*DIAG, 'test', 'selective_risk'), 2)}% selective risk on test"
+    ),
+    "k=100 validation selective risk": lambda: (
+        f"(ModernBERT k=100; validation: {both((*DIAG, 'validation', 'selective_risk'), 2)}%)"
+    ),
+    "OOS shares": lambda: (
+        f"Validation is {one((*DIAG, 'validation_oos_share'))}% OOS and test "
+        f"{one((*DIAG, 'test_oos_share'))}%."
+    ),
+    "share of gap": lambda: (
+        f"closes about {round(100 * at((*DIAG, 'share_of_gap_explained_by_oos_share'))['mean'])}%"
+        " of the gap"
+    ),
+    "kept OOS error rates": lambda: (
+        f"({both((*DIAG, 'test', 'kept_oos_error_rate'))}% vs "
+        f"{both((*DIAG, 'validation', 'kept_oos_error_rate'))}% on validation)"
+    ),
+    "k=100 hybrid call rate and counts": lambda: (
+        f"sends {both((*K100_HYBRID, 'llm_call_rate'))}% of test queries to Haiku "
+        f"({counts((*K100_HYBRID, 'llm_call_rate'))} for seeds 42, 43, 44)"
+    ),
+    "k=100 hybrid accuracy": lambda: (
+        f"from {both((*K100, 'final', 'small_only', 'accuracy_8'))}% to "
+        f"{both((*K100_HYBRID, 'accuracy_8'))}%. There the fallback"
+    ),
+}
+
+
+@pytest.mark.parametrize("name", sorted(FIRST_SCREEN))
+def test_each_first_screen_number_comes_from_its_own_json_field(name):
+    readme = Path("README.md").read_text(encoding="utf-8")
+    assert FIRST_SCREEN[name]() in generated_block(readme)
+
+
+def test_k10_hybrid_counts_are_the_reviewed_absolute_numbers():
+    assert counts((*K10_HYBRID, "llm_call_rate")) == "1,235, 1,157, 1,548 of 5,500"
+    assert counts((*K100_HYBRID, "llm_call_rate")) == "170, 9, 31 of 5,500"

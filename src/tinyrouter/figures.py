@@ -197,42 +197,84 @@ def router_stats(summary: dict, k: int) -> dict[str, tuple[float, float, float, 
     return out
 
 
+ROUTER_STYLE = (
+    (OKABE_ITO["grey"], "D", ""),
+    (OKABE_ITO["sky"], "s", "//"),
+    (OKABE_ITO["blue"], "o", ""),
+    (OKABE_ITO["orange"], "^", ".."),
+)
+ROUTER_OFFSET = 0.2
+
+
+def accuracy_dots(ax, stats: dict, names: list[str]) -> None:  # noqa: ANN001
+    """Panel (a): points with error bars, so the y range does not turn into bar lengths."""
+    for i, name in enumerate(names):
+        colour, marker, _ = ROUTER_STYLE[i]
+        xs = [j + (i - 1.5) * ROUTER_OFFSET for j in range(2)]
+        means = [stats[k][name][0] for k in (10, 100)]
+        errors = [stats[k][name][1] for k in (10, 100)]
+        ax.errorbar(
+            xs,
+            means,
+            yerr=errors,
+            fmt=marker,
+            color=colour,
+            mec="black",
+            mew=0.5,
+            ms=6,
+            capsize=2,
+            lw=1.0,
+            label=name,
+        )
+        for x, m in zip(xs, means, strict=True):
+            ax.annotate(
+                f"{m:.1f}",
+                (x, m),
+                xytext=(0, 6),
+                textcoords="offset points",
+                ha="center",
+                fontsize=6,
+            )
+    ax.set_ylabel("8-way accuracy on test (%)")
+    ax.set_ylim(75, 100)
+    ax.grid(axis="y", color=OKABE_ITO["grey"], alpha=0.3, lw=0.5)
+
+
+def call_bars(ax, stats: dict, names: list[str]) -> None:  # noqa: ANN001
+    """Panel (b): bars from 0, since the call rate is a share of all queries."""
+    for i, name in enumerate(names):
+        colour, _, hatch = ROUTER_STYLE[i]
+        xs = [j + (i - 1.5) * ROUTER_OFFSET for j in range(2)]
+        bars = ax.bar(
+            xs,
+            [stats[k][name][2] for k in (10, 100)],
+            ROUTER_OFFSET,
+            yerr=[stats[k][name][3] for k in (10, 100)],
+            capsize=2,
+            color=colour,
+            hatch=hatch,
+            edgecolor="black",
+            lw=0.5,
+            label=name,
+        )
+        ax.bar_label(bars, fmt="%.1f", fontsize=6, padding=1)
+    ax.set_ylabel("queries sent to Haiku (%)")
+    ax.set_ylim(0, 110)
+
+
 def routers(summary: dict, plt) -> object:  # noqa: ANN001
     fig, axes = plt.subplots(1, 2, figsize=(6.8, 3.0), layout="constrained")
     stats = {k: router_stats(summary, k) for k in (10, 100)}
     names = list(stats[10])
-    colours = [OKABE_ITO["grey"], OKABE_ITO["sky"], OKABE_ITO["blue"], OKABE_ITO["orange"]]
-    hatches = ["", "//", "", ".."]
-    width = 0.2
-    for ax, (column, ylabel) in zip(
-        axes, ((0, "8-way accuracy on test (%)"), (2, "queries sent to Haiku (%)")), strict=True
-    ):
-        for i, name in enumerate(names):
-            xs = [j + (i - 1.5) * width for j in range(2)]
-            heights = [stats[k][name][column] for k in (10, 100)]
-            errors = [stats[k][name][column + 1] for k in (10, 100)]
-            bars = ax.bar(
-                xs,
-                heights,
-                width,
-                yerr=errors,
-                capsize=2,
-                color=colours[i],
-                hatch=hatches[i],
-                edgecolor="black",
-                lw=0.5,
-                label=name,
-            )
-            ax.bar_label(bars, fmt="%.1f", fontsize=6, padding=1)
+    accuracy_dots(axes[0], stats, names)
+    call_bars(axes[1], stats, names)
+    for ax in axes:
         ax.set_xticks([0, 1], ["ModernBERT k=10", "ModernBERT k=100"])
-        ax.set_ylabel(ylabel)
-    axes[0].set_ylim(70, 100)
-    axes[1].set_ylim(0, 110)
-    axes[0].set_title("(a) accuracy")
+        ax.set_xlim(-0.5, 1.5)
+    axes[0].set_title("(a) accuracy (points; axis from 75%)")
     axes[1].set_title("(b) LLM call rate")
-    fig.legend(
-        *axes[0].get_legend_handles_labels(), loc="outside lower center", ncol=4, frameon=False
-    )
+    handles = axes[0].get_legend_handles_labels()
+    fig.legend(*handles, loc="outside lower center", ncol=4, frameon=False)
     return fig
 
 

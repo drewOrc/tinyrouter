@@ -110,29 +110,58 @@ def cpu_name() -> str:
     return platform.processor() or "unknown"
 
 
-def trained_parameter_count(results_root: Path, model: str) -> int:
-    """Parameter total recorded by the k=100 seed-42 run of ``model``'s curve."""
+def trained_run(results_root: Path, model: str) -> dict:
+    """The run JSON of the k=100 seed-42 point of ``model``'s curve."""
     index = json.loads((results_root / "curves" / f"{model}.json").read_text(encoding="utf-8"))
     point = next(p for p in index["points"] if p["k"] == 100 and p["seed"] == 42)
-    run = json.loads((results_root / "runs" / f"{point['run_name']}.json").read_text("utf-8"))
-    return int(run["training"]["parameters"]["total"])
+    return json.loads((results_root / "runs" / f"{point['run_name']}.json").read_text("utf-8"))
+
+
+def trained_parameter_count(results_root: Path, model: str) -> int:
+    """Parameter total recorded by the k=100 seed-42 run of ``model``'s curve."""
+    return int(trained_run(results_root, model)["training"]["parameters"]["total"])
+
+
+def check_same_setup(model: str, run: dict, installed: dict[str, str]) -> dict[str, str]:
+    """The trained run's model, revision and library versions must equal the timed setup's.
+
+    The run did not record the attention implementation. The timed model is
+    built by the same loader (``train.load_model_and_tokenizer``) with the
+    same transformers version, so transformers picks it the same way; the
+    benchmark records the one it got.
+    """
+    config = load_config(ENCODERS[model])
+    recorded = {
+        "model_name": run["config"]["model_name"],
+        "model_revision": run["config"]["model_revision"],
+        "max_length": str(run["config"]["max_length"]),
+        "torch": run["environment"]["torch"],
+        "transformers": run["environment"]["transformers"],
+    }
+    timed = {
+        "model_name": config.model_name,
+        "model_revision": config.model_revision,
+        "max_length": str(config.max_length),
+        **installed,
+    }
+    differ = sorted(k for k in recorded if recorded[k] != timed[k])
+    if differ:
+        raise ArchitectureMismatchError(
+            f"{model}: timed setup differs from the trained run in {differ}: "
+            f"{ {k: (recorded[k], timed[k]) for k in differ} }"
+        )
+    return recorded
 
 
 def load_timed_model(config: RunConfig) -> tuple[object, object]:
+    """The training loader's model on CPU; the pretrained backbone and a seeded 151-way head."""
     import torch
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-    labels = load_label_space()
+    from tinyrouter.train import load_model_and_tokenizer
+
     torch.manual_seed(HEAD_SEED)
-    tokenizer = AutoTokenizer.from_pretrained(config.model_name, revision=config.model_revision)
-    model = AutoModelForSequenceClassification.from_pretrained(
-        config.model_name,
-        revision=config.model_revision,
-        num_labels=labels.num_intents,
-        id2label=dict(enumerate(labels.intent_names)),
-        label2id={name: i for i, name in enumerate(labels.intent_names)},
-    )
-    return model.to("cpu").eval(), tokenizer
+    model, tokenizer = load_model_and_tokenizer(config, load_label_space())
+    return model.to("cpu").eval(), tokenizer  # type: ignore[attr-defined]
 
 
 def time_queries(
@@ -162,11 +191,16 @@ def benchmark_encoder(
     name: str, results_root: Path, texts: Sequence[str], threads: int
 ) -> dict[str, object]:
     import torch
+    import transformers
 
     config = load_config(ENCODERS[name])
+    run = trained_run(results_root, name)
+    same = check_same_setup(
+        name, run, {"torch": torch.__version__, "transformers": transformers.__version__}
+    )
     model, tokenizer = load_timed_model(config)
     total = sum(p.numel() for p in model.parameters())  # type: ignore[attr-defined]
-    trained = trained_parameter_count(results_root, name)
+    trained = int(run["training"]["parameters"]["total"])
     if total != trained:
         raise ArchitectureMismatchError(
             f"{name}: timed model has {total} parameters, the trained k=100 run {trained}"
@@ -181,6 +215,8 @@ def benchmark_encoder(
         "max_length": config.max_length,
         "parameters_total": total,
         "parameters_match_trained_run": True,
+        "matches_trained_run": same,
+        "loader": "tinyrouter.train.load_model_and_tokenizer (the training loader)",
         "attention_implementation": getattr(model.config, "_attn_implementation", None),  # type: ignore[attr-defined]
         "end_to_end": latency_summary(end_to_end),
         "forward": latency_summary(forward),

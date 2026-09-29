@@ -4,7 +4,7 @@
     "analysis/summary.json": "6d108f1876514e00a6312858fef47473a34e610bd9b04617ab71fae72a149f06",
     "analysis/haiku.json": "d91a1265d0f68fea2f3756a44c9d4d68ac337074982cfb738cd6330e45831acc",
     "llm/haiku-8way.json": "d2423251d948f730a50cadca163327edca1ea294d6f5bfe91c334a4e8facfa99",
-    "efficiency/cpu_latency.json": "39ba7ebf0bb4378977be5ab8d4e3d2ea98c290ab8162d0a191d8d9c01d08ff21",
+    "efficiency/cpu_latency.json": "894d7f1d3ec6bf3c5e63798342bf16a788f4c104bc7c3eb30b635ba7b8c304f9",
     "curves/bert.json": "35b46d514e6b47728501678dd6e029fb6a670e9b57d4514d6a2e73827aa987a5",
     "curves/modernbert.json": "515c153596bfb0115b39b2a6166999135014ef2ca68361a35764aa1866e9ffc4"
   },
@@ -188,14 +188,14 @@
       "hardware": "Apple M4",
       "end_to_end_ms": {
         "bert": {
-          "p50_ms": 15.634,
-          "p95_ms": 17.023,
-          "mean_ms": 15.616
+          "p50_ms": 15.501,
+          "p95_ms": 18.379,
+          "mean_ms": 15.652
         },
         "modernbert": {
-          "p50_ms": 20.179,
-          "p95_ms": 23.165,
-          "mean_ms": 19.878
+          "p50_ms": 20.864,
+          "p95_ms": 28.504,
+          "mean_ms": 21.543
         }
       }
     },
@@ -270,7 +270,7 @@
         "one_time_usd": 0.027774,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
+        "router_local_usd_per_query": 1.159e-06,
         "break_even_queries": 75.4,
         "break_even_queries_api_only": 75.2
       },
@@ -282,8 +282,8 @@
         "one_time_usd": 76.277774,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 207067.8,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 207089.2,
         "break_even_queries_api_only": 206439.6
       },
       {
@@ -294,8 +294,8 @@
         "one_time_usd": 305.027774,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 828045.1,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 828130.7,
         "break_even_queries_api_only": 825532.8
       },
       {
@@ -306,8 +306,8 @@
         "one_time_usd": 1525.027774,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 4139924.2,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 4140351.9,
         "break_even_queries_api_only": 4127363.4
       },
       {
@@ -318,7 +318,7 @@
         "one_time_usd": 0.055548,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
+        "router_local_usd_per_query": 1.159e-06,
         "break_even_queries": 150.8,
         "break_even_queries_api_only": 150.3
       },
@@ -330,8 +330,8 @@
         "one_time_usd": 76.305548,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 207143.2,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 207164.6,
         "break_even_queries_api_only": 206514.7
       },
       {
@@ -342,8 +342,8 @@
         "one_time_usd": 305.055548,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 828120.5,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 828206.1,
         "break_even_queries_api_only": 825608.0
       },
       {
@@ -354,8 +354,8 @@
         "one_time_usd": 1525.055548,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 4139999.6,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 4140427.3,
         "break_even_queries_api_only": 4127438.6
       },
       {
@@ -366,7 +366,7 @@
         "one_time_usd": 0.111095,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
+        "router_local_usd_per_query": 1.159e-06,
         "break_even_queries": 301.6,
         "break_even_queries_api_only": 300.7
       },
@@ -378,8 +378,8 @@
         "one_time_usd": 76.361095,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 207294.0,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 207315.4,
         "break_even_queries_api_only": 206665.1
       },
       {
@@ -390,8 +390,8 @@
         "one_time_usd": 305.111095,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 828271.3,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 828356.9,
         "break_even_queries_api_only": 825758.3
       },
       {
@@ -402,8 +402,8 @@
         "one_time_usd": 1525.111095,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 4140150.4,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 4140578.1,
         "break_even_queries_api_only": 4127588.9
       },
       {
@@ -414,8 +414,8 @@
         "one_time_usd": 0.027774,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 8.7936e-05,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 99.0,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 99.1,
         "break_even_queries_api_only": 98.6
       },
       {
@@ -426,8 +426,8 @@
         "one_time_usd": 76.277774,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 8.7936e-05,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 271998.1,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 272035.0,
         "break_even_queries_api_only": 270915.1
       },
       {
@@ -438,8 +438,8 @@
         "one_time_usd": 305.027774,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 8.7936e-05,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 1087695.3,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 1087842.9,
         "break_even_queries_api_only": 1083364.5
       },
       {
@@ -450,8 +450,8 @@
         "one_time_usd": 1525.027774,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 8.7936e-05,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 5438080.4,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 5438818.5,
         "break_even_queries_api_only": 5416427.9
       },
       {
@@ -462,7 +462,7 @@
         "one_time_usd": 0.055548,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 8.7936e-05,
-        "router_local_usd_per_query": 1.121e-06,
+        "router_local_usd_per_query": 1.159e-06,
         "break_even_queries": 198.1,
         "break_even_queries_api_only": 197.3
       },
@@ -474,8 +474,8 @@
         "one_time_usd": 76.305548,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 8.7936e-05,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 272097.1,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 272134.1,
         "break_even_queries_api_only": 271013.8
       },
       {
@@ -486,8 +486,8 @@
         "one_time_usd": 305.055548,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 8.7936e-05,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 1087794.3,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 1087942.0,
         "break_even_queries_api_only": 1083463.1
       },
       {
@@ -498,8 +498,8 @@
         "one_time_usd": 1525.055548,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 8.7936e-05,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 5438179.4,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 5438917.5,
         "break_even_queries_api_only": 5416526.5
       },
       {
@@ -510,7 +510,7 @@
         "one_time_usd": 0.111095,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 8.7936e-05,
-        "router_local_usd_per_query": 1.121e-06,
+        "router_local_usd_per_query": 1.159e-06,
         "break_even_queries": 396.2,
         "break_even_queries_api_only": 394.6
       },
@@ -522,8 +522,8 @@
         "one_time_usd": 76.361095,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 8.7936e-05,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 272295.2,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 272332.2,
         "break_even_queries_api_only": 271211.0
       },
       {
@@ -534,8 +534,8 @@
         "one_time_usd": 305.111095,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 8.7936e-05,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 1087992.4,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 1088140.1,
         "break_even_queries_api_only": 1083660.4
       },
       {
@@ -546,8 +546,8 @@
         "one_time_usd": 1525.111095,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 8.7936e-05,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 5438377.5,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 5439115.6,
         "break_even_queries_api_only": 5416723.8
       },
       {
@@ -558,7 +558,7 @@
         "one_time_usd": 0.166431,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
+        "router_local_usd_per_query": 1.159e-06,
         "break_even_queries": 451.8,
         "break_even_queries_api_only": 450.4
       },
@@ -570,8 +570,8 @@
         "one_time_usd": 762.666431,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 2070376.2,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 2070590.1,
         "break_even_queries_api_only": 2064094.6
       },
       {
@@ -582,8 +582,8 @@
         "one_time_usd": 3050.166431,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 8280149.3,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 8281004.8,
         "break_even_queries_api_only": 8255027.0
       },
       {
@@ -594,8 +594,8 @@
         "one_time_usd": 15250.166431,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 41398939.5,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 41403216.7,
         "break_even_queries_api_only": 41273333.2
       },
       {
@@ -606,8 +606,8 @@
         "one_time_usd": 0.332861,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 903.6,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 903.7,
         "break_even_queries_api_only": 900.9
       },
       {
@@ -618,8 +618,8 @@
         "one_time_usd": 762.832861,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 2070828.0,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 2071041.9,
         "break_even_queries_api_only": 2064545.0
       },
       {
@@ -630,8 +630,8 @@
         "one_time_usd": 3050.332861,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 8280601.1,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 8281456.7,
         "break_even_queries_api_only": 8255477.4
       },
       {
@@ -642,8 +642,8 @@
         "one_time_usd": 15250.332861,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 41399391.3,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 41403668.6,
         "break_even_queries_api_only": 41273783.6
       },
       {
@@ -654,8 +654,8 @@
         "one_time_usd": 0.665723,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 1807.2,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 1807.4,
         "break_even_queries_api_only": 1801.7
       },
       {
@@ -666,8 +666,8 @@
         "one_time_usd": 763.165723,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 2071731.6,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 2071945.6,
         "break_even_queries_api_only": 2065445.9
       },
       {
@@ -678,8 +678,8 @@
         "one_time_usd": 3050.665723,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 8281504.7,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 8282360.4,
         "break_even_queries_api_only": 8256378.3
       },
       {
@@ -690,8 +690,8 @@
         "one_time_usd": 15250.665723,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 0.0,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 41400294.9,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 41404572.3,
         "break_even_queries_api_only": 41274684.5
       },
       {
@@ -702,8 +702,8 @@
         "one_time_usd": 0.166431,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 4.693e-06,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 457.6,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 457.7,
         "break_even_queries_api_only": 456.2
       },
       {
@@ -714,8 +714,8 @@
         "one_time_usd": 762.666431,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 4.693e-06,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 2097092.9,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 2097312.4,
         "break_even_queries_api_only": 2090648.4
       },
       {
@@ -726,8 +726,8 @@
         "one_time_usd": 3050.166431,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 4.693e-06,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 8386998.7,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 8387876.4,
         "break_even_queries_api_only": 8361224.8
       },
       {
@@ -738,8 +738,8 @@
         "one_time_usd": 15250.166431,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 4.693e-06,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 41933162.7,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 41937551.1,
         "break_even_queries_api_only": 41804298.9
       },
       {
@@ -750,8 +750,8 @@
         "one_time_usd": 0.332861,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 4.693e-06,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 915.3,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 915.4,
         "break_even_queries_api_only": 912.5
       },
       {
@@ -762,8 +762,8 @@
         "one_time_usd": 762.832861,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 4.693e-06,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 2097550.5,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 2097770.0,
         "break_even_queries_api_only": 2091104.6
       },
       {
@@ -774,8 +774,8 @@
         "one_time_usd": 3050.332861,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 4.693e-06,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 8387456.3,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 8388334.0,
         "break_even_queries_api_only": 8361681.0
       },
       {
@@ -786,8 +786,8 @@
         "one_time_usd": 15250.332861,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 4.693e-06,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 41933620.4,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 41938008.8,
         "break_even_queries_api_only": 41804755.1
       },
       {
@@ -798,8 +798,8 @@
         "one_time_usd": 0.665723,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 4.693e-06,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 1830.5,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 1830.7,
         "break_even_queries_api_only": 1824.9
       },
       {
@@ -810,8 +810,8 @@
         "one_time_usd": 763.165723,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 4.693e-06,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 2098465.8,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 2098685.4,
         "break_even_queries_api_only": 2092017.0
       },
       {
@@ -822,8 +822,8 @@
         "one_time_usd": 3050.665723,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 4.693e-06,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 8388371.6,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 8389249.4,
         "break_even_queries_api_only": 8362593.4
       },
       {
@@ -834,8 +834,8 @@
         "one_time_usd": 15250.665723,
         "llm_only_usd_per_query": 0.000369492,
         "router_api_usd_per_query": 4.693e-06,
-        "router_local_usd_per_query": 1.121e-06,
-        "break_even_queries": 41934535.6,
+        "router_local_usd_per_query": 1.159e-06,
+        "break_even_queries": 41938924.2,
         "break_even_queries_api_only": 41805667.6
       }
     ]

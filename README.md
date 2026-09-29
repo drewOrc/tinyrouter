@@ -12,7 +12,7 @@ Test split, 8-way routing (7 agents + out-of-scope), mean ± std over seeds 42, 
 | What transferred | What did not transfer |
 |---|---|
 | ModernBERT-base fine-tuned on all 100 examples per intent routes 91.9 ± 0.1% of test queries correctly in the 8-way space (Claude Haiku 4.5 zero-shot: 82.1%). | The deferral threshold chosen on validation for 2% selective risk gives 7.34 ± 0.86% selective risk on test (ModernBERT k=100; validation: 1.50 ± 0.13%). |
-| With 10 examples per intent, deferring low-confidence queries to Haiku lifts 8-way accuracy from 81.5 ± 0.7% (small model alone) to 88.0 ± 0.4%, with Haiku called on 23.9 ± 3.8% of queries. | Validation is 3.2% OOS and test 18.2%. Under this reweighting diagnostic, the OOS prior shift contributes about 87% of the observed risk gap; the remaining difference is consistent with a higher conditional error rate on test OOS queries that the model keeps (36.5 ± 3.0% vs 19.9 ± 2.9% on validation). |
+| With 10 examples per intent, deferring low-confidence queries to Haiku lifts 8-way accuracy from 81.5 ± 0.7% (small model alone) to 88.0 ± 0.4%, with Haiku called on 23.9 ± 3.8% of queries (1,235, 1,157, 1,548 of 5,500 for seeds 42, 43, 44). | Validation is 3.2% OOS and test 18.2%. In a reweighting diagnostic, weighting test to the validation OOS share closes about 87% of the gap between validation and test risk; the remaining difference is consistent with a higher conditional error rate on test OOS queries that the model keeps (36.5 ± 3.0% vs 19.9 ± 2.9% on validation). |
 
 **Engineering conclusion.** A deferral threshold has to be calibrated on labelled data that represents the traffic it will see. A benchmark's validation split is not a risk guarantee for production.
 
@@ -40,9 +40,9 @@ Test split, 8-way routing (7 agents + out-of-scope), mean ± std over seeds 42, 
 | 8-way accuracy, test (%) | 91.1 ± 0.5 | 91.9 ± 0.1 | 82.1 |
 | OOS recall, test (%) | 56.1 ± 2.6 | 61.1 ± 0.4 | 56.8 |
 | ECE 151-way, test, before → after temperature (%) | 3.90 ± 0.34 → 3.80 ± 0.44 | 3.95 ± 0.20 → 2.45 ± 0.29 | n/a |
-| latency p50 / p95, batch 1 | 15.6 / 17.0 ms | 20.2 / 23.2 ms | 669 / 916 ms (API, incl. network) |
+| latency p50 / p95, batch 1 | 15.5 / 18.4 ms | 20.9 / 28.5 ms | 669 / 916 ms (API, incl. network) |
 
-Encoder latency: Apple M4 CPU, batch 1, 4 threads, torch 2.14.0, `torch.inference_mode()`, 50 warm-up queries, then validation rows 0 to 499, in order; tokenization + forward + argmax. It is timed with the same architecture, not the fine-tuned weights (deleted to save disk): the pinned pretrained backbone, a 151-way head, the same tokenizer and max_length. Latency depends on shapes, not weight values, and the parameter count equals the trained run's. Haiku: client-side time per call on the 5,500 test queries, including the network round trip, with up to 6 calls in flight. Peak memory samples `torch.mps.driver_allocated_memory()` after each backward pass and optimizer step (includes the allocator cache). Accuracy, OOS recall and ECE use the 8-way aggregation chosen on validation. Values are mean ± std over seeds 42, 43, 44.
+Encoder latency: Apple M4 CPU, batch 1, 4 threads, torch 2.14.0, `torch.inference_mode()`, 50 warm-up queries, then validation rows 0 to 499, in order; tokenization + forward + argmax. It is timed with the same architecture, not the fine-tuned weights (deleted to save disk): the pinned pretrained backbone, a 151-way head, the same tokenizer and max_length. Latency depends on shapes, not weight values. The timed model is built by the training loader with the model revision, max_length and torch and transformers versions of the trained run, and its parameter count equals the trained run's. Haiku: client-side time per call on the 5,500 test queries, including the network round trip, with up to 6 calls in flight; it is not a like-for-like comparison with the encoders (different machine, a network in between). Peak memory samples `torch.mps.driver_allocated_memory()` after each backward pass and optimizer step (includes the allocator cache). Accuracy and OOS recall use the 8-way aggregation chosen on validation; ECE is over the 151 intents. Values are mean ± std over seeds 42, 43, 44.
 
 ### Cost (RQ5)
 
@@ -55,7 +55,7 @@ Break-even queries against LLM-only, for **assumed** accelerator prices (trainin
 | ModernBERT k=10 | small-only | 75 | 151 | 302 |
 | ModernBERT k=10 | hybrid | 99 | 198 | 396 |
 | ModernBERT k=100 | small-only | 452 | 904 | 1,807 |
-| ModernBERT k=100 | hybrid | 458 | 915 | 1,830 |
+| ModernBERT k=100 | hybrid | 458 | 915 | 1,831 |
 
 Break-even compares cost only: at k=10 the small model alone is less accurate than Haiku and the hybrid is more accurate than Haiku (router table).
 
@@ -63,8 +63,8 @@ Training compute costs cents; labelling dominates once it has to be paid for. CL
 
 | hybrid, US$1/h | labelled rows | at US$0.05 per label | at US$0.2 per label | at US$1 per label |
 |---|---|---|---|---|
-| ModernBERT-base k=10 | 1,525 | 272,097 | 1,087,794 | 5,438,179 |
-| ModernBERT-base k=100 | 15,250 | 2,097,550 | 8,387,456 | 41,933,620 |
+| ModernBERT-base k=10 | 1,525 | 272,134 | 1,087,942 | 5,438,918 |
+| ModernBERT-base k=100 | 15,250 | 2,097,770 | 8,388,334 | 41,938,009 |
 
 Local inference is assumed to cost US$0.05 per vCPU-hour at full utilisation, times the measured p50 latency and thread count. Full grid and every input: `results/cost/cost.json`.
 
@@ -82,7 +82,7 @@ Local inference is assumed to cost US$0.05 per vCPU-hour at full utilisation, ti
 
 ![Router comparison](results/figures/routers.png)
 
-*Test 8-way accuracy and share of queries sent to Haiku for LLM-only, small-only, the hybrid (threshold chosen on validation for 2% selective risk) and the oracle, which defers exactly the small model's errors. Error bars are std over three seeds.*
+*Test 8-way accuracy (a) and share of queries sent to Haiku (b) for LLM-only, small-only, the hybrid (threshold chosen on validation for 2% selective risk) and the oracle, which defers exactly the small model's errors. Panel (a) uses points, not bars, and its axis starts at 75%, so vertical distance is the difference in accuracy points and nothing is read from bar length; panel (b) starts at 0. Error bars are std over three seeds.*
 
 ![Threshold transfer](results/figures/threshold_transfer.png)
 

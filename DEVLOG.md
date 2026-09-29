@@ -4,7 +4,35 @@
 
 ---
 
-## 2026-09-29（深夜，四）：步驟 5，效率表、成本、圖與 README 首屏自動產生（Tier 1 完成）
+## 2026-09-29（深夜，五）：PR #18 審查修正（R1 到 R6）
+
+### 本次工作 / 執行摘要
+- 狀態措辭：Tier 1 研究問題（RQ1 到 RQ5）完成；AC1 尚未達成（待決定拆成 AC1a 從 Release artifacts 重現、AC1b 完整重訓）。AC1 的實作不在 PR #18。
+- **R1**：原本「README 與重算一致」只守一致性，欄位接錯後重生 README，CI 仍綠（審查突變 X3、X4 存活）。新增表格驅動測試：首屏 12 個數字各自對應 `summary.json` 的明確路徑，測試自己格式化，不經 report.py，斷言渲染字串等於該欄位的值。
+- **R2**：k=10 hybrid 補上三個 seed 的絕對呼叫次數：1,235、1,157、1,548（test 共 5,500 筆），並納入 R1 的測試。
+- **R3**：routers 圖 (a) 原本是長條圖且 y 軸截斷在 70，會放大 91.9 對 92.1 的差距。改成點圖加誤差棒，y 軸從 75% 起，圖說寫明「看點的距離，不看長條長度」；(b) 仍是從 0 開始的長條圖。
+- R4：「約 87%」改寫為「把 test 加權到 validation 的 OOS 比例後，validation 與 test 的 risk 差距縮小約 87%」，屬描述性寫法。R5：效率表註腳改為「準確率與 OOS recall 用 validation 選的 8 類聚合，ECE 是 151 類」。R6：Haiku 延遲註明不是同條件比較（不同機器，中間有網路）。
+- 延遲的同架構比對：計時模型改用訓練時同一個 loader（`train.load_model_and_tokenizer`）建立；model revision、max_length、torch 與 transformers 版本必須等於訓練 run 的記錄，否則停止。另記錄 `attention_implementation`（兩個模型都是 sdpa；訓練 run 沒有記錄這個欄位，因為 loader 與 transformers 版本相同，選法一致）。
+- 因為延遲改了程式，重跑 `make bench-cpu`，接著重生 cost、report、figures。
+
+### 核心發現 / 數據
+- 重量後 CPU p50 / p95：BERT 15.5 / 18.4 ms，ModernBERT 20.9 / 28.5 ms（上一則是 15.6 / 17.0 與 20.2 / 23.2）。p50 差不到 1 ms，p95 對同機其他負載較敏感，重量時差了約 5 ms；這是同一台機器兩次量測的差異，不是程式造成的。
+- 損益兩平只有 ModernBERT k=100 hybrid 在 US$2/h 時從 1,830 變成 1,831，其他格不變。
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] 決定 AC1 是否拆成 AC1a（從 Release artifacts 重現）與 AC1b（完整重訓）
+- [ ] Tier 2（步驟 6）
+
+### Files / Budget
+- `src/tinyrouter/report.py`、`figures.py`、`latency.py`；`tests/test_report.py`、`test_latency.py`；`results/efficiency/cpu_latency.json`、`results/cost/cost.json`、`results/figures/*.png`、`results/report.md`；`README.md`；`DEVLOG.md`
+- API 花費：US$0
+
+---
+
+## 2026-09-29（深夜，四）：步驟 5，效率表、成本、圖與 README 首屏自動產生
 
 ### 本次工作 / 執行摘要
 - **CPU 延遲（AC5，`make bench-cpu`）**：曲線權重已刪，改用同架構量：鎖定 revision 的預訓練骨架 + 151 類分類頭（seed 42 隨機初始化）+ 同 tokenizer 與 max_length。延遲只取決於架構與輸入形狀，不取決於權重數值；程式比對參數量必須等於 k=100 訓練 run 記錄的值（BERT 109,598,359、ModernBERT 149,720,983），不等就停。量法：CPU、batch 1、`torch.inference_mode()`、4 個 intra-op 執行緒、interop 1、暖機 50 筆，再依序量 validation 前 500 筆；報 tokenization + forward + argmax 與 forward-only 兩種。
