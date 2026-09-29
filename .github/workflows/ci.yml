@@ -64,7 +64,9 @@ jobs:
         # The llm group (anthropic SDK) is installed so the Haiku runner's
         # retry and key-redaction tests use the SDK's real exception classes.
         # They run against a fake client; no key is set and no API is called.
-        run: uv sync --locked --group llm
+        # The figures group (matplotlib) lets the figure tests draw from the
+        # committed JSON.
+        run: uv sync --locked --group llm --group figures
 
       - name: make lint (ruff check, ruff format --check, em dash check)
         run: make lint

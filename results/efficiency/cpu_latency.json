@@ -1,0 +1,79 @@
+{
+  "format_version": 1,
+  "method": {
+    "device": "cpu",
+    "batch_size": 1,
+    "mode": "torch.inference_mode",
+    "queries": "validation rows 0 to 499, in order",
+    "warmup_queries": 50,
+    "intra_op_threads": 4,
+    "inter_op_threads": 1,
+    "percentiles": "numpy.percentile, method=linear",
+    "end_to_end": "tokenization + forward + argmax",
+    "forward": "forward pass only",
+    "weights": "timed with the pinned pretrained backbone and a randomly initialised 151-way head, not the fine-tuned weights (deleted after their logits were archived); latency depends on the architecture and input shapes, not on the weight values, and the parameter count equals the trained k=100 run's"
+  },
+  "hardware": {
+    "cpu": "Apple M4",
+    "machine": "arm64",
+    "platform": "macOS-26.6.2-arm64-arm-64bit"
+  },
+  "versions": {
+    "python": "3.12.12",
+    "torch": "2.14.0",
+    "transformers": "5.17.0"
+  },
+  "measured_at": "2026-09-29T05:38:49+00:00",
+  "models": {
+    "bert": {
+      "model_name": "google-bert/bert-base-uncased",
+      "model_revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+      "num_labels": 151,
+      "max_length": 64,
+      "parameters_total": 109598359,
+      "parameters_match_trained_run": true,
+      "attention_implementation": "sdpa",
+      "end_to_end": {
+        "n": 500,
+        "mean_ms": 15.616,
+        "p50_ms": 15.634,
+        "p95_ms": 17.023,
+        "min_ms": 13.672,
+        "max_ms": 18.172
+      },
+      "forward": {
+        "n": 500,
+        "mean_ms": 15.503,
+        "p50_ms": 15.528,
+        "p95_ms": 16.916,
+        "min_ms": 13.551,
+        "max_ms": 18.084
+      }
+    },
+    "modernbert": {
+      "model_name": "answerdotai/ModernBERT-base",
+      "model_revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8",
+      "num_labels": 151,
+      "max_length": 64,
+      "parameters_total": 149720983,
+      "parameters_match_trained_run": true,
+      "attention_implementation": "sdpa",
+      "end_to_end": {
+        "n": 500,
+        "mean_ms": 19.878,
+        "p50_ms": 20.179,
+        "p95_ms": 23.165,
+        "min_ms": 16.237,
+        "max_ms": 27.292
+      },
+      "forward": {
+        "n": 500,
+        "mean_ms": 19.763,
+        "p50_ms": 20.068,
+        "p95_ms": 23.064,
+        "min_ms": 16.134,
+        "max_ms": 27.189
+      }
+    }
+  }
+}

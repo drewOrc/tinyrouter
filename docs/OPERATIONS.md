@@ -8,7 +8,7 @@ TinyRouter is a research repository with no deployment target: nothing runs as a
 
 | job | runs | required to merge |
 |---|---|---|
-| `test` | tracked-files guard, `uv sync --locked --group llm` (the SDK's exception classes for the Haiku runner tests; no key, no API call), `make lint`, `make test` (offline) | yes |
+| `test` | tracked-files guard, `uv sync --locked --group llm --group figures` (the SDK's exception classes for the Haiku runner tests, no key and no API call; matplotlib for the figure tests), `make lint`, `make test` (offline) | yes |
 | `commit-hygiene` | rejects tool-attribution trailers in commit messages (patterns in `.github/disallowed-trailers.txt`) | yes |
 | `network` | `make test-network` and `make smoke` against the Hugging Face Hub | no |
 | `pr-text-hygiene` (`pr-text.yml`) | rejects the same patterns in the PR title and body, on open, edit, push and reopen | yes (added to the required checks once it is on `main`) |

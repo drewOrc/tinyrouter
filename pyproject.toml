@@ -49,6 +49,11 @@ onnx = [
     "onnxruntime==1.30.0",
     "onnxscript==0.7.2",
 ]
+# `make figures` (results/figures/*.png). Not installed by `uv sync`; CI's
+# test job installs it so the figure tests run there.
+figures = [
+    "matplotlib==3.11.2",
+]
 
 [tool.uv]
 default-groups = ["dev"]

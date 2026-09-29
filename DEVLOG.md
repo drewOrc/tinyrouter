@@ -4,6 +4,37 @@
 
 ---
 
+## 2026-09-29（深夜，四）：步驟 5，效率表、成本、圖與 README 首屏自動產生（Tier 1 完成）
+
+### 本次工作 / 執行摘要
+- **CPU 延遲（AC5，`make bench-cpu`）**：曲線權重已刪，改用同架構量：鎖定 revision 的預訓練骨架 + 151 類分類頭（seed 42 隨機初始化）+ 同 tokenizer 與 max_length。延遲只取決於架構與輸入形狀，不取決於權重數值；程式比對參數量必須等於 k=100 訓練 run 記錄的值（BERT 109,598,359、ModernBERT 149,720,983），不等就停。量法：CPU、batch 1、`torch.inference_mode()`、4 個 intra-op 執行緒、interop 1、暖機 50 筆，再依序量 validation 前 500 筆；報 tokenization + forward + argmax 與 forward-only 兩種。
+- **Haiku 延遲（`make llm-latency`）**：journal 每筆的 `latency_ms` 是用戶端量的最後一次嘗試時間，含網路往返與 API 排隊，執行時最多 6 個呼叫同時進行；8,600 筆沒有任何重試。
+- **成本（RQ5，`make cost`）**：`results/cost/cost.json` 把實測（M4 訓練 wall-clock、CPU 延遲、Haiku token 與花費、各 router 在 test 的實際 Haiku 花費）與假設（accelerator 每小時 US$0.5、1、2；標註每筆 US$0.05、0.2、1；本機推論每 vCPU-hour US$0.05、滿載）分開存。不把 Mac 購買價算進 run 的成本。損益兩平 = 一次性成本 ÷（LLM-only 每筆 − router 每筆），對 ModernBERT k=10、k=100 的 small-only 與 hybrid、每個價格情境都算，標為情境敏感度。
+- **`make report`**：從 commit 的 JSON 產生 `results/report.md` 與 README 標記之間的區塊（首屏雙欄、router 表、效率表、成本表、聚合方式、圖、Limitations）。`tests/test_report.py` 在 CI 重算並比對，不一致就紅。
+- **`make figures`**：四張 PNG（學習曲線、risk-coverage、router 比較、threshold transfer），Okabe-Ito 配色加線型與標記，300 dpi，拿掉 PNG 的 Software 欄位，兩次輸出逐位元組相同（有測試）。matplotlib 3.11.2 放在新的 `figures` group，CI 的 test job 一併安裝。
+- README 另加隱私說明：Release 存的是公開 CLINC 查詢的 hash 與 LLM 回覆，這個 journal 設計不應原封不動套到含私人查詢的產品。
+
+### 核心發現 / 數據
+（取自 `results/efficiency/*.json`、`results/cost/cost.json`、`results/analysis/summary.json`）
+- CPU p50 / p95（Apple M4，4 執行緒，端到端）：BERT 15.6 / 17.0 ms，ModernBERT 20.2 / 23.2 ms；Haiku test 669 / 916 ms（含網路）。
+- 訓練（k=100，M4 MPS）：BERT 852 ± 33 s、峰值 4.31 GiB；ModernBERT 1,198 ± 1 s、峰值 6.24 GiB（MPS driver 記憶體取樣）。ECE（151 類，test）溫度校準前後：BERT 3.90 → 3.80，ModernBERT 3.95 → 2.45。
+- Haiku 每 1K test 查詢 US$0.369（約 340K 輸入、5.9K 輸出 token）。
+- 損益兩平（只算訓練，US$1/h）：ModernBERT k=10 hybrid 198 筆、k=100 hybrid 915 筆。訓練算力只值幾分錢；一旦要付標註費，標註主導（k=100、每筆 US$0.2 時約 839 萬筆）。
+- k=100 的 hybrid 在三個 seed 各呼叫 Haiku 170、9、31 次（共 5,500 筆 test），8 類準確率 91.9 → 92.1，是安全與診斷槓桿，不是準確率主要來源；k=10 時 81.5 → 88.0（Haiku 呼叫 23.9%）才是 fallback 價值的主要證據。
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] Tier 2（步驟 6）：ONNX int8 + FastAPI + Docker + 壓測，完成後把 RQ5 的本機延遲換成 ONNX 實測
+
+### Files / Budget
+- 新增：`src/tinyrouter/latency.py`、`cost.py`、`figures.py`；`tests/test_latency.py`、`test_cost.py`、`test_report.py`、`test_figures.py`；`results/efficiency/*.json`、`results/cost/cost.json`、`results/figures/*.png`、`results/report.md`
+- 修改：`src/tinyrouter/report.py`（改寫）、`Makefile`、`README.md`、`pyproject.toml`、`uv.lock`、`.github/workflows/ci.yml`、`.gitignore`、`docs/OPERATIONS.md`、`DEVLOG.md`
+- API 花費：US$0
+
+---
+
 ## 2026-09-29（深夜，三）：PR #17 複查小修（R1 到 R4）
 
 ### 本次工作 / 執行摘要

@@ -1,0 +1,843 @@
+{
+  "format_version": 1,
+  "inputs_sha256": {
+    "analysis/summary.json": "6d108f1876514e00a6312858fef47473a34e610bd9b04617ab71fae72a149f06",
+    "analysis/haiku.json": "d91a1265d0f68fea2f3756a44c9d4d68ac337074982cfb738cd6330e45831acc",
+    "llm/haiku-8way.json": "d2423251d948f730a50cadca163327edca1ea294d6f5bfe91c334a4e8facfa99",
+    "efficiency/cpu_latency.json": "39ba7ebf0bb4378977be5ab8d4e3d2ea98c290ab8162d0a191d8d9c01d08ff21",
+    "curves/bert.json": "35b46d514e6b47728501678dd6e029fb6a670e9b57d4514d6a2e73827aa987a5",
+    "curves/modernbert.json": "515c153596bfb0115b39b2a6166999135014ef2ca68361a35764aa1866e9ffc4"
+  },
+  "measured": {
+    "training": {
+      "bert": {
+        "1": {
+          "train_wall_seconds": {
+            "mean": 136.701333,
+            "std": 3.288993,
+            "values": [
+              133.46,
+              136.608,
+              140.036
+            ]
+          },
+          "train_rows": 153,
+          "steps": 400,
+          "device": "mps"
+        },
+        "5": {
+          "train_wall_seconds": {
+            "mean": 136.528,
+            "std": 0.787443,
+            "values": [
+              136.13,
+              137.435,
+              136.019
+            ]
+          },
+          "train_rows": 763,
+          "steps": 400,
+          "device": "mps"
+        },
+        "10": {
+          "train_wall_seconds": {
+            "mean": 137.411667,
+            "std": 0.815936,
+            "values": [
+              137.968,
+              137.792,
+              136.475
+            ]
+          },
+          "train_rows": 1525,
+          "steps": 400,
+          "device": "mps"
+        },
+        "25": {
+          "train_wall_seconds": {
+            "mean": 206.634,
+            "std": 0.366004,
+            "values": [
+              207.001,
+              206.269,
+              206.632
+            ]
+          },
+          "train_rows": 3813,
+          "steps": 600,
+          "device": "mps"
+        },
+        "50": {
+          "train_wall_seconds": {
+            "mean": 411.097333,
+            "std": 1.184395,
+            "values": [
+              412.406,
+              410.787,
+              410.099
+            ]
+          },
+          "train_rows": 7625,
+          "steps": 1195,
+          "device": "mps"
+        },
+        "100": {
+          "train_wall_seconds": {
+            "mean": 851.581,
+            "std": 32.537189,
+            "values": [
+              886.184,
+              846.954,
+              821.605
+            ]
+          },
+          "train_rows": 15250,
+          "steps": 2385,
+          "device": "mps"
+        }
+      },
+      "modernbert": {
+        "1": {
+          "train_wall_seconds": {
+            "mean": 196.575,
+            "std": 3.053313,
+            "values": [
+              193.341,
+              196.976,
+              199.408
+            ]
+          },
+          "train_rows": 153,
+          "steps": 400,
+          "device": "mps"
+        },
+        "5": {
+          "train_wall_seconds": {
+            "mean": 199.517,
+            "std": 0.764402,
+            "values": [
+              199.008,
+              199.147,
+              200.396
+            ]
+          },
+          "train_rows": 763,
+          "steps": 400,
+          "device": "mps"
+        },
+        "10": {
+          "train_wall_seconds": {
+            "mean": 199.971667,
+            "std": 1.186576,
+            "values": [
+              200.03,
+              201.128,
+              198.757
+            ]
+          },
+          "train_rows": 1525,
+          "steps": 400,
+          "device": "mps"
+        },
+        "25": {
+          "train_wall_seconds": {
+            "mean": 302.031667,
+            "std": 1.210153,
+            "values": [
+              301.341,
+              301.325,
+              303.429
+            ]
+          },
+          "train_rows": 3813,
+          "steps": 600,
+          "device": "mps"
+        },
+        "50": {
+          "train_wall_seconds": {
+            "mean": 600.910667,
+            "std": 1.226663,
+            "values": [
+              602.167,
+              600.849,
+              599.716
+            ]
+          },
+          "train_rows": 7625,
+          "steps": 1195,
+          "device": "mps"
+        },
+        "100": {
+          "train_wall_seconds": {
+            "mean": 1198.300667,
+            "std": 1.482022,
+            "values": [
+              1199.467,
+              1198.802,
+              1196.633
+            ]
+          },
+          "train_rows": 15250,
+          "steps": 2385,
+          "device": "mps"
+        }
+      }
+    },
+    "cpu_latency": {
+      "intra_op_threads": 4,
+      "hardware": "Apple M4",
+      "end_to_end_ms": {
+        "bert": {
+          "p50_ms": 15.634,
+          "p95_ms": 17.023,
+          "mean_ms": 15.616
+        },
+        "modernbert": {
+          "p50_ms": 20.179,
+          "p95_ms": 23.165,
+          "mean_ms": 19.878
+        }
+      }
+    },
+    "haiku": {
+      "model": "claude-haiku-4-5-20251001",
+      "calls": 8600,
+      "input_tokens": 2925596,
+      "output_tokens": 50630,
+      "cost_usd": 3.178746,
+      "input_tokens_per_1k_queries": 340185.581,
+      "output_tokens_per_1k_queries": 5887.209,
+      "cost_usd_per_1k_queries": {
+        "validation": 0.369852,
+        "test": 0.369492
+      }
+    },
+    "routers": {
+      "modernbert/k10": {
+        "small_only": {
+          "accuracy_8": 0.81503,
+          "llm_call_rate": 0.0,
+          "llm_cost_usd_per_1k": 0.0
+        },
+        "hybrid": {
+          "accuracy_8": 0.879515,
+          "llm_call_rate": 0.238788,
+          "llm_cost_usd_per_1k": 0.087936
+        }
+      },
+      "modernbert/k100": {
+        "small_only": {
+          "accuracy_8": 0.918727,
+          "llm_call_rate": 0.0,
+          "llm_cost_usd_per_1k": 0.0
+        },
+        "hybrid": {
+          "accuracy_8": 0.921273,
+          "llm_call_rate": 0.012727,
+          "llm_cost_usd_per_1k": 0.004693
+        }
+      }
+    },
+    "router_target_risk": 0.02
+  },
+  "assumptions": {
+    "accelerator_usd_per_hour": [
+      0.5,
+      1.0,
+      2.0
+    ],
+    "label_usd_per_example": [
+      0.05,
+      0.2,
+      1.0
+    ],
+    "vcpu_usd_per_hour": 0.05,
+    "notes": {
+      "training": "measured M4 wall-clock hours of one training run, priced as if billed at each accelerator-hour rate; these are assumed rates, not money spent (the runs used a Mac already owned, and its purchase price is not charged to a run)",
+      "labelling": "CLINC150 is an existing dataset, so no labelling was paid; cost = labelled training rows x an assumed price per label, a sensitivity only",
+      "local_inference": "measured CPU p50 end-to-end latency x intra-op threads (vCPUs) x an assumed price per vCPU-hour, at full utilisation; idle capacity would cost more"
+    }
+  },
+  "break_even": {
+    "formula": "one_time_usd / (llm_only_usd_per_query - router_usd_per_query); null when the router saves nothing per query",
+    "label": "scenario sensitivity, not a forecast",
+    "rows": [
+      {
+        "point": "modernbert/k10",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 0.0,
+        "one_time_usd": 0.027774,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 75.4,
+        "break_even_queries_api_only": 75.2
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 0.05,
+        "one_time_usd": 76.277774,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 207067.8,
+        "break_even_queries_api_only": 206439.6
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 0.2,
+        "one_time_usd": 305.027774,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 828045.1,
+        "break_even_queries_api_only": 825532.8
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 1.0,
+        "one_time_usd": 1525.027774,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 4139924.2,
+        "break_even_queries_api_only": 4127363.4
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 0.0,
+        "one_time_usd": 0.055548,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 150.8,
+        "break_even_queries_api_only": 150.3
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 0.05,
+        "one_time_usd": 76.305548,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 207143.2,
+        "break_even_queries_api_only": 206514.7
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 0.2,
+        "one_time_usd": 305.055548,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 828120.5,
+        "break_even_queries_api_only": 825608.0
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 1.0,
+        "one_time_usd": 1525.055548,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 4139999.6,
+        "break_even_queries_api_only": 4127438.6
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 0.0,
+        "one_time_usd": 0.111095,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 301.6,
+        "break_even_queries_api_only": 300.7
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 0.05,
+        "one_time_usd": 76.361095,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 207294.0,
+        "break_even_queries_api_only": 206665.1
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 0.2,
+        "one_time_usd": 305.111095,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 828271.3,
+        "break_even_queries_api_only": 825758.3
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 1.0,
+        "one_time_usd": 1525.111095,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 4140150.4,
+        "break_even_queries_api_only": 4127588.9
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 0.0,
+        "one_time_usd": 0.027774,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 8.7936e-05,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 99.0,
+        "break_even_queries_api_only": 98.6
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 0.05,
+        "one_time_usd": 76.277774,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 8.7936e-05,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 271998.1,
+        "break_even_queries_api_only": 270915.1
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 0.2,
+        "one_time_usd": 305.027774,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 8.7936e-05,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 1087695.3,
+        "break_even_queries_api_only": 1083364.5
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 1.0,
+        "one_time_usd": 1525.027774,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 8.7936e-05,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 5438080.4,
+        "break_even_queries_api_only": 5416427.9
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 0.0,
+        "one_time_usd": 0.055548,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 8.7936e-05,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 198.1,
+        "break_even_queries_api_only": 197.3
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 0.05,
+        "one_time_usd": 76.305548,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 8.7936e-05,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 272097.1,
+        "break_even_queries_api_only": 271013.8
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 0.2,
+        "one_time_usd": 305.055548,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 8.7936e-05,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 1087794.3,
+        "break_even_queries_api_only": 1083463.1
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 1.0,
+        "one_time_usd": 1525.055548,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 8.7936e-05,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 5438179.4,
+        "break_even_queries_api_only": 5416526.5
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 0.0,
+        "one_time_usd": 0.111095,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 8.7936e-05,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 396.2,
+        "break_even_queries_api_only": 394.6
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 0.05,
+        "one_time_usd": 76.361095,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 8.7936e-05,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 272295.2,
+        "break_even_queries_api_only": 271211.0
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 0.2,
+        "one_time_usd": 305.111095,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 8.7936e-05,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 1087992.4,
+        "break_even_queries_api_only": 1083660.4
+      },
+      {
+        "point": "modernbert/k10",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 1.0,
+        "one_time_usd": 1525.111095,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 8.7936e-05,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 5438377.5,
+        "break_even_queries_api_only": 5416723.8
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 0.0,
+        "one_time_usd": 0.166431,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 451.8,
+        "break_even_queries_api_only": 450.4
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 0.05,
+        "one_time_usd": 762.666431,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 2070376.2,
+        "break_even_queries_api_only": 2064094.6
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 0.2,
+        "one_time_usd": 3050.166431,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 8280149.3,
+        "break_even_queries_api_only": 8255027.0
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 1.0,
+        "one_time_usd": 15250.166431,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 41398939.5,
+        "break_even_queries_api_only": 41273333.2
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 0.0,
+        "one_time_usd": 0.332861,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 903.6,
+        "break_even_queries_api_only": 900.9
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 0.05,
+        "one_time_usd": 762.832861,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 2070828.0,
+        "break_even_queries_api_only": 2064545.0
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 0.2,
+        "one_time_usd": 3050.332861,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 8280601.1,
+        "break_even_queries_api_only": 8255477.4
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 1.0,
+        "one_time_usd": 15250.332861,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 41399391.3,
+        "break_even_queries_api_only": 41273783.6
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 0.0,
+        "one_time_usd": 0.665723,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 1807.2,
+        "break_even_queries_api_only": 1801.7
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 0.05,
+        "one_time_usd": 763.165723,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 2071731.6,
+        "break_even_queries_api_only": 2065445.9
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 0.2,
+        "one_time_usd": 3050.665723,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 8281504.7,
+        "break_even_queries_api_only": 8256378.3
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "small_only",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 1.0,
+        "one_time_usd": 15250.665723,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 0.0,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 41400294.9,
+        "break_even_queries_api_only": 41274684.5
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 0.0,
+        "one_time_usd": 0.166431,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 4.693e-06,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 457.6,
+        "break_even_queries_api_only": 456.2
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 0.05,
+        "one_time_usd": 762.666431,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 4.693e-06,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 2097092.9,
+        "break_even_queries_api_only": 2090648.4
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 0.2,
+        "one_time_usd": 3050.166431,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 4.693e-06,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 8386998.7,
+        "break_even_queries_api_only": 8361224.8
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 0.5,
+        "label_usd_per_example": 1.0,
+        "one_time_usd": 15250.166431,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 4.693e-06,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 41933162.7,
+        "break_even_queries_api_only": 41804298.9
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 0.0,
+        "one_time_usd": 0.332861,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 4.693e-06,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 915.3,
+        "break_even_queries_api_only": 912.5
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 0.05,
+        "one_time_usd": 762.832861,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 4.693e-06,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 2097550.5,
+        "break_even_queries_api_only": 2091104.6
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 0.2,
+        "one_time_usd": 3050.332861,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 4.693e-06,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 8387456.3,
+        "break_even_queries_api_only": 8361681.0
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 1.0,
+        "label_usd_per_example": 1.0,
+        "one_time_usd": 15250.332861,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 4.693e-06,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 41933620.4,
+        "break_even_queries_api_only": 41804755.1
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 0.0,
+        "one_time_usd": 0.665723,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 4.693e-06,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 1830.5,
+        "break_even_queries_api_only": 1824.9
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 0.05,
+        "one_time_usd": 763.165723,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 4.693e-06,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 2098465.8,
+        "break_even_queries_api_only": 2092017.0
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 0.2,
+        "one_time_usd": 3050.665723,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 4.693e-06,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 8388371.6,
+        "break_even_queries_api_only": 8362593.4
+      },
+      {
+        "point": "modernbert/k100",
+        "router": "hybrid",
+        "accelerator_usd_per_hour": 2.0,
+        "label_usd_per_example": 1.0,
+        "one_time_usd": 15250.665723,
+        "llm_only_usd_per_query": 0.000369492,
+        "router_api_usd_per_query": 4.693e-06,
+        "router_local_usd_per_query": 1.121e-06,
+        "break_even_queries": 41934535.6,
+        "break_even_queries_api_only": 41805667.6
+      }
+    ]
+  }
+}
