@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-09-29（夜）：llm-smoke 第一次實跑失敗，temperature 改走 extra_body
+
+### 本次工作 / 執行摘要
+- 事故：PR #14 合併後第一次 `make llm-smoke`，每筆呼叫都在送出前就失敗，錯誤是 `TypeError: Messages.create() got an unexpected keyword argument 'temperature'`。沒有請求到達 API，花費 US$0，輸出裡沒有 key。
+- 原因：anthropic 1.x 把 `temperature`、`top_p`、`top_k` 從 `messages.create()` 的簽名拿掉了，但 API 本身沒有移除，Haiku 4.5 仍然接受。測試用的假 client 什麼參數都收，所以測不出和真 SDK 簽名不符。
+- 修法：`request_params` 改成 `extra_body={"temperature": 0.0}`，SDK 會把它原樣併進 request JSON（claude-api skill，`python/claude-api/sdk-upgrade.md` Step 6 的建議：模型仍接受、程式又依賴這個設定時，移到 extra_body，不要刪）。identity 仍記 temperature 0，語意沒變，所以身分雜湊不變，smoke journal 裡的 failed 紀錄下次會照常重試。
+- `count_tokens` 只送 model、system、messages，沒有同樣的問題；它的參數也抽成 `count_tokens_params()`，跟 `request_params()` 一樣是唯一產生參數的地方。
+- 疤痕變腳本：新增 `test_the_arguments_we_send_fit_the_installed_sdk_signatures`，把實際送出的 kwargs `bind` 到真 SDK 的 `Messages.create` 與 `Messages.count_tokens` 簽名上，不需要網路或 key；另一條測試確認假 client 收到的參數正是這兩個函式產生的，簽名測試因此涵蓋實際送出的內容。
+
+### 核心發現 / 數據
+- (無實跑數據)。定價仍是 Haiku 4.5 輸入 US$1、輸出 US$5 per MTok。
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] 合併後重跑 `make llm-smoke`
+
+### Files / Budget
+- `src/tinyrouter/llm.py`、`tests/test_llm.py`、`tests/llm_fakes.py`
+- API 花費：US$0
+
+---
+
 ## 2026-09-29（晚）：PR #14 審查修正（4 medium、6 low）
 
 ### 本次工作 / 執行摘要
