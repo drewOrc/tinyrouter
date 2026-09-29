@@ -56,6 +56,7 @@ class FakeMessages:
         self.base_tokens = base_tokens
         self.calls: list[dict] = []
         self.count_calls = 0
+        self.count_kwargs: list[dict] = []
         self.count_failures: list[BaseException] = []
         self.response_override = None
         self._lock = threading.Lock()
@@ -87,6 +88,7 @@ class FakeMessages:
 
     def count_tokens(self, **kwargs):
         self.count_calls += 1
+        self.count_kwargs.append(kwargs)
         if self.count_failures:
             raise self.count_failures.pop(0)
         return SimpleNamespace(input_tokens=self.base_tokens)

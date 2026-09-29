@@ -136,13 +136,29 @@ def cost_usd(
 
 
 def request_params(query: str) -> dict[str, Any]:
-    """The exact Messages API arguments for one query; the single place they are built."""
+    """The exact ``messages.create`` arguments for one query; the single place they are built.
+
+    anthropic 1.x removed ``temperature`` from ``messages.create`` (passing
+    it is a TypeError), but the API did not: Haiku 4.5 still accepts it. The
+    comparison with the old project depends on temperature 0, so it goes in
+    ``extra_body``, which the SDK merges into the request JSON unchanged
+    (claude-api skill, python/claude-api/sdk-upgrade.md, Step 6).
+    """
     return {
         "model": MODEL,
         "max_tokens": MAX_TOKENS,
-        "temperature": TEMPERATURE,
         "system": SYSTEM_PROMPT,
         "messages": [{"role": "user", "content": query}],
+        "extra_body": {"temperature": float(TEMPERATURE)},
+    }
+
+
+def count_tokens_params() -> dict[str, Any]:
+    """The ``messages.count_tokens`` arguments: the prompt with a one-character query."""
+    return {
+        "model": MODEL,
+        "system": SYSTEM_PROMPT,
+        "messages": [{"role": "user", "content": "x"}],
     }
 
 
@@ -300,12 +316,8 @@ def prompt_base_tokens(client: Any, sleep: Callable[[float], None] = time.sleep)
 
     Retried and redacted like ``classify``; LLMCallError when it gives up.
     """
-    counted, _, _ = with_retries(
-        lambda: client.messages.count_tokens(
-            model=MODEL, system=SYSTEM_PROMPT, messages=[{"role": "user", "content": "x"}]
-        ),
-        sleep,
-    )
+    params = count_tokens_params()
+    counted, _, _ = with_retries(lambda: client.messages.count_tokens(**params), sleep)
     return int(counted.input_tokens)
 
 

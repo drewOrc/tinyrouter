@@ -1,4 +1,5 @@
 import hashlib
+import inspect
 
 import pytest
 
@@ -58,10 +59,35 @@ def test_request_matches_the_old_project_settings():
     assert params == {
         "model": "claude-haiku-4-5-20251001",
         "max_tokens": 20,
-        "temperature": 0,
         "system": SYSTEM_PROMPT,
         "messages": [{"role": "user", "content": "book a flight"}],
+        "extra_body": {"temperature": 0.0},
     }
+    assert "temperature" not in params
+    assert llm.identity()["temperature"] == 0
+
+
+def test_the_arguments_we_send_fit_the_installed_sdk_signatures():
+    """2026-09-29 smoke incident: every call raised TypeError before reaching the API.
+
+    anthropic 1.8.0 dropped ``temperature`` from ``Messages.create``; the
+    fake client accepts any keyword, so no test noticed. Binding the real
+    kwargs to the real SDK signatures catches that without a network or key.
+    """
+    from anthropic.resources.messages import Messages
+
+    create = inspect.signature(Messages.create)
+    create.bind(None, **llm.request_params("book a flight"))
+    count = inspect.signature(Messages.count_tokens)
+    count.bind(None, **llm.count_tokens_params())
+
+
+def test_the_fake_client_receives_exactly_the_built_arguments():
+    client = fake_client()
+    classify("book a flight", client, sleep=lambda _: None)
+    llm.prompt_base_tokens(client, sleep=lambda _: None)
+    assert client.messages.calls == [llm.request_params("book a flight")]
+    assert client.messages.count_kwargs == [llm.count_tokens_params()]
 
 
 @pytest.mark.parametrize(
@@ -92,7 +118,7 @@ def test_classify_returns_prediction_with_usage_and_request_id():
     assert (result.input_tokens, result.output_tokens) == (250, 4)
     assert result.request_id == "req_fake_1"
     assert result.attempts == 1
-    assert client.messages.calls[-1]["temperature"] == 0
+    assert client.messages.calls[-1]["extra_body"] == {"temperature": 0.0}
 
 
 def test_classify_retries_a_429_then_succeeds_honouring_retry_after():
