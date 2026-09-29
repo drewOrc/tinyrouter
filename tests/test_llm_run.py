@@ -138,8 +138,10 @@ def test_a_torn_last_journal_line_is_redone_and_trimmed(tmp_path):
     outcome = run(tmp_path, client)
     assert client.messages.queries_called() == ["test-1"]
     assert len(outcome.records) == 5
-    assert all(
-        line.startswith("{") and line.endswith("}") for line in path.read_text().splitlines()
+    stored = [json.loads(line) for line in path.read_text().splitlines()]
+    assert [(r["split"], r["index"]) for r in stored][-1] == ("test", 1)
+    assert (
+        len(llm_run.load_journal(path, {q.key: q for q in queries()}, llm.identity_sha256())) == 5
     )
 
 
