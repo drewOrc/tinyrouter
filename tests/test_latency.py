@@ -117,3 +117,14 @@ def test_committed_benchmark_records_the_attention_implementation_and_the_loader
         assert model["attention_implementation"]
         assert "train.load_model_and_tokenizer" in model["loader"]
         assert model["matches_trained_run"]["transformers"] == body["versions"]["transformers"]
+
+
+def test_a_local_version_label_is_not_a_different_torch():
+    """CI installs the Linux CPU wheel, which reports torch as 2.14.0+cpu."""
+    run = latency.trained_run(latency.Path("results"), "bert")
+    torch_version = run["environment"]["torch"]
+    installed = {
+        "torch": f"{torch_version}+cpu",
+        "transformers": run["environment"]["transformers"],
+    }
+    assert latency.check_same_setup("bert", run, installed)["torch"] == torch_version

@@ -122,6 +122,11 @@ def trained_parameter_count(results_root: Path, model: str) -> int:
     return int(trained_run(results_root, model)["training"]["parameters"]["total"])
 
 
+def public(version: str) -> str:
+    """Drop a local version label: the Linux CPU wheel of torch 2.14.0 reports ``2.14.0+cpu``."""
+    return version.split("+", 1)[0]
+
+
 def check_same_setup(model: str, run: dict, installed: dict[str, str]) -> dict[str, str]:
     """The trained run's model, revision and library versions must equal the timed setup's.
 
@@ -144,7 +149,7 @@ def check_same_setup(model: str, run: dict, installed: dict[str, str]) -> dict[s
         "max_length": str(config.max_length),
         **installed,
     }
-    differ = sorted(k for k in recorded if recorded[k] != timed[k])
+    differ = sorted(k for k in recorded if public(recorded[k]) != public(timed[k]))
     if differ:
         raise ArchitectureMismatchError(
             f"{model}: timed setup differs from the trained run in {differ}: "
