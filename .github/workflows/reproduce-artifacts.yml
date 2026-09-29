@@ -17,6 +17,17 @@ on:
       - "Makefile"
       - "src/tinyrouter/reproduce.py"
       - "src/tinyrouter/release.py"
+      - "src/tinyrouter/analysis*.py"
+      - "src/tinyrouter/selective.py"
+      - "src/tinyrouter/diagnostics.py"
+      - "src/tinyrouter/haiku.py"
+      - "src/tinyrouter/cost.py"
+      - "src/tinyrouter/figures.py"
+      - "src/tinyrouter/report.py"
+      - "src/tinyrouter/latency.py"
+      - "results/**"
+      - "README.md"
+      - "uv.lock"
 
 concurrency:
   group: reproduce-artifacts-${{ github.ref }}

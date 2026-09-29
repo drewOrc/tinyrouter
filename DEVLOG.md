@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-09-29（深夜，七）：PR #19 審查修正（R1 到 R6），AC1b 實跑前固定比較範圍
+
+### 本次工作 / 執行摘要
+- 狀態不變：RQ1 到 RQ5 完成；Tier 1 驗收未完成；AC1b 尚未實跑。
+- **R1**：續跑原本只比輸出的 SHA-256。審查實測同一個 `REPRO_ID` 多一個空 commit 後重跑，18 步有 17 步被跳過，verdict 仍 PASS。現在每一步記錄身分（HEAD、`uv.lock` 與 `configs/` 的 SHA-256、Python、torch、transformers 版本），目錄若由不同身分開始，preflight 判 `NOT STARTED`，訊息要求換新 id；`run_steps` 本身也會拒絕（`StaleStateError`）。comparison 的流程表附上每一步實際執行時的 commit，另列 `flow.commits`。
+- **R2**：比較範圍在實跑前補齊並寫進 PLAN §5.1（「實跑前補充」）：README router 表（LLM-only 3 列，ModernBERT k=10、k=100 的 small-only、hybrid 2% 與 5%、oracle 各 4 個指標，共 35 列）與 `ablation_comparison` 全部統計（22 列）要判定；延遲、k=100 訓練時間與峰值記憶體、成本模型只列不判（`LISTED, NOT JUDGED`）。
+- R3：AC1a workflow 的 PR paths 補上分析、成本、圖、報告、延遲模組、`results/**`、README、`uv.lock`。R4：`check-originals --snapshot` 比對執行前的快照（`results/` 所有檔案含 gitignored，加上 README）；AC1b 在第一步前拍快照，AC1a 在 verify-llm 後拍。R5：preflight 的 `git status` 或 `git rev-parse` 失敗時列為問題，不再當成乾淨。R6：README 註明 HF 快取是共用的，可用 `HF_HOME` 指到空目錄。
+
+### 核心發現 / 數據
+- 已提交的結果與自己比較：router 35 列、消融 22 列都是 OK，仍是 0 個 `REVIEW REQUIRED`。
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] 合併後由協調者在乾淨 clone 實跑 AC1b
+
+### Files / Budget
+- `src/tinyrouter/reproduce.py`、`comparison.py`；`tests/test_reproduce.py`、`test_comparison.py`；`.github/workflows/reproduce-artifacts.yml`；`README.md`、`docs/PLAN.md`、`DEVLOG.md`
+- API 花費：US$0
+
+---
+
 ## 2026-09-29（深夜，六）：AC1 拆成 AC1a／AC1b，`make reproduce-artifacts` 與 `make reproduce`
 
 ### 本次工作 / 執行摘要

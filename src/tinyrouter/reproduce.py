@@ -25,8 +25,13 @@ counts as done. The first failing step stops the run, and the comparison is
 still written, with verdict FAIL. Rerunning resumes: a step recorded as
 passed whose output files still have the recorded SHA-256 is skipped, until
 one step has to run again; from there every later step runs (each make
-target resumes its own finished work, so that costs little). The last step
-checks that ``results/`` and ``README.md`` still match HEAD.
+target resumes its own finished work, so that costs little). Every step
+records the identity it ran under (HEAD, the SHA-256 of ``uv.lock`` and of
+``configs/``, Python, torch and transformers); a directory started under
+another identity is refused, not resumed, so one comparison never mixes
+two commits. The last step checks that ``results/`` and ``README.md`` still
+match HEAD and that no file under ``results/``, gitignored ones included,
+differs from the snapshot taken before the first step.
 
 AC1a, ``artifacts``: download the three Releases into ``results/``, verify
 them, rebuild analysis, Haiku latency, cost, figures and report, and check
@@ -37,13 +42,16 @@ is not rerun (it depends on the machine); the committed file is used.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from tinyrouter import comparison
@@ -63,6 +71,7 @@ GIB = 1024**3
 REQUIRED_FREE_GIB = 8.8
 ORIGINALS = ("results", "README.md")
 ORIGINALS_OK = "originals untouched: results/ and README.md match HEAD"
+ARTIFACTS_SNAPSHOT = REPRODUCTION_DIR / "artifacts-originals-snapshot.json"
 ANALYSIS_DONE = "completed analysis (75/75 archives, 8600/8600 llm rows, 25 groups)"
 LLM_DONE = "completed 8600/8600 llm predictions"
 FIGURES = ("learning_curves.png", "risk_coverage.png", "routers.png", "threshold_transfer.png")
@@ -172,7 +181,11 @@ def full_steps(layout: Layout) -> list[Step]:
         ),
         Step("verify-llm", make("verify-llm", roots[0]), (LLM_DONE,), (f"{r}/llm-manifest.json",)),
         *rebuild_steps(r, (roots[0],), str(layout.readme), bench=True),
-        Step("originals-untouched", module("check-originals"), (ORIGINALS_OK,)),
+        Step(
+            "originals-untouched",
+            module("check-originals", "--snapshot", str(layout.base / "originals-snapshot.json")),
+            (ORIGINALS_OK,),
+        ),
     ]
 
 
@@ -238,13 +251,22 @@ def artifact_steps() -> list[Step]:
             (f"OK 75 archive(s) match {r}/logits-manifest.json",),
         ),
         Step("verify-llm", make("verify-llm"), (LLM_DONE,)),
+        Step(
+            "snapshot-originals",
+            module("snapshot", "--out", str(ARTIFACTS_SNAPSHOT)),
+            (f"wrote {ARTIFACTS_SNAPSHOT}",),
+        ),
         *rebuild_steps(r, (), "README.md", bench=False),
-        Step("originals-untouched", module("check-originals"), (ORIGINALS_OK,)),
+        Step(
+            "originals-untouched",
+            module("check-originals", "--snapshot", str(ARTIFACTS_SNAPSHOT)),
+            (ORIGINALS_OK,),
+        ),
     ]
 
 
-def module(action: str) -> tuple[str, ...]:
-    return ("uv", "run", "python", "-m", "tinyrouter.reproduce", action)
+def module(action: str, *args: str) -> tuple[str, ...]:
+    return ("uv", "run", "python", "-m", "tinyrouter.reproduce", action, *args)
 
 
 def run_command(step: Step, log_path: Path) -> tuple[int, list[str]]:
@@ -297,10 +319,20 @@ def resumable(step: Step, prior: dict | None, repo: Path) -> bool:
 
 
 def run_steps(
-    steps: list[Step], repo: Path, state_path: Path | None, logs: Path, executor: Executor
+    steps: list[Step],
+    repo: Path,
+    state_path: Path | None,
+    logs: Path,
+    executor: Executor,
+    identity: dict[str, object] | None = None,
 ) -> list[dict]:
-    """Run in order, resuming passed steps; stop at the first failure."""
+    """Run in order, resuming passed steps; stop at the first failure.
+
+    With ``identity``, every recorded step must carry the same one
+    (``run_identity``), or nothing runs (``StaleStateError``).
+    """
     state = read_state(state_path)
+    refuse_stale(state, identity)
     results: list[dict] = []
     rerun = False
     for step in steps:
@@ -314,6 +346,7 @@ def run_steps(
         code, lines = executor(step, logs / f"{step.name}.log")
         outcome = {**judge_step(step, code, lines), "started": started, "finished": utc_now()}
         outcome["outputs"] = output_hashes(step, repo)
+        outcome["identity"] = identity
         state[step.name] = outcome
         write_state(state_path, state)
         results.append(outcome)
@@ -343,10 +376,103 @@ def run_git(args: list[str]) -> tuple[int, str]:
     return done.returncode, done.stdout.rstrip()
 
 
+def check_originals(repo: Path, snapshot: Path | None, git: Git = run_git) -> str:
+    """Tracked changes (git status) plus, with ``snapshot``, any file under results/ that differs.
+
+    git status cannot see gitignored files (the logits archives, the Haiku
+    journal), so a snapshot of every file taken before the run is compared too.
+    """
+    tracked = originals_changed(git)
+    problems = [tracked] if tracked else []
+    if snapshot is not None:
+        before = json.loads(snapshot.read_text(encoding="utf-8"))
+        problems += snapshot_changes(before, snapshot_originals(repo))
+    return "\n".join(problems)
+
+
 def originals_changed(git: Git = run_git) -> str:
     """``git status`` of results/ and README.md, untracked files included; empty when clean."""
     code, out = git(["status", "--porcelain", "--untracked-files=all", "--", *ORIGINALS])
     return out if code == 0 else f"git status failed ({code})"
+
+
+class StaleStateError(RuntimeError):
+    """steps.json was written by another commit, lockfile, config set or library version."""
+
+
+def tree_sha256(root: Path) -> str:
+    """One SHA-256 over every file under ``root``: relative path and content hash, sorted."""
+    lines = [
+        f"{path.relative_to(root).as_posix()} {sha256_of(path)}"
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    ]
+    return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
+
+
+def library_version(name: str) -> str | None:
+    try:
+        return version(name)
+    except PackageNotFoundError:
+        return None
+
+
+def run_identity(repo: Path, git: Git = run_git) -> dict[str, object]:
+    """What a step's output depends on besides its inputs: commit, lockfile, configs, libraries."""
+    code, head = git(["rev-parse", "HEAD"])
+    if code != 0 or not head:
+        raise StaleStateError(f"git rev-parse HEAD failed (exit {code})")
+    return {
+        "head": head,
+        "uv_lock_sha256": sha256_of(repo / "uv.lock"),
+        "configs_sha256": tree_sha256(repo / "configs"),
+        "python": platform.python_version(),
+        "torch": library_version("torch"),
+        "transformers": library_version("transformers"),
+    }
+
+
+def stale_steps(state: dict[str, dict], identity: dict[str, object]) -> list[str]:
+    """Recorded steps whose identity differs from ``identity``, with the fields that differ."""
+    stale = []
+    for name, entry in state.items():
+        recorded = entry.get("identity")
+        if recorded == identity:
+            continue
+        if not isinstance(recorded, dict):
+            stale.append(f"{name} (no identity recorded)")
+            continue
+        fields = sorted(k for k in identity if recorded.get(k) != identity[k])
+        stale.append(f"{name} ({', '.join(fields)} differ; recorded at {recorded.get('head')})")
+    return stale
+
+
+def refuse_stale(state: dict[str, dict], identity: dict[str, object] | None) -> None:
+    if identity is None:
+        return
+    stale = stale_steps(state, identity)
+    if stale:
+        raise StaleStateError(
+            "this reproduction directory was started under another identity: "
+            f"{'; '.join(stale)}. Resuming would mix outputs of two setups; start a new "
+            "REPRO_ID (or delete that directory)."
+        )
+
+
+def snapshot_originals(repo: Path) -> dict[str, str]:
+    """SHA-256 of every file under results/ (gitignored ones too) and of README.md."""
+    files = [p for p in sorted((repo / "results").rglob("*")) if p.is_file()]
+    files.append(repo / "README.md")
+    return {p.relative_to(repo).as_posix(): sha256_of(p) for p in files if p.is_file()}
+
+
+def snapshot_changes(before: dict[str, str], after: dict[str, str]) -> list[str]:
+    changes = [f"removed {p}" for p in sorted(before.keys() - after.keys())]
+    changes += [f"added {p}" for p in sorted(after.keys() - before.keys())]
+    changes += [
+        f"changed {p}" for p in sorted(before.keys() & after.keys()) if before[p] != after[p]
+    ]
+    return changes
 
 
 @dataclass(frozen=True)
@@ -366,10 +492,14 @@ class Probes:
 def preflight(repo: Path, probes: Probes) -> dict[str, object]:
     """Clean tree, HEAD merged into origin/main, lockfile in sync, API key set, enough disk."""
     problems = []
-    _, dirty = probes.git(["status", "--porcelain", "--untracked-files=all"])
-    if dirty:
+    status_code, dirty = probes.git(["status", "--porcelain", "--untracked-files=all"])
+    if status_code != 0:
+        problems.append(f"git status failed (exit {status_code}); cannot tell the tree is clean")
+    elif dirty:
         problems.append("working tree is not clean (git status --porcelain is not empty)")
-    _, head = probes.git(["rev-parse", "HEAD"])
+    head_code, head = probes.git(["rev-parse", "HEAD"])
+    if head_code != 0 or not head:
+        problems.append(f"git rev-parse HEAD failed (exit {head_code})")
     fetched, _ = probes.git(["fetch", "--quiet", "origin", "main"])
     merged, _ = probes.git(["merge-base", "--is-ancestor", "HEAD", "FETCH_HEAD"])
     if fetched != 0 or merged != 0:
@@ -432,7 +562,18 @@ def reproduce_full(
 ) -> str:
     """AC1b; returns the verdict (PASS, FAIL, or NOT STARTED when preflight refuses)."""
     check_isolation(layout, repo)
-    checks = preflight(repo, probes or Probes())
+    probes = probes or Probes()
+    checks = preflight(repo, probes)
+    identity = None
+    if not checks["problems"]:
+        identity = run_identity(repo, probes.git)
+        stale = stale_steps(read_state(repo / layout.base / "steps.json"), identity)
+        if stale:
+            checks["problems"] = [  # type: ignore[index]
+                f"{layout.base} was started under another identity ({'; '.join(stale)}); "
+                "start a new REPRO_ID instead of resuming it"
+            ]
+    checks["identity"] = identity
     (repo / layout.base).mkdir(parents=True, exist_ok=True)
     (repo / layout.base / "preflight.json").write_text(
         json.dumps(checks, indent=2) + "\n", encoding="utf-8"
@@ -441,12 +582,16 @@ def reproduce_full(
         for problem in checks["problems"]:  # type: ignore[attr-defined]
             print(f"preflight: {problem}", file=sys.stderr)
         return "NOT STARTED"
+    snapshot = repo / layout.base / "originals-snapshot.json"
+    if not snapshot.is_file():
+        snapshot.write_text(json.dumps(snapshot_originals(repo), indent=2) + "\n", encoding="utf-8")
     steps = run_steps(
         full_steps(layout),
         repo,
         repo / layout.base / "steps.json",
         repo / layout.base / "logs",
         executor,
+        identity,
     )
     context = {"reproduction_id": layout.run_id, "preflight": checks, "pins": pins(repo)}
     body = write_comparison(layout, repo, steps, context)
@@ -469,12 +614,22 @@ def default_id(git: Git = run_git) -> str:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("action", choices=("full", "artifacts", "check-originals", "compare"))
+    parser.add_argument(
+        "action", choices=("full", "artifacts", "check-originals", "snapshot", "compare")
+    )
     parser.add_argument("--id", default=None, help="reproduction/<id>; default: HEAD[:12]")
+    parser.add_argument("--snapshot", default=None, help="check-originals: compare to this too")
+    parser.add_argument("--out", default=None, help="snapshot: where to write it")
     args = parser.parse_args(argv)
     repo = Path(".")
+    if args.action == "snapshot":
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(snapshot_originals(repo), indent=2) + "\n", encoding="utf-8")
+        print(f"wrote {out}")
+        return
     if args.action == "check-originals":
-        changed = originals_changed()
+        changed = check_originals(repo, Path(args.snapshot) if args.snapshot else None)
         if changed:
             print(f"changed since HEAD:\n{changed}")
             raise SystemExit(1)

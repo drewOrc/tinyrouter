@@ -22,6 +22,14 @@ How one number is compared (``compare_stat``):
   nothing to scale a difference by, so any difference is
   ``REVIEW REQUIRED``, and so is a different number of seeds behind it;
 - present in only one of the two runs: ``REVIEW REQUIRED``; absent in both: ``OK``.
+
+Scope, fixed before the first AC1b run (docs/PLAN.md 5.1): the README's
+first screen, its router table (k=10 and k=100, targets 2% and 5%), the
+learning curves, the OOS ablation comparison and every threshold
+diagnostic are judged as above. Latency, training time, peak memory and the
+cost model (``results/efficiency/*``, the k=100 run records,
+``results/cost/cost.json``) depend on the machine and are listed with their
+differences but never judged (status ``LISTED, NOT JUDGED``).
 """
 
 from __future__ import annotations
@@ -35,6 +43,7 @@ from tinyrouter.ac2 import THRESHOLD as AC2_THRESHOLD
 
 OK = "OK"
 REVIEW = "REVIEW REQUIRED"
+LISTED = "LISTED, NOT JUDGED"
 PASS = "PASS"
 FAIL = "FAIL"
 EXACT_TOLERANCE = 1e-9
@@ -111,6 +120,120 @@ def compare_stat(label: str, original: object, reproduced: object) -> dict[str, 
         return {**row, "status": OK if same else REVIEW, "rule": rule}
     inside = difference <= std + EXACT_TOLERANCE
     return {**row, "status": OK if inside else REVIEW, "rule": "within original mean ± std"}
+
+
+ROUTER_METRICS = ("accuracy_8", "oos_recall", "high_conf_oos_misroute_rate", "llm_call_rate")
+ROUTER_POINTS = ("modernbert/k10", "modernbert/k100")
+TARGETS = ("0.02", "0.05")
+
+
+def router_paths() -> list[tuple[str, tuple[str, ...]]]:
+    """The README router table: LLM-only, then small-only, hybrid per target and oracle."""
+    llm = ("llm_only_test",)
+    paths = [
+        ("LLM-only accuracy_8", (*llm, "accuracy_8")),
+        ("LLM-only oos_recall", (*llm, "oos", "recall")),
+        ("LLM-only llm_call_rate", (*llm, "llm_call_rate")),
+    ]
+    for point in ROUTER_POINTS:
+        final = ("groups", point, "result", "final")
+        routers = [("small-only", (*final, "small_only"))]
+        routers += [(f"hybrid {t}", (*final, "fallback", t, "hybrid", "test")) for t in TARGETS]
+        routers.append(("oracle", (*final, "oracle")))
+        for name, base in routers:
+            paths += [(f"{point} {name} {m}", (*base, m)) for m in ROUTER_METRICS]
+    return paths
+
+
+def router_rows(original: dict, reproduced: dict) -> list[dict]:
+    return [compare_stat(label, at(original, p), at(reproduced, p)) for label, p in router_paths()]
+
+
+def ablation_rows(original: dict, reproduced: dict) -> list[dict]:
+    """Every statistic of ``ablation_comparison`` (OOS 250 against OOS 0)."""
+    base = ("ablation_comparison",)
+    paths = sorted(set(stat_leaves(at(original, base))) | set(stat_leaves(at(reproduced, base))))
+    return [
+        compare_stat("/".join(p), at(original, (*base, *p)), at(reproduced, (*base, *p)))
+        for p in paths
+    ]
+
+
+def number_leaves(tree: object, prefix: tuple[str, ...] = ()) -> Iterator[tuple[str, ...]]:
+    """Paths of every number (not bool) in a JSON tree, list items by position."""
+    if isinstance(tree, dict):
+        for key, value in tree.items():
+            yield from number_leaves(value, (*prefix, str(key)))
+    elif isinstance(tree, list):
+        for i, value in enumerate(tree):
+            yield from number_leaves(value, (*prefix, str(i)))
+    elif isinstance(tree, int | float) and not isinstance(tree, bool):
+        yield prefix
+
+
+def at_any(tree: object, path: tuple[str, ...]) -> object:
+    node = tree
+    for key in path:
+        if isinstance(node, list) and key.isdigit() and int(key) < len(node):
+            node = node[int(key)]
+        elif isinstance(node, dict) and key in node:
+            node = node[key]
+        else:
+            return None
+    return node
+
+
+def listed_rows(name: str, original: object, reproduced: object) -> list[dict]:
+    """Machine-dependent numbers with original, rerun and difference; always LISTED."""
+    paths = sorted(set(number_leaves(original)) | set(number_leaves(reproduced)))
+    rows = []
+    for path in paths:
+        before, after = at_any(original, path), at_any(reproduced, path)
+        numeric = all(
+            isinstance(v, int | float) and not isinstance(v, bool) for v in (before, after)
+        )
+        rows.append(
+            {
+                "metric": f"{name}:{'/'.join(path)}",
+                "original": before,
+                "reproduced": after,
+                "difference": after - before if numeric else None,  # type: ignore[operator]
+                "status": LISTED,
+            }
+        )
+    return rows
+
+
+def k100_training(root: Path) -> dict | None:
+    """Training time and peak memory of each k=100 run, from the curve indexes and run JSONs."""
+    out: dict[str, dict] = {}
+    for model in CURVE_MODELS:
+        index = read_json(root / "curves" / f"{model}.json")
+        if index is None:
+            return None
+        for point in index["points"]:
+            if point["k"] != 100:
+                continue
+            run = read_json(root / "runs" / f"{point['run_name']}.json") or {}
+            training = run.get("training", {})
+            out[f"{model}/seed{point['seed']}"] = {
+                "train_wall_seconds": training.get("train_wall_seconds"),
+                "peak_memory": training.get("peak_memory"),
+            }
+    return out
+
+
+def machine_dependent_rows(original_root: Path, reproduced_root: Path) -> list[dict]:
+    """Listed, not judged: latency, k=100 training time and peak memory, the cost model."""
+    rows = []
+    for name in ("efficiency/cpu_latency.json", "efficiency/haiku_latency.json", "cost/cost.json"):
+        rows += listed_rows(
+            name, read_json(original_root / name), read_json(reproduced_root / name)
+        )
+    rows += listed_rows(
+        "k100 training", k100_training(original_root), k100_training(reproduced_root)
+    )
+    return rows
 
 
 def headline_rows(original: dict, reproduced: dict) -> list[dict]:
@@ -271,10 +394,19 @@ def verdict(flow_ok: bool, haiku: dict, ac2: dict) -> str:
     return PASS
 
 
+JUDGED_SECTIONS = (
+    "headline",
+    "routers",
+    "learning_curves",
+    "ablation",
+    "threshold_diagnostics",
+)
+
+
 def review_count(sections: dict[str, object]) -> int:
     """Rows and pilot choices marked REVIEW REQUIRED."""
     count = 0
-    for name in ("headline", "learning_curves", "threshold_diagnostics"):
+    for name in JUDGED_SECTIONS:
         rows = sections.get(name) or []
         count += sum(row["status"] == REVIEW for row in rows)  # type: ignore[union-attr]
     pilots = sections.get("pilots") or {}
@@ -315,8 +447,11 @@ def build(
             {k: read_json(reproduced_root / "pilots" / f"{k}.json") for k in ("lr", "steps")},
         ),
         "headline": None if after is None else headline_rows(before, after),
+        "routers": None if after is None else router_rows(before, after),
         "learning_curves": None if after is None else curve_rows(before, after),
+        "ablation": None if after is None else ablation_rows(before, after),
         "threshold_diagnostics": None if after is None else diagnostic_rows(before, after),
+        "machine_dependent": machine_dependent_rows(original_root, reproduced_root),
     }
     flow_ok = flow_passed(steps, expected_steps)
     return {
@@ -324,7 +459,12 @@ def build(
         "criteria": "docs/PLAN.md section 5.1 (frozen 2026-09-29)",
         "verdict": verdict(flow_ok, haiku, ac2),
         "review_required": review_count(sections),
-        "flow": {"passed": flow_ok, "expected_steps": expected_steps, "steps": steps},
+        "flow": {
+            "passed": flow_ok,
+            "expected_steps": expected_steps,
+            "steps": steps,
+            "commits": sorted({str((s.get("identity") or {}).get("head")) for s in steps}),
+        },
         "ac2": ac2,
         "haiku": haiku,
         "budget": budget_section(rep_summary),
@@ -355,11 +495,12 @@ def stat_table(rows: list[dict], only_review: bool = False) -> list[str]:
 
 
 def flow_lines(body: dict) -> list[str]:
-    lines = ["| step | status | completion line(s) |", "|---|---|---|"]
+    lines = ["| step | status | commit | completion line(s) |", "|---|---|---|---|"]
     for step in body["flow"]["steps"]:
         found = "; ".join(f"`{line}`" for line in step.get("completion_found", [])) or "none"
         status = step["status"] + (" (resumed)" if step.get("resumed") else "")
-        lines.append(f"| {step['name']} | {status} | {found} |")
+        commit = str((step.get("identity") or {}).get("head", "unknown"))[:12]
+        lines.append(f"| {step['name']} | {status} | {commit} | {found} |")
     return lines
 
 
@@ -411,11 +552,25 @@ def pilot_and_number_lines(body: dict) -> list[str]:
         return [*lines, "Numbers: not reached (the analysis step did not finish).", ""]
     diag = body["threshold_diagnostics"]
     flagged = sum(row["status"] == REVIEW for row in diag)
+    listed = body["machine_dependent"]
     return [
         *lines,
         "## README first screen (test)",
         "",
         *stat_table(body["headline"]),
+        "",
+        "## README router table (test, 8-way)",
+        "",
+        *stat_table(body["routers"]),
+        "",
+        "## OOS ablation (OOS 250 against OOS 0)",
+        "",
+        *stat_table(body["ablation"]),
+        "",
+        f"## Machine-dependent numbers: {len(listed)} {LISTED} (all rows in the JSON)",
+        "",
+        "Latency, k=100 training time and peak memory, and the cost model vary with the "
+        "machine; they are listed with their differences and never marked REVIEW REQUIRED.",
         "",
         "## Learning curves (test, small model alone)",
         "",

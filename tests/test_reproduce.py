@@ -207,12 +207,15 @@ def probes(
     key: bool = True,
     free_gib: float = 50.0,
     sync: int = 0,
+    head: str = "f" * 40,
+    status_code: int = 0,
+    head_code: int = 0,
 ) -> Probes:
     def git(args: list[str]) -> tuple[int, str]:
         if args[0] == "status":
-            return 0, dirty
+            return status_code, dirty
         if args[0] == "rev-parse":
-            return 0, "f" * 40
+            return head_code, "" if head_code else head
         if args[0] == "merge-base":
             return merged, ""
         return 0, ""
@@ -253,8 +256,18 @@ def test_preflight_never_writes_the_key_value(tmp_path, monkeypatch):
     assert "sk-test" not in json.dumps(checks)
 
 
+def repo_files(path: Path) -> Path:
+    """What run_identity and the snapshot read: results/, README.md, uv.lock, configs/."""
+    (path / "results").mkdir(exist_ok=True)
+    (path / "README.md").write_text("# x\n")
+    (path / "uv.lock").write_text("lock\n")
+    (path / "configs").mkdir(exist_ok=True)
+    (path / "configs" / "a.yaml").write_text("a: 1\n")
+    return path
+
+
 def test_a_failed_preflight_runs_no_step_and_says_not_started(tmp_path):
-    (tmp_path / "results").mkdir()
+    repo_files(tmp_path)
     executor = FakeExecutor(tmp_path)
     verdict = reproduce_full(LAYOUT, tmp_path, probes(key=False), executor)
     assert verdict == "NOT STARTED"
@@ -266,7 +279,7 @@ def test_a_failed_preflight_runs_no_step_and_says_not_started(tmp_path):
 def test_a_flow_with_every_line_but_no_real_outputs_fails_on_ac2(tmp_path, monkeypatch):
     """Completion lines alone do not make a PASS: the comparison still needs AC2's JSON."""
     monkeypatch.setattr(reproduce, "pins", lambda repo: {})
-    (tmp_path / "results").mkdir()
+    repo_files(tmp_path)
     verdict = reproduce_full(LAYOUT, tmp_path, probes(), FakeExecutor(tmp_path, write=False))
     assert verdict == FAIL
     body = json.loads((tmp_path / LAYOUT.base / "comparison.json").read_text())
@@ -306,3 +319,106 @@ def test_check_originals_reports_a_change_to_results_or_readme(tmp_path):
     (tmp_path / "results" / "new.json").unlink()
     (tmp_path / "README.md").write_text("# y\n")
     assert "README.md" in reproduce.originals_changed(git)
+
+
+@pytest.mark.parametrize(
+    ("change", "needle"),
+    [({"status_code": 128}, "git status failed"), ({"head_code": 128}, "rev-parse HEAD failed")],
+)
+def test_preflight_treats_a_failing_git_as_a_problem_not_as_clean(tmp_path, change, needle):
+    problems = preflight(tmp_path, probes(**change))["problems"]
+    assert any(needle in p for p in problems)
+
+
+IDENTITY = {
+    "head": "a" * 40,
+    "uv_lock_sha256": "1" * 64,
+    "configs_sha256": "2" * 64,
+    "python": "3.12.12",
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+}
+
+
+def test_a_state_from_the_same_identity_resumes(tmp_path):
+    state = tmp_path / "steps.json"
+    run_steps(three_steps(), tmp_path, state, tmp_path / "logs", FakeExecutor(tmp_path), IDENTITY)
+    executor = FakeExecutor(tmp_path)
+    run_steps(three_steps(), tmp_path, state, tmp_path / "logs", executor, dict(IDENTITY))
+    assert executor.ran == []
+
+
+@pytest.mark.parametrize(
+    "field", ["head", "uv_lock_sha256", "configs_sha256", "python", "torch", "transformers"]
+)
+def test_a_state_from_another_identity_is_refused_and_nothing_runs(tmp_path, field):
+    state = tmp_path / "steps.json"
+    run_steps(three_steps(), tmp_path, state, tmp_path / "logs", FakeExecutor(tmp_path), IDENTITY)
+    executor = FakeExecutor(tmp_path)
+    with pytest.raises(reproduce.StaleStateError, match=f"{field} differ.*new REPRO_ID"):
+        run_steps(
+            three_steps(), tmp_path, state, tmp_path / "logs", executor, {**IDENTITY, field: "x"}
+        )
+    assert executor.ran == []
+
+
+def test_a_state_without_an_identity_is_refused(tmp_path):
+    state = tmp_path / "steps.json"
+    run_steps(three_steps(), tmp_path, state, tmp_path / "logs", FakeExecutor(tmp_path))
+    with pytest.raises(reproduce.StaleStateError, match="no identity recorded"):
+        run_steps(
+            three_steps(), tmp_path, state, tmp_path / "logs", FakeExecutor(tmp_path), IDENTITY
+        )
+
+
+def test_run_identity_covers_head_lockfile_configs_and_libraries(tmp_path):
+    repo_files(tmp_path)
+    first = reproduce.run_identity(tmp_path, probes().git)
+    assert first["head"] == "f" * 40 and first["torch"] and first["python"]
+    (tmp_path / "configs" / "a.yaml").write_text("a: 2\n")
+    assert (
+        reproduce.run_identity(tmp_path, probes().git)["configs_sha256"] != first["configs_sha256"]
+    )
+    (tmp_path / "uv.lock").write_text("other\n")
+    assert (
+        reproduce.run_identity(tmp_path, probes().git)["uv_lock_sha256"] != first["uv_lock_sha256"]
+    )
+
+
+def test_the_same_id_after_a_new_commit_is_refused_before_any_step(tmp_path, monkeypatch):
+    """The review's case: same REPRO_ID, one more (empty) commit, then make reproduce again."""
+    monkeypatch.setattr(reproduce, "pins", lambda repo: {})
+    repo_files(tmp_path)
+    reproduce_full(LAYOUT, tmp_path, probes(head="a" * 40), FakeExecutor(tmp_path, write=False))
+    first = json.loads((tmp_path / LAYOUT.base / "steps.json").read_text())
+    assert {s["identity"]["head"] for s in first.values()} == {"a" * 40}
+    executor = FakeExecutor(tmp_path)
+    verdict = reproduce_full(LAYOUT, tmp_path, probes(head="b" * 40), executor)
+    assert verdict == "NOT STARTED"
+    assert executor.ran == []
+    problems = json.loads((tmp_path / LAYOUT.base / "preflight.json").read_text())["problems"]
+    assert "head differ" in problems[0] and "new REPRO_ID" in problems[0]
+
+
+def test_check_originals_with_a_snapshot_sees_gitignored_files(tmp_path):
+    repo_files(tmp_path)
+    (tmp_path / "results" / "logits").mkdir()
+    (tmp_path / "results" / "logits" / "a.npz").write_bytes(b"archive")
+    clean = probes().git
+    snapshot = tmp_path / "snap.json"
+    snapshot.write_text(json.dumps(reproduce.snapshot_originals(tmp_path)))
+    assert reproduce.check_originals(tmp_path, snapshot, clean) == ""
+    (tmp_path / "results" / "logits" / "a.npz").write_bytes(b"overwritten")
+    (tmp_path / "results" / "logits" / "b.npz").write_bytes(b"new")
+    changed = reproduce.check_originals(tmp_path, snapshot, clean)
+    assert "changed results/logits/a.npz" in changed and "added results/logits/b.npz" in changed
+    (tmp_path / "README.md").write_text("# y\n")
+    assert "changed README.md" in reproduce.check_originals(tmp_path, snapshot, clean)
+
+
+def test_both_flows_end_with_a_snapshot_check():
+    full = full_steps(LAYOUT)[-1]
+    assert full.command[-2:] == ("--snapshot", "reproduction/abc123def456/originals-snapshot.json")
+    names = [s.name for s in artifact_steps()]
+    assert names.index("snapshot-originals") == names.index("verify-llm") + 1
+    assert "--snapshot" in artifact_steps()[-1].command

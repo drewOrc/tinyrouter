@@ -9,6 +9,7 @@ import pytest
 from tinyrouter import comparison
 from tinyrouter.comparison import (
     FAIL,
+    LISTED,
     OK,
     ORIGINAL_AC6_USD,
     PASS,
@@ -158,7 +159,12 @@ def test_the_two_budgets_stay_separate_and_the_original_is_fixed():
 def roots(tmp_path):
     """Committed results as the original, a copy as the rerun, and a Haiku journal for both."""
     original = tmp_path / "original"
-    for name in ("analysis/summary.json", "ac2.json", "pilots/lr.json", "pilots/steps.json"):
+    names = ["analysis/summary.json", "ac2.json", "pilots/lr.json", "pilots/steps.json"]
+    names += ["efficiency/cpu_latency.json", "efficiency/haiku_latency.json", "cost/cost.json"]
+    names += [f"curves/{m}.json" for m in ("bert", "modernbert")]
+    names += [f"runs/{p.name}" for p in (RESULTS / "runs").glob("*k100-seed*.json")]
+    names += [f"runs/bert-base-uncased-full-seed{s}.json" for s in (42, 43, 44)]
+    for name in names:
         (original / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(RESULTS / name, original / name)
     (original / "llm").mkdir()
@@ -250,3 +256,68 @@ def test_numbers_are_marked_not_reached_when_the_analysis_never_ran(roots):
     body = run_build(roots, [{"name": "ac2", "status": FAIL}])
     assert body["headline"] is None
     assert "not reached" in render_markdown(body)
+
+
+def test_the_router_table_and_the_ablation_are_in_scope(roots):
+    body = run_build(roots)
+    labels = [r["metric"] for r in body["routers"]]
+    assert len(labels) == 3 + 2 * 4 * 4
+    assert "modernbert/k10 hybrid 0.05 high_conf_oos_misroute_rate" in labels
+    assert "modernbert/k100 oracle llm_call_rate" in labels
+    assert "LLM-only oos_recall" in labels
+    ablation = {r["metric"]: r for r in body["ablation"]}
+    assert ablation["oos_250/oos_detection_test/auroc"]["original_mean"] == 0.983263
+    assert ablation["oos_0/oos_detection_test/auroc"]["original_mean"] == 0.977988
+    assert "oos_0/hybrid_test/0.02/llm_call_rate" in ablation
+    assert all(r["status"] == OK for r in body["routers"] + body["ablation"])
+
+
+def test_a_moved_router_or_ablation_number_is_reviewed(roots):
+    _, rerun, _ = roots
+
+    def shift(body):
+        body["ablation_comparison"]["oos_0"]["oos_detection_test"]["auroc"]["mean"] += 0.01
+        hybrid = body["groups"]["modernbert/k10"]["result"]["final"]["fallback"]["0.05"]
+        hybrid["hybrid"]["test"]["oos_recall"]["mean"] += 0.2
+
+    edit(rerun / "analysis" / "summary.json", shift)
+    body = run_build(roots)
+    assert [r["metric"] for r in body["ablation"] if r["status"] == REVIEW] == [
+        "oos_0/oos_detection_test/auroc"
+    ]
+    assert [r["metric"] for r in body["routers"] if r["status"] == REVIEW] == [
+        "modernbert/k10 hybrid 0.05 oos_recall"
+    ]
+    assert body["verdict"] == PASS and body["review_required"] == 2
+
+
+def test_machine_dependent_numbers_are_listed_and_never_judged(roots):
+    _, rerun, _ = roots
+
+    def slower(body):
+        body["models"]["bert"]["end_to_end"]["p50_ms"] *= 10
+
+    edit(rerun / "efficiency" / "cpu_latency.json", slower)
+    edit(rerun / "cost" / "cost.json", lambda b: b.update(extra=1.0))
+    run = next((rerun / "runs").glob("ModernBERT-base-k100-seed42.json"))
+    edit(run, lambda b: b["training"].update(train_wall_seconds=99999.0))
+    body = run_build(roots)
+    listed = {r["metric"]: r for r in body["machine_dependent"]}
+    assert {r["status"] for r in listed.values()} == {LISTED}
+    p50 = listed["efficiency/cpu_latency.json:models/bert/end_to_end/p50_ms"]
+    assert p50["difference"] == pytest.approx(9 * p50["original"])
+    assert listed["cost/cost.json:extra"]["original"] is None
+    wall = listed["k100 training:modernbert/seed42/train_wall_seconds"]
+    assert wall["reproduced"] == 99999.0
+    assert any(m.startswith("k100 training:bert/seed44/peak_memory/") for m in listed)
+    assert body["verdict"] == PASS and body["review_required"] == 0
+
+
+def test_the_flow_records_the_commit_each_step_ran_at(roots):
+    steps = [
+        {"name": n, "status": PASS, "identity": {"head": h * 40}}
+        for n, h in zip(STEPS, "ab", strict=True)
+    ]
+    body = run_build(roots, steps)
+    assert body["flow"]["commits"] == ["a" * 40, "b" * 40]
+    assert "| ac2 | PASS | aaaaaaaaaaaa |" in render_markdown(body)
