@@ -147,3 +147,12 @@ def test_high_confidence_misroute_counts_only_kept_oos_sent_to_an_agent():
     accepted = np.array([1, 1, 0, 1, 1], bool)
     # Rows 1 and 3: gold oos, routed to an agent, kept. Row 2 was deferred.
     assert high_confidence_oos_misroute(pred_oos, gold_oos, accepted) == pytest.approx(2 / 4)
+
+
+def test_the_bound_is_one_sided_95_percent():
+    from scipy.stats import norm
+
+    assert ONE_SIDED_95_Z == pytest.approx(norm.ppf(0.95))
+    # 60 rows, no error: upper 0.043 one-sided, 0.060 two-sided; the target sits between.
+    choice = select_threshold("validation", np.arange(60.0), np.zeros(60, bool), 0.05)
+    assert choice.coverage == 1.0

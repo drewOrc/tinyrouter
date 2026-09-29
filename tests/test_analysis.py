@@ -5,6 +5,7 @@ from tinyrouter.analysis import (
     AGGREGATIONS,
     Routed,
     analyze_run,
+    fit_run_temperature,
     route,
     router_metrics,
     select_aggregation,
@@ -198,6 +199,12 @@ def test_analyze_run_refuses_test_logits_in_the_validation_slot():
     pred, cost = fake_llm(500)
     with pytest.raises(LeakageError):
         analyze_run(splits["test"], splits["test"], "encoder", SPACE, pred, cost)
+
+
+@pytest.mark.parametrize("kind", ["encoder", "tfidf"])
+def test_the_temperature_is_fitted_on_validation_only(kind):
+    with pytest.raises(LeakageError, match="test"):
+        fit_run_temperature(synthetic_splits()["test"], kind)
 
 
 def choices_of(scalars):
