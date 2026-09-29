@@ -1,0 +1,48 @@
+{
+  "name": "haiku-8way",
+  "identity": {
+    "model": "claude-haiku-4-5-20251001",
+    "max_tokens": 20,
+    "temperature": 0,
+    "system_prompt_sha256": "560d22c59164f1125e4ec787f9002b4c9bc6bf03b4cc78472550ae850d5df574",
+    "user_content": "query text verbatim, one user message"
+  },
+  "identity_sha256": "e29d539a733a02009e0fa3ca91756c2eeaa531370d222c70f5ff7e7d0c638d84",
+  "dataset_revision": "155b9c710419136e17307b80d0a13e68cd46b4ec",
+  "rows": {
+    "validation": 3100,
+    "test": 5500
+  },
+  "pricing_usd_per_mtok": {
+    "input": 1.0,
+    "output": 5.0,
+    "cache_write": 1.25,
+    "cache_read": 0.1
+  },
+  "pricing_source": "claude-api skill, Current Models table (cached 2026-06-24): Claude Haiku 4.5 $1.00 input / $5.00 output per MTok; https://platform.claude.com/docs/en/about-claude/pricing.md",
+  "parser_sha256": "eb21d7c785621190236a52434f5879da23e788ed7396c2103615b06b18828941",
+  "cap_scope": "per identity and target: totals and the cap cover this target's journal for this identity only; the smoke run and other identities are not included",
+  "predictions_file": "haiku-8way.jsonl",
+  "predictions_sha256": "cac660f25f06bad317573c14aa55c0d7d977619c3cd6471c97654d94ec3432a0",
+  "totals": {
+    "input_tokens": 2925596,
+    "output_tokens": 50630,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "calls": 8600,
+    "cost_usd": 3.178746,
+    "parse_failed": {
+      "validation": 0,
+      "test": 0
+    }
+  },
+  "last_invocation": {
+    "calls": 8600,
+    "cost_usd": 3.178746,
+    "max_usd": 5.0,
+    "failed_calls": 0
+  },
+  "git_commit": "30e6d6683cc2e767461b70ee70c2a8fc117f12a5",
+  "git_dirty": false,
+  "created_at": "2026-09-29T02:57:50+00:00"
+}

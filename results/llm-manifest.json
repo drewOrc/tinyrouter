@@ -1,0 +1,16 @@
+{
+  "format_version": 1,
+  "files": {
+    "haiku-8way.jsonl": {
+      "sha256": "cac660f25f06bad317573c14aa55c0d7d977619c3cd6471c97654d94ec3432a0",
+      "bytes": 5225708,
+      "identity_sha256": "e29d539a733a02009e0fa3ca91756c2eeaa531370d222c70f5ff7e7d0c638d84",
+      "rows": {
+        "validation": 3100,
+        "test": 5500
+      },
+      "git_commit": "30e6d6683cc2e767461b70ee70c2a8fc117f12a5",
+      "created_at": "2026-09-29T02:57:50+00:00"
+    }
+  }
+}

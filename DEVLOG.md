@@ -165,6 +165,32 @@
 
 ---
 
+## 2026-09-29：Haiku 4.5 zero-shot 全量完成（validation 3,100 + test 5,500）
+
+### 本次工作 / 執行摘要
+- PR #14（Haiku 執行器：journal、續跑、預留上界的成本護欄、執行鎖）與 PR #15（temperature 改走 `extra_body`，並用真 SDK 簽名檢查送出的參數）合併後執行。
+- `make llm-smoke`（validation 前 20 筆）：US$0.0074，20/20，0 筆解析失敗，實際 input 338 到 342 tokens 都在上界內；推估全量 US$3.18。前 20 筆全是同一個 intent（資料依 intent 排序），所以 smoke 只驗證格式與成本，沒有驗證回覆的多樣性。
+- Drew 確認花費後執行 `make llm`：`completed 8600/8600 llm predictions`，0 筆失敗，輸出無 key，`make verify-llm` 通過。
+
+### 核心發現 / 數據
+- **花費**：正式 US$3.1787（2,925,596 input + 50,630 output tokens）+ smoke US$0.0074 = **US$3.19**，AC6 上限 US$5。成本上限是每個身分 × 每個 target，所以總額需手動加總（見 `cap_scope`）。
+- Haiku 8 類：validation 87.52%、OOS recall 68.0%；**test 82.07%、OOS recall 56.8%**；0 筆解析失敗（新規則）。
+- 初步對照（同一份 test、8 類）：ModernBERT k=10 82.0%、BERT k=10 82.2%，約每個 intent 10 筆標註即追上 Haiku；ModernBERT k=100 91.9%。統計檢定與正式表格在分析 PR。
+- 舊專案的 82.9% 是 1,200 筆分層抽樣（OOS 佔 1/8），與這裡的 test（OOS 佔 18.2%）不是同一批查詢，不直接比較。
+
+### Blockers / 遇到的問題
+- 第一次 smoke 全部失敗（`TypeError: ... 'temperature'`，anthropic 1.8.0 從簽名移除取樣參數），花費 US$0。假 client 什麼參數都收，所以測試沒抓到；PR #15 補上真 SDK 簽名檢查。
+
+### Next
+- [ ] `haiku-8way.jsonl` 附到 GitHub Release
+- [ ] 分析 PR：RQ2 到 RQ4（不確定性訊號、risk-coverage、fallback、oracle、兩個 OOS 誤派指標、Wilson 信賴區間），同時報新舊兩種解析規則與不一致列數，並逐列交叉比對 Haiku 的 gold 與 logits archive 的 labels
+
+### Files / Budget
+- `results/llm/haiku-8way.json`、`results/llm-manifest.json`（jsonl 不進 git）
+- API 花費：US$3.19（累計）
+
+---
+
 ## 2026-09-23 (夜)：兩條學習曲線與 OOS 消融完成
 
 ### 本次工作 / 執行摘要
