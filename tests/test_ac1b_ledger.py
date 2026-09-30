@@ -18,18 +18,108 @@ def committed() -> dict:
     return ac1b_ledger.load(ROOT / ac1b_ledger.LEDGER)
 
 
-def test_the_committed_ledger_records_both_failed_attempts_at_3992840():
+def test_the_committed_ledger_records_both_attempts_at_3992840():
     attempts = committed()["attempts"]
-    assert [(a["attempt"], a["result"], a["haiku_usd"]) for a in attempts] == [
-        (1, "FAIL", 0.0),
-        (2, "FAIL", 3.178751),
+    assert [
+        (a["attempt"], a["result"], a["comparison_verdict"], a["haiku_usd"]) for a in attempts
+    ] == [
+        (1, "INFRASTRUCTURE INTERRUPTED", "FAIL", 0.0),
+        (2, "FAIL", "FAIL", 3.178751),
     ]
+    assert [a["failure_kind"] for a in attempts] == ["infrastructure", "program defect"]
     assert {a["reproduction_id"] for a in attempts} == {"3992840ddb3f"}
-    assert attempts[0]["reason"].startswith("infrastructure")
-    assert attempts[1]["reason"].startswith("program defect")
+    assert attempts[0]["decision"]["source"] == (
+        "Drew's decision, relayed by the coordinator (2026-09-29)"
+    )
+    assert "status.claude.com" in attempts[0]["evidence"]["source"]
     for a in attempts:
-        assert (ROOT / a["evidence"] / "comparison.md").is_file()
-        assert (ROOT / a["evidence"] / "INCIDENT.md").is_file()
+        assert (ROOT / a["evidence_dir"] / "comparison.md").is_file()
+        assert (ROOT / a["evidence_dir"] / "INCIDENT.md").is_file()
+
+
+def test_the_comparison_verdict_in_the_evidence_is_kept_as_written():
+    """Attempt 1 is INTERRUPTED in the ledger; its comparison still says FAIL."""
+    text = (EVIDENCE / "attempt-1" / "comparison.md").read_text(encoding="utf-8")
+    assert text.startswith("# AC1b comparison\n\n**Verdict: FAIL**")
+
+
+def interrupted() -> dict:
+    return copy.deepcopy(committed()["attempts"][0])
+
+
+def with_attempts(*attempts: dict) -> dict:
+    ledger = copy.deepcopy(committed())
+    ledger["attempts"] = [{**a, "attempt": i} for i, a in enumerate(attempts, start=1)]
+    return ledger
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"evidence": None},
+        {"evidence": {"incident": "x", "time_utc": "t", "source": "s", "error_type": " "}},
+        {"decision": None},
+        {"failure_kind": "program defect"},
+        {"failure_kind": "ac2"},
+        {"failure_kind": None},
+    ],
+    ids=["no evidence", "blank error type", "no decision", "program defect", "ac2", "no kind"],
+)
+def test_infrastructure_interrupted_is_refused_without_its_conditions(change):
+    with pytest.raises(LedgerError):
+        ac1b_ledger.validate(with_attempts({**interrupted(), **change}))
+
+
+def test_a_program_defect_can_only_be_fail():
+    defect = copy.deepcopy(committed()["attempts"][1])
+    for result in ("INFRASTRUCTURE INTERRUPTED", "INFRASTRUCTURE BLOCKED", "PASS"):
+        with pytest.raises(LedgerError):
+            ac1b_ledger.validate(with_attempts({**defect, "result": result}))
+
+
+def test_failure_kind_is_an_enumeration():
+    defect = copy.deepcopy(committed()["attempts"][1])
+    with pytest.raises(LedgerError, match="failure_kind"):
+        ac1b_ledger.validate(with_attempts({**defect, "failure_kind": "flaky"}))
+
+
+def test_the_same_infrastructure_error_twice_in_a_row_must_be_blocked():
+    first = interrupted()
+    with pytest.raises(LedgerError, match="INFRASTRUCTURE BLOCKED"):
+        ac1b_ledger.validate(with_attempts(first, interrupted()))
+    with pytest.raises(LedgerError, match="INFRASTRUCTURE BLOCKED"):
+        ac1b_ledger.validate(with_attempts(first, {**interrupted(), "result": "FAIL"}))
+    blocked = {**interrupted(), "result": "INFRASTRUCTURE BLOCKED"}
+    assert ac1b_ledger.validate(with_attempts(first, blocked))
+
+
+def test_a_different_infrastructure_error_may_be_interrupted_again():
+    other = interrupted()
+    other["evidence"] = {**other["evidence"], "error_type": "HTTP 529 overloaded"}
+    assert ac1b_ledger.validate(with_attempts(interrupted(), other))
+
+
+def test_blocked_needs_infrastructure_evidence_too():
+    blocked = {**interrupted(), "result": "INFRASTRUCTURE BLOCKED", "evidence": None}
+    with pytest.raises(LedgerError):
+        ac1b_ledger.validate(with_attempts(blocked))
+
+
+def test_pass_needs_a_pass_comparison_and_no_failure_kind():
+    good = {**copy.deepcopy(committed()["attempts"][1]), "result": "PASS"}
+    with pytest.raises(LedgerError):
+        ac1b_ledger.validate(with_attempts({**good, "failure_kind": None}))
+    assert ac1b_ledger.validate(
+        with_attempts({**good, "failure_kind": None, "comparison_verdict": "PASS"})
+    )
+
+
+def test_the_budget_states_that_only_a_pass_completes_ac1b():
+    text = "\n".join(ac1b_ledger.markdown(ac1b_ledger.budget(committed())))
+    assert ac1b_ledger.FINAL_RULE in text
+    assert "neither an AC1b failure nor a pass" in ac1b_ledger.FINAL_RULE
+    for doc in ac1b_ledger.BUDGET_DOCS:
+        assert ac1b_ledger.FINAL_RULE in (ROOT / doc).read_text(encoding="utf-8")
 
 
 def test_the_original_experiment_cost_and_the_cap_cannot_be_edited_in_the_ledger():
@@ -42,7 +132,14 @@ def test_the_original_experiment_cost_and_the_cap_cannot_be_edited_in_the_ledger
 
 @pytest.mark.parametrize(
     ("field", "value"),
-    [("attempt", 3), ("result", "PASSED"), ("reason", " "), ("haiku_usd", 5.01), ("haiku_usd", -1)],
+    [
+        ("attempt", 3),
+        ("result", "PASSED"),
+        ("reason", " "),
+        ("haiku_usd", 5.01),
+        ("haiku_usd", -1),
+        ("comparison_verdict", "NOT STARTED"),
+    ],
 )
 def test_a_malformed_attempt_is_refused(field, value):
     ledger = copy.deepcopy(committed())

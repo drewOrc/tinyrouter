@@ -11,11 +11,22 @@
       "started_utc": "2026-09-29T07:40:02Z",
       "finished_utc": "2026-09-29T14:24:22Z",
       "time_source": "steps.json: start of the first step, end of the failed llm step",
-      "result": "FAIL",
+      "result": "INFRASTRUCTURE INTERRUPTED",
       "failure_kind": "infrastructure",
+      "comparison_verdict": "FAIL",
       "reason": "infrastructure: Haiku count_tokens returned HTTP 503 credential validation failed 5 times during an Anthropic authentication incident; no classification request sent",
+      "evidence": {
+        "incident": "Elevated errors on claude.ai, Claude Code and Claude Cowork",
+        "time_utc": "2026-09-29 14:21 UTC, status Investigating",
+        "source": "status.claude.com",
+        "error_type": "HTTP 503 credential validation failed (messages.count_tokens)"
+      },
+      "decision": {
+        "text": "503 是外部服務／認證可用性事故，不代表訓練或實驗協定失效……若同一認證問題反覆發生，才暫停並把 AC1b 標為 infrastructure-blocked；目前不應視為 AC1b 失敗。",
+        "source": "Drew's decision, relayed by the coordinator (2026-09-29)"
+      },
       "haiku_usd": 0.0,
-      "evidence": "docs/ac1b/attempt-1/"
+      "evidence_dir": "docs/ac1b/attempt-1/"
     },
     {
       "attempt": 2,
@@ -26,9 +37,11 @@
       "time_source": "steps.json: start of the resumed llm step, end of the failed figures step",
       "result": "FAIL",
       "failure_kind": "program defect",
+      "comparison_verdict": "FAIL",
       "reason": "program defect: make figures stopped because seeds chose different 8-way aggregations for modernbert/k100 (argmax, summed, summed); Haiku 8600/8600, 0 parse failures, 20 predictions differ",
       "haiku_usd": 3.178751,
-      "evidence": "docs/ac1b/attempt-2/"
+      "evidence_dir": "docs/ac1b/attempt-2/"
     }
-  ]
+  ],
+  "result_rule": "INFRASTRUCTURE INTERRUPTED is neither an AC1b failure nor a pass; AC1b acceptance is completed only by an attempt whose result is PASS. comparison_verdict keeps the comparison's own mechanical verdict unchanged."
 }

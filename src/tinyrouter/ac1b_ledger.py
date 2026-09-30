@@ -22,7 +22,16 @@ LEDGER = Path("docs/ac1b/attempts.json")
 REPO = Path(__file__).resolve().parents[2]
 ORIGINAL_AC6_USD = 3.19
 CAP_USD_PER_ATTEMPT = 5.0
-RESULTS = ("PASS", "FAIL", "INFRASTRUCTURE INTERRUPTED")
+PASS = "PASS"
+FAIL = "FAIL"
+INTERRUPTED = "INFRASTRUCTURE INTERRUPTED"
+BLOCKED = "INFRASTRUCTURE BLOCKED"
+RESULTS = (PASS, FAIL, INTERRUPTED, BLOCKED)
+INFRASTRUCTURE = "infrastructure"
+FAILURE_KINDS = (INFRASTRUCTURE, "program defect", "ac2")
+VERDICTS = (PASS, FAIL)
+EVIDENCE_FIELDS = ("incident", "time_utc", "source", "error_type")
+DECISION_FIELDS = ("text", "source")
 FIELDS = (
     "attempt",
     "commit",
@@ -30,8 +39,14 @@ FIELDS = (
     "started_utc",
     "finished_utc",
     "result",
+    "failure_kind",
+    "comparison_verdict",
     "reason",
     "haiku_usd",
+)
+FINAL_RULE = (
+    "INFRASTRUCTURE INTERRUPTED is neither an AC1b failure nor a pass; AC1b acceptance is "
+    "completed only by an attempt whose result is PASS."
 )
 
 
@@ -40,7 +55,14 @@ class LedgerError(ValueError):
 
 
 def validate(ledger: dict) -> dict:
-    """Attempts numbered 1..n, a known result, a reason, spend within the per-attempt cap."""
+    """Numbered attempts, known results and kinds, spend within the per-attempt cap.
+
+    An infrastructure result (INTERRUPTED or BLOCKED) needs failure_kind
+    ``infrastructure``, external incident evidence and, for INTERRUPTED, the
+    decision that classified it. A second consecutive infrastructure
+    attempt with the same error type must be BLOCKED: AC1b pauses instead
+    of resuming again. The comparison's own verdict is kept as recorded.
+    """
     if ledger.get("original_ac6_usd") != ORIGINAL_AC6_USD:
         raise LedgerError(f"original_ac6_usd must stay {ORIGINAL_AC6_USD}")
     if ledger.get("cap_usd_per_attempt") != CAP_USD_PER_ATTEMPT:
@@ -48,20 +70,69 @@ def validate(ledger: dict) -> dict:
     attempts = ledger.get("attempts")
     if not isinstance(attempts, list) or not attempts:
         raise LedgerError("no attempts recorded")
+    previous: dict | None = None
     for number, entry in enumerate(attempts, start=1):
-        missing = [f for f in FIELDS if f not in entry]
-        if missing:
-            raise LedgerError(f"attempt {number}: missing {missing}")
-        if entry["attempt"] != number:
-            raise LedgerError(f"attempt numbers must run 1..n; found {entry['attempt']}")
-        if entry["result"] not in RESULTS:
-            raise LedgerError(f"attempt {number}: result {entry['result']!r} not in {RESULTS}")
-        if not str(entry["reason"]).strip():
-            raise LedgerError(f"attempt {number}: a result needs a reason")
-        spent = entry["haiku_usd"]
-        if not isinstance(spent, int | float) or not 0 <= spent <= CAP_USD_PER_ATTEMPT:
-            raise LedgerError(f"attempt {number}: haiku_usd {spent!r} outside 0..cap")
+        check_attempt(number, entry)
+        check_repeat(number, entry, previous)
+        previous = entry
     return ledger
+
+
+def check_attempt(number: int, entry: dict) -> None:
+    missing = [f for f in FIELDS if f not in entry]
+    if missing:
+        raise LedgerError(f"attempt {number}: missing {missing}")
+    if entry["attempt"] != number:
+        raise LedgerError(f"attempt numbers must run 1..n; found {entry['attempt']}")
+    result, kind = entry["result"], entry["failure_kind"]
+    if result not in RESULTS:
+        raise LedgerError(f"attempt {number}: result {result!r} not in {RESULTS}")
+    if entry["comparison_verdict"] not in VERDICTS:
+        raise LedgerError(f"attempt {number}: comparison_verdict must be one of {VERDICTS}")
+    if result == PASS and (kind is not None or entry["comparison_verdict"] != PASS):
+        raise LedgerError(f"attempt {number}: PASS needs a PASS comparison and no failure_kind")
+    if result != PASS and kind not in FAILURE_KINDS:
+        raise LedgerError(f"attempt {number}: failure_kind {kind!r} not in {FAILURE_KINDS}")
+    if result in (INTERRUPTED, BLOCKED):
+        check_infrastructure(number, entry)
+    if not str(entry["reason"]).strip():
+        raise LedgerError(f"attempt {number}: a result needs a reason")
+    spent = entry["haiku_usd"]
+    if not isinstance(spent, int | float) or not 0 <= spent <= CAP_USD_PER_ATTEMPT:
+        raise LedgerError(f"attempt {number}: haiku_usd {spent!r} outside 0..cap")
+
+
+def check_infrastructure(number: int, entry: dict) -> None:
+    if entry["failure_kind"] != INFRASTRUCTURE:
+        raise LedgerError(f"attempt {number}: {entry['result']} is for infrastructure only")
+    if not filled(entry.get("evidence"), EVIDENCE_FIELDS):
+        raise LedgerError(f"attempt {number}: {entry['result']} needs evidence {EVIDENCE_FIELDS}")
+    if entry["result"] == INTERRUPTED and not filled(entry.get("decision"), DECISION_FIELDS):
+        raise LedgerError(f"attempt {number}: INTERRUPTED needs the decision {DECISION_FIELDS}")
+
+
+def check_repeat(number: int, entry: dict, previous: dict | None) -> None:
+    """The same infrastructure error twice in a row pauses AC1b (BLOCKED)."""
+    repeated = (
+        previous is not None
+        and previous["failure_kind"] == INFRASTRUCTURE == entry["failure_kind"]
+        and error_type(previous) is not None
+        and error_type(previous) == error_type(entry)
+    )
+    if repeated and entry["result"] != BLOCKED:
+        raise LedgerError(
+            f"attempt {number}: the infrastructure error of attempt {number - 1} recurred; "
+            f"the result must be {BLOCKED} (AC1b paused)"
+        )
+
+
+def error_type(entry: dict) -> str | None:
+    evidence = entry.get("evidence")
+    return evidence.get("error_type") if isinstance(evidence, dict) else None
+
+
+def filled(value: object, fields: tuple[str, ...]) -> bool:
+    return isinstance(value, dict) and all(str(value.get(f) or "").strip() for f in fields)
 
 
 def load(path: Path = REPO / LEDGER) -> dict:
@@ -107,6 +178,7 @@ def budget(ledger: dict, current: dict | None = None) -> dict[str, object]:
             "note": "sum over AC1b attempts only; never added to the original experiment cost",
         },
         "cap_usd_per_attempt": CAP_USD_PER_ATTEMPT,
+        "final_rule": FINAL_RULE,
         "rule": (
             "reproduction-validation spend is never reported as original experiment cost and "
             "does not change the AC6 US$5 conclusion"
@@ -137,6 +209,8 @@ def markdown(section: dict) -> list[str]:
         "",
         "Reproduction-validation spend is never reported as original experiment cost and does "
         "not change the AC6 conclusion (Haiku spend at most US$5).",
+        "",
+        FINAL_RULE,
     ]
 
 

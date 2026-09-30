@@ -8,4 +8,4 @@ Written 2026-09-30 from the attempt's `run.log`, `steps.json` and `comparison.md
 - Haiku spend: US$3.178751, under the US$5 cap of this reproduction id (attempt 1 spent US$0 on the same journal).
 - Failed step: `figures`. `figures.selected_aggregation` raised `ValueError: modernbert/k100: seeds chose different aggregations ['argmax', 'summed', 'summed']; pick one first`. In the original run all three ModernBERT k=100 seeds chose argmax on validation, so this path had never run.
 - Verdict under the frozen criteria (docs/PLAN.md 5.1): FAIL (the flow did not complete). This is a defect in the program, not an infrastructure failure.
-- Drew's decision (2026-09-30): fix the defect, then run AC1b again in full at the new commit as a new attempt with its own US$5 cap. The outputs of this attempt are not combined with figures or a report from another commit.
+- Drew's decision, relayed by the coordinator (2026-09-30): fix the defect, then run AC1b again in full at the new commit as a new attempt with its own US$5 cap. The outputs of this attempt are not combined with figures or a report from another commit.

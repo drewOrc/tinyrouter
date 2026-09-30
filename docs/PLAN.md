@@ -127,7 +127,7 @@ TinyRouter 問三件事：**小模型要多少標註資料才夠？它知不知�
 
 - 判定範圍（偏離原始 mean ± std 標 `REVIEW REQUIRED`）固定為：README 首屏數字；README router 表（LLM-only，以及 ModernBERT k=10 與 k=100 的 small-only、hybrid 目標 2% 與 5%、oracle，各報 8 類準確率、OOS recall、高信心 OOS 誤派、LLM 呼叫率）；學習曲線（兩個 encoder、每個 k 的 8 類準確率與 OOS recall）；`ablation_comparison`（OOS 250 對 0 的 AUROC、AUPRC 與 router 行為）；所有門檻診斷統計。
 - **只列不判**：延遲（`results/efficiency/*`）、k=100 的訓練時間與峰值記憶體、成本模型（`results/cost/cost.json`）隨機器變動。comparison 列出原始值、重跑值與差異，狀態固定為 `LISTED, NOT JUDGED`，不計入 `REVIEW REQUIRED`，也不影響判定。
-- **聚合選擇只列不判**（2026-09-30，第 3 次嘗試實跑前寫定）：每個有 final router 的組，comparison 列出原始與重跑每個 seed 在 validation 選的 8 類聚合方式與是否相同，狀態固定為 `LISTED, NOT JUDGED`，不計入 `REVIEW REQUIRED`，也不影響判定。
+- **聚合選擇只列不判**（2026-09-30，第 2 次嘗試觀察到差異後追加，第 3 次嘗試實跑前寫定）：每個有 final router 的組，comparison 列出原始與重跑每個 seed 在 validation 選的 8 類聚合方式與是否相同，狀態固定為 `LISTED, NOT JUDGED`，不計入 `REVIEW REQUIRED`，也不影響判定。
 - 續跑只限同一身分：每一步記錄 HEAD、`uv.lock` 與 `configs/` 的 SHA-256、Python、torch 與 transformers 版本；同一個 reproduction 目錄若由不同身分開始，拒絕續跑，必須換新 id，所以一份 comparison 不會混到兩個 commit 的輸出（第 1 條的落實方式）。
 
 **預算規則**：原始 AC6 實驗的 Haiku 花費固定是 US$3.19（完整 run US$3.18 加 smoke），這個數字不再變動。AC1b 的 Haiku 是另一次、明確標記為 reproduction-validation 的執行，有獨立的 US$5 上限，花費寫在 reproduction 目錄自己的紀錄裡；兩者不得混稱為原始實驗成本，也不相加。

@@ -42,8 +42,8 @@ def test_mixed_per_seed_aggregations_get_one_panel_each_titled_with_their_seeds(
     titles = [ax.get_title() for ax in fig.axes]
     assert titles == [
         "(a) ModernBERT k=10 (summed)",
-        "(b) ModernBERT k=100 (argmax)\nfinal router of seed 42",
-        "(c) ModernBERT k=100 (summed)\nfinal router of seeds 43, 44",
+        "(b) ModernBERT k=100 (argmax)\nmean of 3 seeds; final router of seed 42",
+        "(c) ModernBERT k=100 (summed)\nmean of 3 seeds; final router of seeds 43, 44",
     ]
     plt.close(fig)
 

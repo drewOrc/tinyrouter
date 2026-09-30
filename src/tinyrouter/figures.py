@@ -178,7 +178,8 @@ def panel_title(index: int, k: int, aggregation: str, seeds: tuple[int, ...] | N
     title = f"({'abcd'[index]}) ModernBERT k={k} ({aggregation})"
     if seeds is None:
         return title
-    return f"{title}\nfinal router of seed{'s' * (len(seeds) > 1)} {', '.join(map(str, seeds))}"
+    plural = "s" * (len(seeds) > 1)
+    return f"{title}\nmean of 3 seeds; final router of seed{plural} {', '.join(map(str, seeds))}"
 
 
 def risk_coverage(summary: dict, curves: dict, plt) -> object:  # noqa: ANN001
