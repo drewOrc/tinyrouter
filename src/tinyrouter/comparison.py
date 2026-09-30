@@ -224,6 +224,55 @@ def k100_training(root: Path) -> dict | None:
     return out
 
 
+SEEDS = (42, 43, 44)
+
+
+def seed_aggregations(summary: dict, group: str) -> list[str] | None:
+    """Each seed's validation-chosen 8-way aggregation, in seed order; None when absent.
+
+    ``summary.json`` stores one string when the seeds agree, the per-seed list otherwise.
+    """
+    chosen = at(summary, ("groups", group, "result", "selected_aggregation"))
+    if isinstance(chosen, str):
+        return [chosen] * len(SEEDS)
+    return list(chosen) if isinstance(chosen, list) else None
+
+
+def aggregation_rows(before: dict, after: dict) -> list[dict]:
+    """Per group with a final router: original and rerun aggregation per seed. Never judged.
+
+    Fixed before AC1b attempt 3 (docs/PLAN.md 5.1). It explains router
+    differences (a seed that switched aggregation routes differently) and
+    is ``LISTED, NOT JUDGED``: it adds no REVIEW REQUIRED and never changes
+    the verdict.
+    """
+    groups = set(before.get("groups", {})) | set(after.get("groups", {}))
+    rows = []
+    for group in sorted(g for g in groups if has_final(before, g) or has_final(after, g)):
+        original, rerun = seed_aggregations(before, group), seed_aggregations(after, group)
+        differing = (
+            list(SEEDS)
+            if original is None or rerun is None
+            else [s for s, a, b in zip(SEEDS, original, rerun, strict=True) if a != b]
+        )
+        rows.append(
+            {
+                "group": group,
+                "seeds": list(SEEDS),
+                "original": original,
+                "reproduced": rerun,
+                "same": not differing,
+                "differing_seeds": differing,
+                "status": LISTED,
+            }
+        )
+    return rows
+
+
+def has_final(summary: dict, group: str) -> bool:
+    return at(summary, ("groups", group, "result", "final")) is not None
+
+
 def machine_dependent_rows(original_root: Path, reproduced_root: Path) -> list[dict]:
     """Listed, not judged: latency, k=100 training time and peak memory, the cost model."""
     rows = []
@@ -457,6 +506,7 @@ def build(
         "ablation": None if after is None else ablation_rows(before, after),
         "threshold_diagnostics": None if after is None else diagnostic_rows(before, after),
         "machine_dependent": machine_dependent_rows(original_root, reproduced_root),
+        "aggregations": None if after is None else aggregation_rows(before, after),
     }
     flow_ok = flow_passed(steps, expected_steps)
     return {
@@ -580,6 +630,7 @@ def pilot_and_number_lines(body: dict) -> list[str]:
         "Latency, k=100 training time and peak memory, and the cost model vary with the "
         "machine; they are listed with their differences and never marked REVIEW REQUIRED.",
         "",
+        *aggregation_lines(body["aggregations"]),
         "## Learning curves (test, small model alone)",
         "",
         *stat_table(body["learning_curves"]),
@@ -589,3 +640,24 @@ def pilot_and_number_lines(body: dict) -> list[str]:
         *stat_table(diag, only_review=True),
         "",
     ]
+
+
+def aggregation_lines(rows: list[dict]) -> list[str]:
+    differ = sum(not row["same"] for row in rows)
+    lines = [
+        f"## 8-way aggregation chosen on validation: {len(rows)} groups {LISTED} ({differ} differ)",
+        "",
+        "Each seed's final router uses the aggregation it chose on validation; a seed that "
+        "switched routes differently, which can explain a REVIEW REQUIRED row above.",
+        "",
+        "| group | original (42/43/44) | rerun (42/43/44) | same | differing seeds | status |",
+        "|---|---|---|---|---|---|",
+    ]
+    for row in rows:
+        before = "/".join(row["original"]) if row["original"] else "n/a"
+        after = "/".join(row["reproduced"]) if row["reproduced"] else "n/a"
+        seeds = ", ".join(map(str, row["differing_seeds"])) or "none"
+        lines.append(
+            f"| {row['group']} | {before} | {after} | {row['same']} | {seeds} | {row['status']} |"
+        )
+    return [*lines, ""]

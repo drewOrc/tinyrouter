@@ -369,3 +369,65 @@ def test_the_flow_records_the_commit_each_step_ran_at(roots):
     body = run_build(roots, steps)
     assert body["flow"]["commits"] == ["a" * 40, "b" * 40]
     assert "| ac2 | PASS | aaaaaaaaaaaa |" in render_markdown(body)
+
+
+def switch_aggregation(rerun: Path, group: str, per_seed: list[str]) -> None:
+    path = rerun / "analysis" / "summary.json"
+    body = json.loads(path.read_text())
+    body["groups"][group]["result"]["selected_aggregation"] = per_seed
+    path.write_text(json.dumps(body))
+
+
+def test_aggregation_choices_are_listed_per_seed_for_every_group_with_a_final_router(roots):
+    body = run_build(roots)
+    rows = {row["group"]: row for row in body["aggregations"]}
+    summary = json.loads((RESULTS / "analysis" / "summary.json").read_text())
+    assert set(rows) == set(summary["groups"])
+    for model in ("bert", "modernbert"):
+        for k in (1, 5, 10, 25, 50, 100):
+            assert f"{model}/k{k}" in rows
+    assert "modernbert-oos0/k100" in rows
+    k100 = rows["modernbert/k100"]
+    assert k100["original"] == k100["reproduced"] == ["argmax"] * 3
+    assert k100["same"] is True and k100["differing_seeds"] == []
+    assert {row["status"] for row in rows.values()} == {LISTED}
+
+
+def test_a_switched_aggregation_is_listed_but_neither_reviewed_nor_failed(roots):
+    """AC1b attempt 2: ModernBERT k=100 seeds 43 and 44 switched from argmax to summed."""
+    original, rerun, _ = roots
+    switch_aggregation(rerun, "modernbert/k100", ["argmax", "summed", "summed"])
+    body = run_build(roots)
+    row = next(r for r in body["aggregations"] if r["group"] == "modernbert/k100")
+    assert row["original"] == ["argmax", "argmax", "argmax"]
+    assert row["reproduced"] == ["argmax", "summed", "summed"]
+    assert row["same"] is False and row["differing_seeds"] == [43, 44]
+    assert row["status"] == LISTED
+    assert body["verdict"] == PASS and body["review_required"] == 0
+    text = render_markdown(body)
+    assert (
+        "| modernbert/k100 | argmax/argmax/argmax | argmax/summed/summed | False | 43, 44 |" in text
+    )
+    assert "(1 differ)" in text
+
+
+def test_a_group_missing_from_the_rerun_lists_every_seed_as_differing():
+    before = {"groups": {"g": {"result": {"final": {}, "selected_aggregation": "summed"}}}}
+    rows = comparison.aggregation_rows(before, {"groups": {}})
+    assert rows == [
+        {
+            "group": "g",
+            "seeds": [42, 43, 44],
+            "original": ["summed"] * 3,
+            "reproduced": None,
+            "same": False,
+            "differing_seeds": [42, 43, 44],
+            "status": LISTED,
+        }
+    ]
+
+
+def test_the_aggregation_section_is_never_part_of_the_review_count():
+    """PLAN 5.1 (2026-09-30): aggregation choices are listed, not judged, whatever a row says."""
+    assert "aggregations" not in comparison.JUDGED_SECTIONS
+    assert comparison.review_count({"aggregations": [{"status": REVIEW}] * 3}) == 0
