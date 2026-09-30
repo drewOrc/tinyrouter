@@ -146,13 +146,61 @@ def test_haiku_checks_fail_on_missing_rows_another_identity_or_spend_above_the_c
     assert not over["checks_passed"]
 
 
-def test_the_two_budgets_stay_separate_and_the_original_is_fixed():
-    budget = budget_section(summary(4.2))
+LEDGER = {
+    "original_ac6_usd": 3.19,
+    "cap_usd_per_attempt": 5.0,
+    "attempts": [
+        {
+            "attempt": 1,
+            "commit": "a" * 40,
+            "reproduction_id": "aaaaaaaaaaaa",
+            "started_utc": "t0",
+            "finished_utc": "t1",
+            "result": "FAIL",
+            "reason": "infrastructure",
+            "haiku_usd": 0.0,
+        },
+        {
+            "attempt": 2,
+            "commit": "a" * 40,
+            "reproduction_id": "aaaaaaaaaaaa",
+            "started_utc": "t2",
+            "finished_utc": "t3",
+            "result": "FAIL",
+            "reason": "program defect",
+            "haiku_usd": 3.178751,
+        },
+    ],
+}
+
+
+def test_the_budget_has_three_parts_and_the_original_is_never_changed():
+    budget = budget_section(summary(4.2), LEDGER, "bbbbbbbbbbbb")
     assert budget["original_ac6_experiment"]["usd"] == ORIGINAL_AC6_USD == 3.19
-    assert budget["reproduction_validation"]["usd"] == 4.2
-    assert budget["reproduction_validation"]["cap_usd"] == 5.0
-    flat = json.dumps(budget)
-    assert "7.39" not in flat and "total" not in flat
+    assert budget["this_run_usd"] == 4.2
+    attempts = budget["ac1b_attempts"]
+    assert [a["result"] for a in attempts] == ["FAIL", "FAIL", "PENDING"]
+    assert attempts[-1]["haiku_usd"] == 4.2
+    assert budget["reproduction_validation_total"]["usd"] == round(3.178751 + 4.2, 6)
+    assert budget["cap_usd_per_attempt"] == 5.0
+    # The reproduction-validation spend is never folded into the original experiment cost.
+    assert json.dumps(budget["original_ac6_experiment"]).count("3.19") == 1
+    for spent in (3.19 + 3.178751, 3.19 + 3.178751 + 4.2):
+        assert f"{spent:.2f}" not in json.dumps(budget)
+
+
+def test_a_rerun_already_in_the_ledger_is_not_counted_twice():
+    budget = budget_section(summary(3.178751), LEDGER, "aaaaaaaaaaaa")
+    assert len(budget["ac1b_attempts"]) == 2
+    assert budget["reproduction_validation_total"]["usd"] == 3.178751
+
+
+def test_the_markdown_budget_shows_all_three_parts(roots):
+    body = run_build(roots)
+    text = render_markdown(body)
+    assert "Original experiment (AC6, fixed): US$3.19" in text
+    assert "| attempt | reproduction id | result | reason | Haiku spend |" in text
+    assert "Reproduction-validation total (all AC1b attempts)" in text
 
 
 @pytest.fixture
@@ -321,3 +369,65 @@ def test_the_flow_records_the_commit_each_step_ran_at(roots):
     body = run_build(roots, steps)
     assert body["flow"]["commits"] == ["a" * 40, "b" * 40]
     assert "| ac2 | PASS | aaaaaaaaaaaa |" in render_markdown(body)
+
+
+def switch_aggregation(rerun: Path, group: str, per_seed: list[str]) -> None:
+    path = rerun / "analysis" / "summary.json"
+    body = json.loads(path.read_text())
+    body["groups"][group]["result"]["selected_aggregation"] = per_seed
+    path.write_text(json.dumps(body))
+
+
+def test_aggregation_choices_are_listed_per_seed_for_every_group_with_a_final_router(roots):
+    body = run_build(roots)
+    rows = {row["group"]: row for row in body["aggregations"]}
+    summary = json.loads((RESULTS / "analysis" / "summary.json").read_text())
+    assert set(rows) == set(summary["groups"])
+    for model in ("bert", "modernbert"):
+        for k in (1, 5, 10, 25, 50, 100):
+            assert f"{model}/k{k}" in rows
+    assert "modernbert-oos0/k100" in rows
+    k100 = rows["modernbert/k100"]
+    assert k100["original"] == k100["reproduced"] == ["argmax"] * 3
+    assert k100["same"] is True and k100["differing_seeds"] == []
+    assert {row["status"] for row in rows.values()} == {LISTED}
+
+
+def test_a_switched_aggregation_is_listed_but_neither_reviewed_nor_failed(roots):
+    """AC1b attempt 2: ModernBERT k=100 seeds 43 and 44 switched from argmax to summed."""
+    original, rerun, _ = roots
+    switch_aggregation(rerun, "modernbert/k100", ["argmax", "summed", "summed"])
+    body = run_build(roots)
+    row = next(r for r in body["aggregations"] if r["group"] == "modernbert/k100")
+    assert row["original"] == ["argmax", "argmax", "argmax"]
+    assert row["reproduced"] == ["argmax", "summed", "summed"]
+    assert row["same"] is False and row["differing_seeds"] == [43, 44]
+    assert row["status"] == LISTED
+    assert body["verdict"] == PASS and body["review_required"] == 0
+    text = render_markdown(body)
+    assert (
+        "| modernbert/k100 | argmax/argmax/argmax | argmax/summed/summed | False | 43, 44 |" in text
+    )
+    assert "(1 differ)" in text
+
+
+def test_a_group_missing_from_the_rerun_lists_every_seed_as_differing():
+    before = {"groups": {"g": {"result": {"final": {}, "selected_aggregation": "summed"}}}}
+    rows = comparison.aggregation_rows(before, {"groups": {}})
+    assert rows == [
+        {
+            "group": "g",
+            "seeds": [42, 43, 44],
+            "original": ["summed"] * 3,
+            "reproduced": None,
+            "same": False,
+            "differing_seeds": [42, 43, 44],
+            "status": LISTED,
+        }
+    ]
+
+
+def test_the_aggregation_section_is_never_part_of_the_review_count():
+    """PLAN 5.1 (2026-09-30): aggregation choices are listed, not judged, whatever a row says."""
+    assert "aggregations" not in comparison.JUDGED_SECTIONS
+    assert comparison.review_count({"aggregations": [{"status": REVIEW}] * 3}) == 0

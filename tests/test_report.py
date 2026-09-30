@@ -1,4 +1,5 @@
 import copy
+import dataclasses
 import json
 import shutil
 import subprocess
@@ -221,3 +222,21 @@ def test_each_first_screen_number_comes_from_its_own_json_field(name):
 def test_k10_hybrid_counts_are_the_reviewed_absolute_numbers():
     assert counts((*K10_HYBRID, "llm_call_rate")) == "1,235, 1,157, 1,548 of 5,500"
     assert counts((*K100_HYBRID, "llm_call_rate")) == "170, 9, 31 of 5,500"
+
+
+def test_report_with_mixed_per_seed_aggregations_names_them_and_explains_the_panels():
+    """AC1b attempt 2: ModernBERT k=100 seeds chose argmax, summed, summed."""
+    r = report.Results.load(Path("results"))
+    summary = json.loads(json.dumps(r.summary))
+    summary["groups"]["modernbert/k100"]["result"]["selected_aggregation"] = [
+        "argmax",
+        "summed",
+        "summed",
+    ]
+    mixed = dataclasses.replace(r, summary=summary)
+    block = report.readme_block(mixed)
+    assert "ModernBERT-base: k=1 summed" in block
+    assert "k=100 per seed argmax/summed/summed" in block
+    assert "At k=100 the three seeds chose different 8-way aggregations on validation" in block
+    assert "No aggregation is chosen on test" in block
+    assert "chose different 8-way aggregations" not in report.readme_block(r)
