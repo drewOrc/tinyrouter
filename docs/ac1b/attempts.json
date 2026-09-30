@@ -1,0 +1,34 @@
+{
+  "format_version": 1,
+  "original_ac6_usd": 3.19,
+  "cap_usd_per_attempt": 5.0,
+  "cap_rule": "each AC1b attempt has its own US$5 cap (Drew, 2026-09-30); enforced per reproduction id, whose Haiku journal starts empty",
+  "attempts": [
+    {
+      "attempt": 1,
+      "commit": "3992840ddb3ff1df8b879ba00aaee6277e3f7ce4",
+      "reproduction_id": "3992840ddb3f",
+      "started_utc": "2026-09-29T07:40:02Z",
+      "finished_utc": "2026-09-29T14:24:22Z",
+      "time_source": "steps.json: start of the first step, end of the failed llm step",
+      "result": "FAIL",
+      "failure_kind": "infrastructure",
+      "reason": "infrastructure: Haiku count_tokens returned HTTP 503 credential validation failed 5 times during an Anthropic authentication incident; no classification request sent",
+      "haiku_usd": 0.0,
+      "evidence": "docs/ac1b/attempt-1/"
+    },
+    {
+      "attempt": 2,
+      "commit": "3992840ddb3ff1df8b879ba00aaee6277e3f7ce4",
+      "reproduction_id": "3992840ddb3f",
+      "started_utc": "2026-09-30T01:13:40Z",
+      "finished_utc": "2026-09-30T01:31:53Z",
+      "time_source": "steps.json: start of the resumed llm step, end of the failed figures step",
+      "result": "FAIL",
+      "failure_kind": "program defect",
+      "reason": "program defect: make figures stopped because seeds chose different 8-way aggregations for modernbert/k100 (argmax, summed, summed); Haiku 8600/8600, 0 parse failures, 20 predictions differ",
+      "haiku_usd": 3.178751,
+      "evidence": "docs/ac1b/attempt-2/"
+    }
+  ]
+}

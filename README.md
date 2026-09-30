@@ -237,7 +237,23 @@ Training on Apple MPS is not bit-for-bit deterministic, so a rerun is not expect
 
 A clean clone is not a clean cache: the base models and the CLINC150 files come from the shared Hugging Face cache (`~/.cache/huggingface` by default). That does not affect correctness, since every model is pinned to a revision and every data file is checked against its SHA-256, but to download everything afresh point the cache at an empty directory, for example `HF_HOME=/tmp/tinyrouter-hf make reproduce`.
 
-**Status: AC1b has not been run yet.** Until it has passed, the status is RQ1 to RQ5 complete, Tier 1 acceptance not complete.
+**Status: AC1b has not passed yet.** It has been attempted twice at `3992840ddb3f` and both attempts failed (an external authentication incident, then a defect in the figure code when seeds chose different 8-way aggregations); every attempt is recorded in [`docs/ac1b/`](docs/ac1b/README.md). Until it has passed, the status is RQ1 to RQ5 complete, Tier 1 acceptance not complete.
+
+AC1b budget. Every attempt has its own US$5 Haiku cap, enforced per reproduction id:
+
+<!-- BEGIN AC1b budget, generated from docs/ac1b/attempts.json; do not edit by hand -->
+- Original experiment (AC6, fixed): US$3.19
+- AC1b attempts (reproduction-validation, each capped at US$5):
+
+| attempt | reproduction id | result | reason | Haiku spend |
+|---|---|---|---|---|
+| 1 | `3992840ddb3f` | FAIL | infrastructure: Haiku count_tokens returned HTTP 503 credential validation failed 5 times during an Anthropic authentication incident; no classification request sent | US$0.000000 |
+| 2 | `3992840ddb3f` | FAIL | program defect: make figures stopped because seeds chose different 8-way aggregations for modernbert/k100 (argmax, summed, summed); Haiku 8600/8600, 0 parse failures, 20 predictions differ | US$3.178751 |
+
+- Reproduction-validation total (all AC1b attempts): US$3.178751
+
+Reproduction-validation spend is never reported as original experiment cost and does not change the AC6 conclusion (Haiku spend at most US$5).
+<!-- END AC1b budget -->
 
 ## Reproducibility notes
 

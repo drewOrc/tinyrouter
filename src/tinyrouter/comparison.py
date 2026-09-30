@@ -38,6 +38,7 @@ import json
 from collections.abc import Iterator
 from pathlib import Path
 
+from tinyrouter import ac1b_ledger
 from tinyrouter.ac2 import SEEDS as AC2_SEEDS
 from tinyrouter.ac2 import THRESHOLD as AC2_THRESHOLD
 
@@ -48,9 +49,9 @@ PASS = "PASS"
 FAIL = "FAIL"
 EXACT_TOLERANCE = 1e-9
 EXPECTED_LLM_ROWS = 8600
-# docs/PLAN.md 5.1: the original AC6 spend is fixed; the rerun has its own cap.
-ORIGINAL_AC6_USD = 3.19
-REPRODUCTION_CAP_USD = 5.0
+# docs/PLAN.md 5.1: the original AC6 spend is fixed; each AC1b attempt has its own cap.
+ORIGINAL_AC6_USD = ac1b_ledger.ORIGINAL_AC6_USD
+REPRODUCTION_CAP_USD = ac1b_ledger.CAP_USD_PER_ATTEMPT
 TARGET = "0.02"
 CURVE_MODELS = ("modernbert", "bert")
 CURVE_KS = (1, 5, 10, 25, 50, 100)
@@ -331,23 +332,21 @@ def haiku_section(
     return body
 
 
-def budget_section(reproduced_summary: dict | None) -> dict[str, object]:
-    """Two separate budgets; the rerun's spend is never added to the original experiment's."""
+def budget_section(
+    reproduced_summary: dict | None, ledger: dict, reproduction_id: str | None = None
+) -> dict[str, object]:
+    """Three parts: the fixed original AC6 cost, each AC1b attempt, and their total.
+
+    The rerun's spend is never added to the original experiment's
+    (``ac1b_ledger.budget``).
+    """
     spent = None
     if reproduced_summary is not None:
         spent = round(float(reproduced_summary.get("totals", {}).get("cost_usd", 0.0)), 6)
-    return {
-        "original_ac6_experiment": {
-            "usd": ORIGINAL_AC6_USD,
-            "note": "fixed: full run US$3.18 plus smoke; not changed by any rerun",
-        },
-        "reproduction_validation": {
-            "usd": spent,
-            "cap_usd": REPRODUCTION_CAP_USD,
-            "note": "AC1b rerun only, its own journal and cap; not an experiment cost",
-        },
-        "rule": "separate budgets; never summed or reported as one number",
-    }
+    current = None
+    if reproduction_id is not None:
+        current = {"reproduction_id": reproduction_id, "usd": spent}
+    return {"this_run_usd": spent, **ac1b_ledger.budget(ledger, current)}
 
 
 def ac2_section(reproduced_ac2: dict | None, original_ac2: dict) -> dict[str, object]:
@@ -426,8 +425,14 @@ def build(
     steps: list[dict],
     expected_steps: list[str],
     context: dict[str, object],
+    ledger: dict | None = None,
 ) -> dict[str, object]:
-    """The whole comparison for one rerun; reads JSON only."""
+    """The whole comparison for one rerun; reads JSON only.
+
+    ``ledger`` defaults to this checkout's ``docs/ac1b/attempts.json``.
+    """
+    if ledger is None:
+        ledger = ac1b_ledger.load()
     before = read_json(original_root / "analysis" / "summary.json") or {}
     after = read_json(reproduced_root / "analysis" / "summary.json")
     rep_jsonl = reproduced_root / "llm" / "haiku-8way.jsonl"
@@ -467,7 +472,9 @@ def build(
         },
         "ac2": ac2,
         "haiku": haiku,
-        "budget": budget_section(rep_summary),
+        "budget": budget_section(
+            rep_summary, ledger, str(context.get("reproduction_id") or "") or None
+        ),
         **sections,
         **context,
     }
@@ -532,11 +539,12 @@ def render_markdown(body: dict) -> str:
         json.dumps(haiku, indent=2),
         "```",
         "",
-        "## Budget (separate, never summed)",
+        "## Budget",
         "",
-        f"- original AC6 experiment: US${budget['original_ac6_experiment']['usd']:.2f} (fixed)",
-        f"- reproduction-validation: US${budget['reproduction_validation']['usd']} "
-        f"(cap US${budget['reproduction_validation']['cap_usd']:g})",
+        f"This run's Haiku spend: US${budget['this_run_usd']} "
+        f"(cap US${budget['cap_usd_per_attempt']:g} for this reproduction id).",
+        "",
+        *ac1b_ledger.markdown(budget),
         "",
     ]
     lines += pilot_and_number_lines(body)

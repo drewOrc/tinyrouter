@@ -4,6 +4,34 @@
 
 ---
 
+## 2026-09-30：AC1b 兩次嘗試失敗；修正各 seed 選不同聚合時的畫圖缺陷，新增嘗試帳本
+
+### 本次工作 / 執行摘要
+- 狀態不變：RQ1 到 RQ5 完成；**Tier 1 驗收未完成，AC1b 尚未通過**。
+- **AC1b 第 1 次**（`3992840ddb3f`，2026-09-29 07:40 到 14:24 UTC）：訓練、AC2、pilot 全過；Haiku 前的 `count_tokens` 在 Anthropic 認證事故期間連 5 次 HTTP 503，花費 US$0。依凍結標準判 FAIL；Drew 判定為基礎設施事故，同一 id 與身分續跑。
+- **AC1b 第 2 次**（續跑，2026-09-30 01:13 到 01:31 UTC）：Haiku 8,600/8,600、US$3.178751、0 parse failed、20 筆預測與原 run 不同；analysis、latency、cost 完成；`make figures` 失敗：ModernBERT k=100 三個 seed 在 validation 選了 argmax、summed、summed，`figures.selected_aggregation` 直接丟 ValueError。原始 run 三個 seed 都選 argmax，所以這條路徑從沒跑過。判 FAIL（程式缺陷）。
+- **修正**：找過所有讀聚合方式的地方。`analysis` 本來就讓每個 seed 用自己 validation 選的聚合（`final`、`diagnostics` 逐 seed 算好再合併）；`report` 的聚合說明已會列出逐 seed 選擇；`cost`、`comparison`、學習曲線、router 圖、門檻圖都讀 `final` 或 `diagnostics`，不受影響。只有 risk-coverage 圖假設三個 seed 同一種。`curves.json` 對每種聚合只存三 seed 的 mean 與 std，沒有逐 seed 曲線，而補存會改動原始 `curves.json` 的位元組，所以改成：seed 一致的 k 維持一個面板；不一致的 k 每種被選到的聚合各一個面板（固定 argmax、summed 順序），標題寫出哪些 seed 的 final router 用它；README 圖說在這種情況自動加一句說明。沒有任何選擇用到 test，也沒有固定成某一種。
+- **帳本**：`docs/ac1b/attempts.json` 記錄每次嘗試（commit、id、UTC 起訖、結果與原因、實際 Haiku 支出），`docs/ac1b/attempt-<n>/` 放 comparison 與事故說明。comparison 與 README 的預算改成三部分：原始實驗 US$3.19（固定）、每次嘗試支出與原因、reproduction-validation 累計。PLAN §5.1 預算規則補一行：每次嘗試各自獨立 US$5 上限（Drew，2026-09-30）。
+- 下一步依 Drew 決定：合併後在新 commit 完整重跑 AC1b（新的一次嘗試，新 id、新 journal、獨立 US$5）；不拿第 2 次的輸出配新 commit 的圖。
+
+### 核心發現 / 數據
+- 用第 2 次重跑輸出的副本跑 `figures` 與 `report`（`--results-root`、`--readme-out`）：4 張圖與 report 都完成；risk-coverage 為 (a) k=10 summed、(b) k=100 argmax（seed 42）、(c) k=100 summed（seeds 43、44）。
+- 第 2 次重跑中其他聚合不一致的組：BERT k=10、25、50、100，ModernBERT k=25，OOS 0 消融 k=100，TF-IDF k=5、10、25。
+- 原始結果上 `make figures`、`make report` 兩次，`results/` 與 README 生成區塊逐位元組不變。
+
+### Blockers / 遇到的問題
+- (無)
+
+### Next
+- [ ] 合併後在新 commit 完整重跑 AC1b（第 3 次嘗試），結果寫進 `docs/ac1b/attempts.json`
+
+### Files / Budget
+- 新增：`src/tinyrouter/ac1b_ledger.py`；`tests/test_ac1b_ledger.py`；`docs/ac1b/`（`attempts.json`、`README.md`、`attempt-1/`、`attempt-2/`）
+- 修改：`src/tinyrouter/figures.py`、`report.py`、`comparison.py`；`tests/test_figures.py`、`test_report.py`、`test_comparison.py`；`README.md`、`docs/PLAN.md`、`DEVLOG.md`
+- API 花費：本次 US$0。AC1b 累計（reproduction-validation）：US$3.178751；原始實驗成本維持 US$3.19
+
+---
+
 ## 2026-09-29（深夜，七）：PR #19 審查修正（R1 到 R6），AC1b 實跑前固定比較範圍
 
 ### 本次工作 / 執行摘要

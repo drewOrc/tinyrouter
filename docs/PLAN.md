@@ -130,6 +130,7 @@ TinyRouter 問三件事：**小模型要多少標註資料才夠？它知不知�
 - 續跑只限同一身分：每一步記錄 HEAD、`uv.lock` 與 `configs/` 的 SHA-256、Python、torch 與 transformers 版本；同一個 reproduction 目錄若由不同身分開始，拒絕續跑，必須換新 id，所以一份 comparison 不會混到兩個 commit 的輸出（第 1 條的落實方式）。
 
 **預算規則**：原始 AC6 實驗的 Haiku 花費固定是 US$3.19（完整 run US$3.18 加 smoke），這個數字不再變動。AC1b 的 Haiku 是另一次、明確標記為 reproduction-validation 的執行，有獨立的 US$5 上限，花費寫在 reproduction 目錄自己的紀錄裡；兩者不得混稱為原始實驗成本，也不相加。
+- 每次 AC1b 嘗試各自獨立 US$5 上限（Drew，2026-09-30）。嘗試帳本：`docs/ac1b/attempts.json`（人讀版 `docs/ac1b/README.md`，各次證據在 `docs/ac1b/attempt-<n>/`）。
 
 ## 6. 風險
 

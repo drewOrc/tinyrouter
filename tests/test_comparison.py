@@ -146,13 +146,61 @@ def test_haiku_checks_fail_on_missing_rows_another_identity_or_spend_above_the_c
     assert not over["checks_passed"]
 
 
-def test_the_two_budgets_stay_separate_and_the_original_is_fixed():
-    budget = budget_section(summary(4.2))
+LEDGER = {
+    "original_ac6_usd": 3.19,
+    "cap_usd_per_attempt": 5.0,
+    "attempts": [
+        {
+            "attempt": 1,
+            "commit": "a" * 40,
+            "reproduction_id": "aaaaaaaaaaaa",
+            "started_utc": "t0",
+            "finished_utc": "t1",
+            "result": "FAIL",
+            "reason": "infrastructure",
+            "haiku_usd": 0.0,
+        },
+        {
+            "attempt": 2,
+            "commit": "a" * 40,
+            "reproduction_id": "aaaaaaaaaaaa",
+            "started_utc": "t2",
+            "finished_utc": "t3",
+            "result": "FAIL",
+            "reason": "program defect",
+            "haiku_usd": 3.178751,
+        },
+    ],
+}
+
+
+def test_the_budget_has_three_parts_and_the_original_is_never_changed():
+    budget = budget_section(summary(4.2), LEDGER, "bbbbbbbbbbbb")
     assert budget["original_ac6_experiment"]["usd"] == ORIGINAL_AC6_USD == 3.19
-    assert budget["reproduction_validation"]["usd"] == 4.2
-    assert budget["reproduction_validation"]["cap_usd"] == 5.0
-    flat = json.dumps(budget)
-    assert "7.39" not in flat and "total" not in flat
+    assert budget["this_run_usd"] == 4.2
+    attempts = budget["ac1b_attempts"]
+    assert [a["result"] for a in attempts] == ["FAIL", "FAIL", "PENDING"]
+    assert attempts[-1]["haiku_usd"] == 4.2
+    assert budget["reproduction_validation_total"]["usd"] == round(3.178751 + 4.2, 6)
+    assert budget["cap_usd_per_attempt"] == 5.0
+    # The reproduction-validation spend is never folded into the original experiment cost.
+    assert json.dumps(budget["original_ac6_experiment"]).count("3.19") == 1
+    for spent in (3.19 + 3.178751, 3.19 + 3.178751 + 4.2):
+        assert f"{spent:.2f}" not in json.dumps(budget)
+
+
+def test_a_rerun_already_in_the_ledger_is_not_counted_twice():
+    budget = budget_section(summary(3.178751), LEDGER, "aaaaaaaaaaaa")
+    assert len(budget["ac1b_attempts"]) == 2
+    assert budget["reproduction_validation_total"]["usd"] == 3.178751
+
+
+def test_the_markdown_budget_shows_all_three_parts(roots):
+    body = run_build(roots)
+    text = render_markdown(body)
+    assert "Original experiment (AC6, fixed): US$3.19" in text
+    assert "| attempt | reproduction id | result | reason | Haiku spend |" in text
+    assert "Reproduction-validation total (all AC1b attempts)" in text
 
 
 @pytest.fixture

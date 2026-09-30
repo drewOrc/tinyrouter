@@ -7,6 +7,10 @@ same matplotlib give byte-identical files. Colours are the Okabe-Ito
 palette, which stays distinguishable under the common colour-vision
 deficiencies; line styles and markers differ too, so the figures also work
 in greyscale. Bands and error bars are mean ± sample std over seeds 42, 43, 44.
+
+Each seed's final router uses the 8-way aggregation it chose on validation.
+In risk_coverage a k whose seeds chose differently gets one panel per
+aggregation, titled with the seeds that use it; nothing is chosen on test.
 """
 
 from __future__ import annotations
@@ -131,20 +135,66 @@ def learning_curves(summary: dict, plt) -> object:  # noqa: ANN001
     return fig
 
 
-def selected_aggregation(summary: dict, group: str) -> str:
+AGGREGATIONS = ("argmax", "summed")
+SEEDS = (42, 43, 44)
+
+
+def seed_aggregations(summary: dict, group: str) -> tuple[str, ...]:
+    """The 8-way aggregation each seed's final router chose on validation, in seed order.
+
+    ``summary.json`` stores one string when the three seeds agree and the
+    per-seed list when they do not (``analysis_run.combine``).
+    """
     chosen = summary["groups"][group]["result"]["selected_aggregation"]
-    if not isinstance(chosen, str):
-        raise ValueError(f"{group}: seeds chose different aggregations {chosen}; pick one first")
-    return chosen
+    if isinstance(chosen, str):
+        return (chosen,) * len(SEEDS)
+    if len(chosen) != len(SEEDS) or not set(chosen) <= set(AGGREGATIONS):
+        raise ValueError(f"{group}: unexpected selected_aggregation {chosen!r}")
+    return tuple(chosen)
+
+
+def risk_coverage_panels(summary: dict) -> list[tuple[int, str, tuple[int, ...] | None]]:
+    """(k, aggregation, seeds whose final router uses it) per panel, None when all three do.
+
+    A k whose seeds agree gets one panel. A k whose seeds chose different
+    aggregations on validation gets one panel per aggregation that a seed
+    chose, in the fixed order of ``AGGREGATIONS``; none is picked on test
+    and none is dropped.
+    """
+    panels: list[tuple[int, str, tuple[int, ...] | None]] = []
+    for k in (10, 100):
+        per_seed = seed_aggregations(summary, f"modernbert/k{k}")
+        if len(set(per_seed)) == 1:
+            panels.append((k, per_seed[0], None))
+            continue
+        for aggregation in AGGREGATIONS:
+            seeds = tuple(s for s, a in zip(SEEDS, per_seed, strict=True) if a == aggregation)
+            if seeds:
+                panels.append((k, aggregation, seeds))
+    return panels
+
+
+def panel_title(index: int, k: int, aggregation: str, seeds: tuple[int, ...] | None) -> str:
+    title = f"({'abcd'[index]}) ModernBERT k={k} ({aggregation})"
+    if seeds is None:
+        return title
+    return f"{title}\nfinal router of seed{'s' * (len(seeds) > 1)} {', '.join(map(str, seeds))}"
 
 
 def risk_coverage(summary: dict, curves: dict, plt) -> object:  # noqa: ANN001
-    fig, axes = plt.subplots(1, 2, figsize=(6.8, 3.0), sharey=True, layout="constrained")
+    """Test risk-coverage of each signal; a k with mixed per-seed aggregations gets two panels.
+
+    ``curves.json`` keeps each aggregation's curve as mean and std over all
+    three seeds, not per seed, so a mixed k shows both aggregations side
+    by side, each titled with the seeds whose final router uses it.
+    """
+    panels = risk_coverage_panels(summary)
+    fig, axes = plt.subplots(
+        1, len(panels), figsize=(3.4 * len(panels), 3.0), sharey=True, layout="constrained"
+    )
     grid = [100 * c for c in curves["coverage_grid"]]
-    for ax, k in zip(axes, (10, 100), strict=True):
-        group = f"modernbert/k{k}"
-        aggregation = selected_aggregation(summary, group)
-        block = curves["groups"][group]["result"][aggregation]
+    for index, (ax, (k, aggregation, seeds)) in enumerate(zip(axes, panels, strict=True)):
+        block = curves["groups"][f"modernbert/k{k}"]["result"][aggregation]
         for signal, (label, colour, style, width) in SIGNALS.items():
             points = block[signal]["risk_coverage"]
             mean = [100 * p["mean"] for p in points]
@@ -166,7 +216,7 @@ def risk_coverage(summary: dict, curves: dict, plt) -> object:  # noqa: ANN001
             lw=0.9,
             label=f"{100 * float(TARGET):.0f}% target risk",
         )
-        ax.set_title(f"({'ab'[k == 100]}) ModernBERT k={k} ({aggregation})")
+        ax.set_title(panel_title(index, k, aggregation, seeds))
         ax.set_xlabel("coverage: queries kept by the small model (%)")
         ax.set_xlim(0, 100)
     axes[0].set_ylabel("selective risk on test (%)")
